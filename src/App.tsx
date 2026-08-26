@@ -68,6 +68,13 @@ export function App() {
   // Derived role strictly from authenticatedUser
   const currentRole = authenticatedUser?.role || 'SUPERVISOR_TERRENO';
 
+  // Lock SUPERVISOR_TERRENO strictly to work-orders tab
+  useEffect(() => {
+    if (currentRole === 'SUPERVISOR_TERRENO' && activeTab !== 'work-orders') {
+      setActiveTab('work-orders');
+    }
+  }, [currentRole, activeTab]);
+
   // Audit Logs State
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
 

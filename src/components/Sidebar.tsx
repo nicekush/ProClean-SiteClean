@@ -42,24 +42,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile
 }) => {
 
+  interface DomainItem {
+    id: string;
+    label: string;
+    icon: any;
+    allowedRoles?: UserRole[];
+  }
+
+  interface DomainGroup {
+    title: string;
+    icon: any;
+    allowedRoles: UserRole[];
+    items: DomainItem[];
+  }
+
   // Domain Groups Definition with RBAC Permissions
-  const domainGroups = [
+  const domainGroups: DomainGroup[] = [
     {
       title: 'OPERACIÓN TERRENO',
       icon: HardHat,
       allowedRoles: ['SUPERVISOR_TERRENO', 'ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'],
       items: [
-        { id: 'work-orders', label: 'Órdenes de Trabajo', icon: ClipboardList },
-        { id: 'map-operational', label: 'Mapa Operacional Zaldívar', icon: MapPin },
-        { id: 'evidences', label: 'Evidencias Fotográficas', icon: Camera }
+        { id: 'work-orders', label: 'Órdenes de Trabajo', icon: ClipboardList, allowedRoles: ['SUPERVISOR_TERRENO', 'ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
+        { id: 'map-operational', label: 'Mapa Operacional Zaldívar', icon: MapPin, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
+        { id: 'evidences', label: 'Evidencias Fotográficas', icon: Camera, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] }
       ]
     },
     {
       title: 'ANALÍTICA Y AUDITORÍA',
       icon: BarChart2,
-      allowedRoles: ['SUPERVISOR_TERRENO', 'ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'],
+      allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'],
       items: [
-        { id: 'dashboard', label: 'Reporte KPI Adherencia', icon: BarChart3 },
+        { id: 'dashboard', label: 'Reporte KPI Adherencia', icon: BarChart3, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
         { id: 'audit-logs', label: 'Historial de Auditoría', icon: History, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] }
       ]
     },
