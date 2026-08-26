@@ -1350,6 +1350,17 @@
       "active": true,
       "avatarColor": "#FF7A00",
       "lastLogin": "26-08-2026, 7:00:39 p. m."
+    },
+    {
+      "id": "usr-6",
+      "name": "Marco Andrade",
+      "email": "mandrade@procleanmg.cl",
+      "password": "proclean1234",
+      "role": "SUPERVISOR_TERRENO",
+      "contractId": "c1",
+      "active": true,
+      "avatarColor": "#05A6A6",
+      "lastLogin": "26-08-2026"
     }
   ],
   "plantAreas": [
