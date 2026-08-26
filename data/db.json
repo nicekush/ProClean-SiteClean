@@ -35,7 +35,7 @@
   "shifts": [
     {
       "id": "s1",
-      "name": "Área Seca (Día)",
+      "name": "Turno Día",
       "code": "TRN-DIA",
       "startTime": "08:00",
       "endTime": "20:00",
@@ -43,19 +43,11 @@
     },
     {
       "id": "s2",
-      "name": "Nocheros (Noche)",
+      "name": "Turno Noche",
       "code": "TRN-NCH",
       "startTime": "20:00",
       "endTime": "08:00",
       "colorHex": "#3F3D73"
-    },
-    {
-      "id": "s3",
-      "name": "Hidrolavadora (Especializado)",
-      "code": "TRN-HDR",
-      "startTime": "08:00",
-      "endTime": "18:00",
-      "colorHex": "#025951"
     }
   ],
   "contingencies": [
@@ -1325,7 +1317,7 @@
       "role": "SUPER_ADMIN",
       "active": true,
       "avatarColor": "#B91C1C",
-      "lastLogin": "17-08-2026, 6:42:23 p. m."
+      "lastLogin": "26-08-2026, 6:48:58 p. m."
     }
   ],
   "plantAreas": [
