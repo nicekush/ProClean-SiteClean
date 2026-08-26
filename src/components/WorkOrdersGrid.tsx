@@ -108,7 +108,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     taskType: 'PLANIFICADO' as TaskType,
     cubicMetersRemoved: 0,
     fleetTripsCount: 0,
-    bucketCapacityM3: 0
+    bucketCapacityM3: 0,
+    machineHours: 0
   });
 
   const labels = whiteLabel.columnLabels;
@@ -409,7 +410,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       taskType: 'PLANIFICADO',
       cubicMetersRemoved: 0,
       fleetTripsCount: 0,
-      bucketCapacityM3: 0
+      bucketCapacityM3: 0,
+      machineHours: 0
     });
   };
 
@@ -574,15 +576,17 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     }
   };
 
-  const renderStepper = (currentStep: number, totalSteps: number = 7) => {
+  const renderStepper = (currentStep: number, totalSteps: number = 9) => {
     const stepTitles = [
       '1. Clasificación Tarea',
       '2. Área de Planta',
       '3. Sector / Proceso',
       '4. Equipo & Componentes',
       '5. Fecha & Turno',
-      '6. Recursos & m³',
-      '7. Detalle & Fotos'
+      '6. Selección de Recursos',
+      '7. Cuadrilla Manual',
+      '8. Maquinaria de Flota',
+      '9. Detalle & Fotos'
     ];
     const percent = Math.round((currentStep / totalSteps) * 100);
 
@@ -971,10 +975,17 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 </div>
 
                 {editAvailableSubSectors.length > 0 && (
-                  <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '8px' }}>
-                      Componentes Intervenidos (Nivel 4 Badges Multiseleccionables)
-                    </label>
+                  <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: editSelectedSubSectorNames.length === 0 ? '2px solid #EF4444' : '1px solid var(--slate-200)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block' }}>
+                        Componentes Intervenidos (Nivel 4 Badges Multiseleccionables) <span style={{ color: '#EF4444' }}>* (Obligatorio)</span>
+                      </label>
+                      {editSelectedSubSectorNames.length === 0 && (
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#EF4444', backgroundColor: '#FEF2F2', padding: '2px 8px', borderRadius: '8px' }}>
+                          ⚠️ Selecciona al menos 1
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {editAvailableSubSectors.map(sub => {
                         const isSelected = editSelectedSubSectorNames.includes(sub.name);
@@ -1022,6 +1033,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     className="btn btn-primary" 
                     onClick={() => {
                       if (!editSelectedEquipmentId) { alert('Selecciona el Equipo antes de continuar.'); return; }
+                      if (editSelectedSubSectorNames.length === 0) { alert('Debes seleccionar al menos un Componente Intervenido (Nivel 4) para continuar.'); return; }
                       setCurrentEditStep(5);
                     }} 
                     style={{ padding: '12px 24px', fontSize: '13px' }}
@@ -1076,15 +1088,29 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               </div>
             )}
 
-            {/* PASO 6: RECURSOS & CUBICACIÓN M3 */}
+            {/* PASO 6: SELECCIÓN DE RECURSOS */}
             {currentEditStep === 6 && (
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                  🚜👷 Paso 6: Recursos Operativos & Cubicación (m³)
+                  🚜👷 Paso 6: Selecciona los Recursos Utilizados
                 </h4>
 
-                <div style={{ display: 'flex', gap: '20px', backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '14px', border: '1px solid var(--slate-200)' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
+                  <label 
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      gap: '12px', 
+                      padding: '24px 16px',
+                      borderRadius: '16px',
+                      border: (editingOrder.hasManualLabor !== false) ? '2px solid var(--orange)' : '1px solid var(--slate-300)',
+                      backgroundColor: (editingOrder.hasManualLabor !== false) ? '#FFF7ED' : '#FFFFFF',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={editingOrder.hasManualLabor !== false}
@@ -1093,12 +1119,28 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                         const calcM3 = computeCombinedM3(hasManual, editingOrder.headcount || 0, editingOrder.realHours || 0, editingOrder.hasEquipment !== false, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3);
                         setEditingOrder({ ...editingOrder, hasManualLabor: hasManual, cubicMetersRemoved: calcM3 });
                       }}
-                      style={{ width: '18px', height: '18px', accentColor: 'var(--orange)' }}
+                      style={{ width: '22px', height: '22px', accentColor: 'var(--orange)' }}
                     />
-                    👷 Trabajo Manual
+                    <span style={{ fontSize: '15px', fontWeight: 900, color: (editingOrder.hasManualLabor !== false) ? 'var(--orange)' : 'var(--slate-800)', textAlign: 'center' }}>
+                      👷 Trabajo Manual
+                    </span>
                   </label>
 
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+                  <label 
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      gap: '12px', 
+                      padding: '24px 16px',
+                      borderRadius: '16px',
+                      border: (editingOrder.hasEquipment !== false) ? '2px solid #0369A1' : '1px solid var(--slate-300)',
+                      backgroundColor: (editingOrder.hasEquipment !== false) ? '#F0F9FF' : '#FFFFFF',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={editingOrder.hasEquipment !== false}
@@ -1107,66 +1149,165 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                         const calcM3 = computeCombinedM3(editingOrder.hasManualLabor !== false, editingOrder.headcount || 0, editingOrder.realHours || 0, hasEquip, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3);
                         setEditingOrder({ ...editingOrder, hasEquipment: hasEquip, cubicMetersRemoved: calcM3 });
                       }}
-                      style={{ width: '18px', height: '18px', accentColor: 'var(--orange)' }}
+                      style={{ width: '22px', height: '22px', accentColor: '#0369A1' }}
                     />
-                    🚜 Maquinaria (Equipos)
+                    <span style={{ fontSize: '15px', fontWeight: 900, color: (editingOrder.hasEquipment !== false) ? '#0369A1' : 'var(--slate-800)', textAlign: 'center' }}>
+                      🚜 Maquinaria (Equipos)
+                    </span>
                   </label>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                  {editingOrder.hasManualLabor !== false && (
-                    <div style={{ padding: '14px', backgroundColor: '#ECFDF5', borderRadius: '14px', border: '1px solid #6EE7B7' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 900, color: '#047857', display: 'block', marginBottom: '8px' }}>👷 Cuadrilla Manual</span>
-                      <div style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-700)' }}>N° Personas</label>
-                        <input type="number" min="1" value={editingOrder.headcount} onChange={e => { const c = Number(e.target.value); setEditingOrder({ ...editingOrder, headcount: c, cubicMetersRemoved: computeCombinedM3(true, c, editingOrder.realHours || 0, editingOrder.hasEquipment !== false, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3) }); }} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #6EE7B7', fontWeight: 800 }} />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-700)' }}>Horas (HH)</label>
-                        <input type="number" min="1" value={editingOrder.realHours} onChange={e => { const h = Number(e.target.value); setEditingOrder({ ...editingOrder, realHours: h, estimatedHours: h, cubicMetersRemoved: computeCombinedM3(true, editingOrder.headcount || 0, h, editingOrder.hasEquipment !== false, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3) }); }} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #6EE7B7', fontWeight: 800 }} />
-                      </div>
-                    </div>
-                  )}
-
-                  {editingOrder.hasEquipment !== false && (
-                    <div style={{ padding: '14px', backgroundColor: '#F0F9FF', borderRadius: '14px', border: '1px solid #7DD3FC' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 900, color: '#0369A1', display: 'block', marginBottom: '8px' }}>🚜 Maquinaria</span>
-                      <div style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-700)' }}>Vehículo de Flota</label>
-                        <select value={editingOrder.vehiclePatent || ''} onChange={e => { const pat = e.target.value; const m = machines.find(mac => mac.patent === pat); const cap = m?.capacityM3 || 0; setEditingOrder({ ...editingOrder, vehiclePatent: pat, bucketCapacityM3: cap, cubicMetersRemoved: computeCombinedM3(editingOrder.hasManualLabor !== false, editingOrder.headcount || 0, editingOrder.realHours || 0, true, pat, editingOrder.fleetTripsCount || 0, cap) }); }} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #7DD3FC', fontWeight: 800 }}>
-                          <option value="">Selecciona Vehículo...</option>
-                          {machines.map(m => (<option key={m.id} value={m.patent}>{m.name} ({m.patent}) - {m.capacityM3 || 0} m³</option>))}
-                        </select>
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-700)' }}>N° Vueltas</label>
-                        <input type="number" min="0" value={editingOrder.fleetTripsCount || 0} onChange={e => { const t = Number(e.target.value); setEditingOrder({ ...editingOrder, fleetTripsCount: t, cubicMetersRemoved: computeCombinedM3(editingOrder.hasManualLabor !== false, editingOrder.headcount || 0, editingOrder.realHours || 0, true, editingOrder.vehiclePatent, t, editingOrder.bucketCapacityM3) }); }} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #7DD3FC', fontWeight: 800 }} />
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{ padding: '14px', backgroundColor: '#FFF7ED', borderRadius: '14px', border: '2px solid var(--orange)' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--orange)', display: 'block', marginBottom: '6px' }}>📦 Volumen Removido (m³)</label>
-                    <input type="number" min="0" step="0.1" value={editingOrder.cubicMetersRemoved || 0} onChange={e => setEditingOrder({ ...editingOrder, cubicMetersRemoved: Number(e.target.value) })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #FFEDD5', backgroundColor: '#FFF', fontWeight: 900, color: 'var(--orange)', fontSize: '20px' }} />
-                  </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(5)}>
                     ◄ Atrás
                   </button>
-                  <button type="button" className="btn btn-primary" onClick={() => setCurrentEditStep(7)} style={{ padding: '12px 24px', fontSize: '13px' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      if (editingOrder.hasManualLabor !== false) {
+                        setCurrentEditStep(7);
+                      } else if (editingOrder.hasEquipment !== false) {
+                        setCurrentEditStep(8);
+                      } else {
+                        setCurrentEditStep(9);
+                      }
+                    }} 
+                    style={{ padding: '12px 24px', fontSize: '13px' }}
+                  >
+                    Siguiente ➔
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASO 7: CUADRILLA MANUAL */}
+            {currentEditStep === 7 && (
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#047857', margin: 0 }}>
+                  👷 Paso 7: Información de Cuadrilla Manual
+                </h4>
+
+                <div style={{ padding: '20px', backgroundColor: '#ECFDF5', borderRadius: '16px', border: '1px solid #6EE7B7', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 900, color: '#047857', display: 'block', marginBottom: '6px' }}>N° Personas (Cuadrilla)</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      value={editingOrder.headcount} 
+                      onChange={e => { const c = Number(e.target.value); setEditingOrder({ ...editingOrder, headcount: c, cubicMetersRemoved: computeCombinedM3(true, c, editingOrder.realHours || 0, editingOrder.hasEquipment !== false, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3) }); }} 
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #6EE7B7', fontWeight: 900, fontSize: '15px' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 900, color: '#047857', display: 'block', marginBottom: '6px' }}>
+                      Horas (HH) (por persona)
+                    </label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      value={editingOrder.realHours} 
+                      onChange={e => { const h = Number(e.target.value); setEditingOrder({ ...editingOrder, realHours: h, estimatedHours: h, cubicMetersRemoved: computeCombinedM3(true, editingOrder.headcount || 0, h, editingOrder.hasEquipment !== false, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3) }); }} 
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #6EE7B7', fontWeight: 900, fontSize: '15px' }} 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(6)}>
+                    ◄ Atrás
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      if (editingOrder.hasEquipment !== false) {
+                        setCurrentEditStep(8);
+                      } else {
+                        setCurrentEditStep(9);
+                      }
+                    }} 
+                    style={{ padding: '12px 24px', fontSize: '13px' }}
+                  >
+                    Siguiente ➔
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASO 8: MAQUINARIA DE FLOTA */}
+            {currentEditStep === 8 && (
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#0369A1', margin: 0 }}>
+                  🚜 Paso 8: Información de Maquinaria (Equipos)
+                </h4>
+
+                <div style={{ padding: '20px', backgroundColor: '#F0F9FF', borderRadius: '16px', border: '1px solid #7DD3FC', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 900, color: '#0369A1', display: 'block', marginBottom: '6px' }}>Vehículo de Flota</label>
+                    <select 
+                      value={editingOrder.vehiclePatent || ''} 
+                      onChange={e => { const pat = e.target.value; const m = machines.find(mac => mac.patent === pat); const cap = m?.capacityM3 || 0; setEditingOrder({ ...editingOrder, vehiclePatent: pat, bucketCapacityM3: cap, cubicMetersRemoved: computeCombinedM3(editingOrder.hasManualLabor !== false, editingOrder.headcount || 0, editingOrder.realHours || 0, true, pat, editingOrder.fleetTripsCount || 0, cap) }); }} 
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '14px', backgroundColor: '#FFF' }}
+                    >
+                      <option value="">Selecciona Vehículo...</option>
+                      {machines.map(m => (<option key={m.id} value={m.patent}>{m.name} ({m.patent}) - {m.capacityM3 || 0} m³</option>))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 900, color: '#0369A1', display: 'block', marginBottom: '6px' }}>N° Vueltas</label>
+                    <input 
+                      type="number" 
+                      min="0" 
+                      value={editingOrder.fleetTripsCount || 0} 
+                      onChange={e => { const t = Number(e.target.value); setEditingOrder({ ...editingOrder, fleetTripsCount: t, cubicMetersRemoved: computeCombinedM3(editingOrder.hasManualLabor !== false, editingOrder.headcount || 0, editingOrder.realHours || 0, true, editingOrder.vehiclePatent, t, editingOrder.bucketCapacityM3) }); }} 
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '15px' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 900, color: '#0369A1', display: 'block', marginBottom: '6px' }}>
+                      Horas Máquina (HM) (por equipo)
+                    </label>
+                    <input 
+                      type="number" 
+                      min="0" 
+                      step="0.5"
+                      value={editingOrder.machineHours || 0} 
+                      onChange={e => setEditingOrder({ ...editingOrder, machineHours: Number(e.target.value) })} 
+                      style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '15px' }} 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => {
+                      if (editingOrder.hasManualLabor !== false) {
+                        setCurrentEditStep(7);
+                      } else {
+                        setCurrentEditStep(6);
+                      }
+                    }}
+                  >
+                    ◄ Atrás
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={() => setCurrentEditStep(9)} style={{ padding: '12px 24px', fontSize: '13px' }}>
                     Siguiente: Detalle & Fotos ➔
                   </button>
                 </div>
               </div>
             )}
 
-            {/* PASO 7: DETALLE & FOTOS */}
-            {currentEditStep === 7 && (
+            {/* PASO 9: DETALLE & FOTOS */}
+            {currentEditStep === 9 && (
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                  📸 Paso 7: Descripción de la Operación & Evidencias Fotográficas
+                  📸 Paso 9: Descripción de la Operación & Evidencias Fotográficas
                 </h4>
 
                 <div>
@@ -1201,7 +1342,19 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(6)}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => {
+                      if (editingOrder.hasEquipment !== false) {
+                        setCurrentEditStep(8);
+                      } else if (editingOrder.hasManualLabor !== false) {
+                        setCurrentEditStep(7);
+                      } else {
+                        setCurrentEditStep(6);
+                      }
+                    }}
+                  >
                     ◄ Atrás
                   </button>
                   <button type="submit" className="btn btn-primary" style={{ padding: '12px 28px', fontSize: '13px', backgroundColor: '#047857', borderColor: '#047857' }}>
@@ -1678,10 +1831,17 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
 
                   {availableSubSectors.length > 0 && (
-                    <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
-                      <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '8px' }}>
-                        Componentes Intervenidos (Nivel 4 Badges Multiseleccionables)
-                      </label>
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: selectedSubSectorNames.length === 0 ? '2px solid #EF4444' : '1px solid var(--slate-200)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block' }}>
+                          Componentes Intervenidos (Nivel 4 Badges Multiseleccionables) <span style={{ color: '#EF4444' }}>* (Obligatorio)</span>
+                        </label>
+                        {selectedSubSectorNames.length === 0 && (
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: '#EF4444', backgroundColor: '#FEF2F2', padding: '2px 8px', borderRadius: '8px' }}>
+                            ⚠️ Selecciona al menos 1
+                          </span>
+                        )}
+                      </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {availableSubSectors.map(sub => {
                           const isSelected = selectedSubSectorNames.includes(sub.name);
@@ -1723,6 +1883,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       className="btn btn-primary" 
                       onClick={() => {
                         if (!selectedEquipmentId) { alert('Selecciona el Equipo antes de continuar.'); return; }
+                        if (selectedSubSectorNames.length === 0) { alert('Debes seleccionar al menos un Componente Intervenido (Nivel 4) para continuar.'); return; }
                         setCurrentAddStep(5);
                       }} 
                       style={{ padding: '12px 24px', fontSize: '13px' }}
@@ -1777,89 +1938,226 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 </div>
               )}
 
-              {/* PASO 6: RECURSOS & CUBICACIÓN M3 */}
+              {/* PASO 6: SELECCIÓN DE RECURSOS */}
               {currentAddStep === 6 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    🚜👷 Paso 6: Recursos Operativos & Cubicación (m³)
+                    🚜👷 Paso 6: Selecciona los Recursos Utilizados
                   </h4>
 
-                  <div style={{ display: 'flex', gap: '20px', backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '14px', border: '1px solid var(--slate-200)' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
+                    <label 
+                      style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        gap: '12px', 
+                        padding: '24px 16px',
+                        borderRadius: '16px',
+                        border: newOrder.hasManualLabor ? '2px solid var(--orange)' : '1px solid var(--slate-300)',
+                        backgroundColor: newOrder.hasManualLabor ? '#FFF7ED' : '#FFFFFF',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
                       <input
                         type="checkbox"
                         checked={newOrder.hasManualLabor}
-                        onChange={e => setNewOrder({ ...newOrder, hasManualLabor: e.target.checked })}
-                        style={{ width: '18px', height: '18px', accentColor: 'var(--orange)' }}
+                        onChange={e => {
+                          const hasManual = e.target.checked;
+                          const calcM3 = computeCombinedM3(hasManual, newOrder.headcount || 0, newOrder.realHours || 0, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3);
+                          setNewOrder({ ...newOrder, hasManualLabor: hasManual, cubicMetersRemoved: calcM3 });
+                        }}
+                        style={{ width: '22px', height: '22px', accentColor: 'var(--orange)' }}
                       />
-                      👷 Trabajo Manual
+                      <span style={{ fontSize: '15px', fontWeight: 900, color: newOrder.hasManualLabor ? 'var(--orange)' : 'var(--slate-800)', textAlign: 'center' }}>
+                        👷 Trabajo Manual
+                      </span>
                     </label>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+                    <label 
+                      style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        gap: '12px', 
+                        padding: '24px 16px',
+                        borderRadius: '16px',
+                        border: newOrder.hasEquipment ? '2px solid #0369A1' : '1px solid var(--slate-300)',
+                        backgroundColor: newOrder.hasEquipment ? '#F0F9FF' : '#FFFFFF',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
                       <input
                         type="checkbox"
                         checked={newOrder.hasEquipment}
-                        onChange={e => setNewOrder({ ...newOrder, hasEquipment: e.target.checked })}
-                        style={{ width: '18px', height: '18px', accentColor: 'var(--orange)' }}
+                        onChange={e => {
+                          const hasEquip = e.target.checked;
+                          const calcM3 = computeCombinedM3(newOrder.hasManualLabor, newOrder.headcount || 0, newOrder.realHours || 0, hasEquip, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3);
+                          setNewOrder({ ...newOrder, hasEquipment: hasEquip, cubicMetersRemoved: calcM3 });
+                        }}
+                        style={{ width: '22px', height: '22px', accentColor: '#0369A1' }}
                       />
-                      🚜 Maquinaria (Equipos)
+                      <span style={{ fontSize: '15px', fontWeight: 900, color: newOrder.hasEquipment ? '#0369A1' : 'var(--slate-800)', textAlign: 'center' }}>
+                        🚜 Maquinaria (Equipos)
+                      </span>
                     </label>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                    {newOrder.hasManualLabor && (
-                      <div style={{ padding: '14px', backgroundColor: '#ECFDF5', borderRadius: '14px', border: '1px solid #6EE7B7' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 900, color: '#047857', display: 'block', marginBottom: '8px' }}>👷 Cuadrilla Manual</span>
-                        <div style={{ marginBottom: '8px' }}>
-                          <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-700)' }}>N° Personas</label>
-                          <input type="number" min="1" value={newOrder.headcount} onChange={e => { const c = Number(e.target.value); setNewOrder({ ...newOrder, headcount: c, cubicMetersRemoved: computeCombinedM3(true, c, newOrder.realHours || 0, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3) }); }} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #6EE7B7', fontWeight: 800 }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-700)' }}>Horas (HH)</label>
-                          <input type="number" min="1" value={newOrder.realHours} onChange={e => { const h = Number(e.target.value); setNewOrder({ ...newOrder, realHours: h, estimatedHours: h, cubicMetersRemoved: computeCombinedM3(true, newOrder.headcount || 0, h, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3) }); }} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #6EE7B7', fontWeight: 800 }} />
-                        </div>
-                      </div>
-                    )}
-
-                    {newOrder.hasEquipment && (
-                      <div style={{ padding: '14px', backgroundColor: '#F0F9FF', borderRadius: '14px', border: '1px solid #7DD3FC' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 900, color: '#0369A1', display: 'block', marginBottom: '8px' }}>🚜 Maquinaria</span>
-                        <div style={{ marginBottom: '8px' }}>
-                          <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-700)' }}>Vehículo de Flota</label>
-                          <select value={newOrder.vehiclePatent || ''} onChange={e => { const pat = e.target.value; const m = machines.find(mac => mac.patent === pat); const cap = m?.capacityM3 || 0; setNewOrder({ ...newOrder, vehiclePatent: pat, bucketCapacityM3: cap, cubicMetersRemoved: computeCombinedM3(newOrder.hasManualLabor, newOrder.headcount || 0, newOrder.realHours || 0, true, pat, newOrder.fleetTripsCount || 0, cap) }); }} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #7DD3FC', fontWeight: 800 }}>
-                            <option value="">Selecciona Vehículo...</option>
-                            {machines.map(m => (<option key={m.id} value={m.patent}>{m.name} ({m.patent}) - {m.capacityM3 || 0} m³</option>))}
-                          </select>
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-700)' }}>N° Vueltas</label>
-                          <input type="number" min="0" value={newOrder.fleetTripsCount || 0} onChange={e => { const t = Number(e.target.value); setNewOrder({ ...newOrder, fleetTripsCount: t, cubicMetersRemoved: computeCombinedM3(newOrder.hasManualLabor, newOrder.headcount || 0, newOrder.realHours || 0, true, newOrder.vehiclePatent, t, newOrder.bucketCapacityM3) }); }} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #7DD3FC', fontWeight: 800 }} />
-                        </div>
-                      </div>
-                    )}
-
-                    <div style={{ padding: '14px', backgroundColor: '#FFF7ED', borderRadius: '14px', border: '2px solid var(--orange)' }}>
-                      <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--orange)', display: 'block', marginBottom: '6px' }}>📦 Volumen Removido (m³)</label>
-                      <input type="number" min="0" step="0.1" value={newOrder.cubicMetersRemoved || 0} onChange={e => setNewOrder({ ...newOrder, cubicMetersRemoved: Number(e.target.value) })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #FFEDD5', backgroundColor: '#FFF', fontWeight: 900, color: 'var(--orange)', fontSize: '20px' }} />
-                    </div>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(5)}>
                       ◄ Atrás
                     </button>
-                    <button type="button" className="btn btn-primary" onClick={() => setCurrentAddStep(7)} style={{ padding: '12px 24px', fontSize: '13px' }}>
+                    <button 
+                      type="button" 
+                      className="btn btn-primary" 
+                      onClick={() => {
+                        if (newOrder.hasManualLabor) {
+                          setCurrentAddStep(7);
+                        } else if (newOrder.hasEquipment) {
+                          setCurrentAddStep(8);
+                        } else {
+                          setCurrentAddStep(9);
+                        }
+                      }} 
+                      style={{ padding: '12px 24px', fontSize: '13px' }}
+                    >
+                      Siguiente ➔
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* PASO 7: CUADRILLA MANUAL */}
+              {currentAddStep === 7 && (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#047857', margin: 0 }}>
+                    👷 Paso 7: Información de Cuadrilla Manual
+                  </h4>
+
+                  <div style={{ padding: '20px', backgroundColor: '#ECFDF5', borderRadius: '16px', border: '1px solid #6EE7B7', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 900, color: '#047857', display: 'block', marginBottom: '6px' }}>N° Personas (Cuadrilla)</label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        value={newOrder.headcount} 
+                        onChange={e => { const c = Number(e.target.value); setNewOrder({ ...newOrder, headcount: c, cubicMetersRemoved: computeCombinedM3(true, c, newOrder.realHours || 0, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3) }); }} 
+                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #6EE7B7', fontWeight: 900, fontSize: '15px' }} 
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 900, color: '#047857', display: 'block', marginBottom: '6px' }}>
+                        Horas (HH) (por persona)
+                      </label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        value={newOrder.realHours} 
+                        onChange={e => { const h = Number(e.target.value); setNewOrder({ ...newOrder, realHours: h, estimatedHours: h, cubicMetersRemoved: computeCombinedM3(true, newOrder.headcount || 0, h, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3) }); }} 
+                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #6EE7B7', fontWeight: 900, fontSize: '15px' }} 
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(6)}>
+                      ◄ Atrás
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn btn-primary" 
+                      onClick={() => {
+                        if (newOrder.hasEquipment) {
+                          setCurrentAddStep(8);
+                        } else {
+                          setCurrentAddStep(9);
+                        }
+                      }} 
+                      style={{ padding: '12px 24px', fontSize: '13px' }}
+                    >
+                      Siguiente ➔
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* PASO 8: MAQUINARIA DE FLOTA */}
+              {currentAddStep === 8 && (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#0369A1', margin: 0 }}>
+                    🚜 Paso 8: Información de Maquinaria (Equipos)
+                  </h4>
+
+                  <div style={{ padding: '20px', backgroundColor: '#F0F9FF', borderRadius: '16px', border: '1px solid #7DD3FC', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 900, color: '#0369A1', display: 'block', marginBottom: '6px' }}>Vehículo de Flota</label>
+                      <select 
+                        value={newOrder.vehiclePatent || ''} 
+                        onChange={e => { const pat = e.target.value; const m = machines.find(mac => mac.patent === pat); const cap = m?.capacityM3 || 0; setNewOrder({ ...newOrder, vehiclePatent: pat, bucketCapacityM3: cap, cubicMetersRemoved: computeCombinedM3(newOrder.hasManualLabor, newOrder.headcount || 0, newOrder.realHours || 0, true, pat, newOrder.fleetTripsCount || 0, cap) }); }} 
+                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '14px', backgroundColor: '#FFF' }}
+                      >
+                        <option value="">Selecciona Vehículo...</option>
+                        {machines.map(m => (<option key={m.id} value={m.patent}>{m.name} ({m.patent}) - {m.capacityM3 || 0} m³</option>))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 900, color: '#0369A1', display: 'block', marginBottom: '6px' }}>N° Vueltas</label>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={newOrder.fleetTripsCount || 0} 
+                        onChange={e => { const t = Number(e.target.value); setNewOrder({ ...newOrder, fleetTripsCount: t, cubicMetersRemoved: computeCombinedM3(newOrder.hasManualLabor, newOrder.headcount || 0, newOrder.realHours || 0, true, newOrder.vehiclePatent, t, newOrder.bucketCapacityM3) }); }} 
+                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '15px' }} 
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 900, color: '#0369A1', display: 'block', marginBottom: '6px' }}>
+                        Horas Máquina (HM) (por equipo)
+                      </label>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        step="0.5"
+                        value={newOrder.machineHours || 0} 
+                        onChange={e => setNewOrder({ ...newOrder, machineHours: Number(e.target.value) })} 
+                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '15px' }} 
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => {
+                        if (newOrder.hasManualLabor) {
+                          setCurrentAddStep(7);
+                        } else {
+                          setCurrentAddStep(6);
+                        }
+                      }}
+                    >
+                      ◄ Atrás
+                    </button>
+                    <button type="button" className="btn btn-primary" onClick={() => setCurrentAddStep(9)} style={{ padding: '12px 24px', fontSize: '13px' }}>
                       Siguiente: Detalle & Fotos ➔
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* PASO 7: DETALLE & FOTOS */}
-              {currentAddStep === 7 && (
+              {/* PASO 9: DETALLE & FOTOS */}
+              {currentAddStep === 9 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    📸 Paso 7: Descripción de la Operación & Evidencias Fotográficas
+                    📸 Paso 9: Descripción de la Operación & Evidencias Fotográficas
                   </h4>
 
                   <div>
@@ -1888,7 +2186,19 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(6)}>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => {
+                        if (newOrder.hasEquipment) {
+                          setCurrentAddStep(8);
+                        } else if (newOrder.hasManualLabor) {
+                          setCurrentAddStep(7);
+                        } else {
+                          setCurrentAddStep(6);
+                        }
+                      }}
+                    >
                       ◄ Atrás
                     </button>
                     <button type="submit" className="btn btn-primary" style={{ padding: '12px 28px', fontSize: '13px', backgroundColor: '#047857', borderColor: '#047857' }}>

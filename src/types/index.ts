@@ -88,6 +88,7 @@ export interface WorkOrder {
   cubicMetersRemoved?: number;
   fleetTripsCount?: number;
   bucketCapacityM3?: number;
+  machineHours?: number; // Horas Máquina (HM) (por equipo)
   executionDate?: string; // Fecha de Ejecución (YYYY-MM-DD)
 }
 
