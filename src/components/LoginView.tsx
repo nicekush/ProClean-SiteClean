@@ -135,51 +135,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ whiteLabel, onLoginSuccess
             </button>
           </form>
 
-          {/* Quick Demo Credentials Assistant */}
-          <div style={{ marginTop: '36px', paddingTop: '24px', borderTop: '1px solid #E2E8F0' }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '12px' }}>
-              Credenciales de Prueba Rápida (Selecciona una cuenta):
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ padding: '8px 10px', fontSize: '11px', justifyContent: 'flex-start' }}
-                onClick={() => fillQuickPreset('cmendoza@contratista.cl', '123')}
-              >
-                <HardHat size={14} style={{ color: '#05A6A6' }} /> Supervisor Terreno
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ padding: '8px 10px', fontSize: '11px', justifyContent: 'flex-start' }}
-                onClick={() => fillQuickPreset('palarcon@codelco.cl', '123')}
-              >
-                <UserCheck size={14} style={{ color: '#025951' }} /> ITO Mandante Minero
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ padding: '8px 10px', fontSize: '11px', justifyContent: 'flex-start' }}
-                onClick={() => fillQuickPreset('rgomez@contratista.cl', '123')}
-              >
-                <Shield size={14} style={{ color: '#3F3D73' }} /> Admin Contrato
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ padding: '8px 10px', fontSize: '11px', justifyContent: 'flex-start', gridColumn: '1 / -1', backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', color: '#C2410C', fontWeight: 900 }}
-                onClick={() => fillQuickPreset('scortes@procleanmg.cl', 'proclean1234')}
-              >
-                <Shield size={14} style={{ color: '#FF7A00' }} /> 👑 Super Admin ProClean (Sebastián Cortés)
-              </button>
-            </div>
-          </div>
-
         </div>
       </div>
     </div>

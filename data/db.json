@@ -686,6 +686,28 @@
   "auditLogs": [
     {
       "tenantId": "tenant_cmz",
+      "timestamp": "26-08-2026, 7:00:43 p. m.",
+      "userName": "Sebastián Cortés (SUPER_ADMIN)",
+      "userRole": "SUPER_ADMIN",
+      "action": "ELIMINACION",
+      "entityName": "Sesión de Usuario",
+      "entityId": "scortes@procleanmg.cl",
+      "details": "Cierre de sesión de Sebastián Cortés",
+      "id": "log-1787785243660"
+    },
+    {
+      "tenantId": "tenant_cmz",
+      "timestamp": "26-08-2026, 7:00:33 p. m.",
+      "userName": "Admin SaaS (SUPER_ADMIN)",
+      "userRole": "SUPER_ADMIN",
+      "action": "ELIMINACION",
+      "entityName": "Sesión de Usuario",
+      "entityId": "admin@siteclean.io",
+      "details": "Cierre de sesión de Admin SaaS",
+      "id": "log-1787785233328"
+    },
+    {
+      "tenantId": "tenant_cmz",
       "timestamp": "18-08-2026, 10:50:47 a. m.",
       "userName": "Admin SaaS (SUPER_ADMIN)",
       "userRole": "SUPER_ADMIN",
@@ -1327,7 +1349,7 @@
       "role": "SUPER_ADMIN",
       "active": true,
       "avatarColor": "#FF7A00",
-      "lastLogin": "26-08-2026"
+      "lastLogin": "26-08-2026, 7:00:39 p. m."
     }
   ],
   "plantAreas": [
