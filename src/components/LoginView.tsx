@@ -172,10 +172,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ whiteLabel, onLoginSuccess
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ padding: '8px 10px', fontSize: '11px', justifyContent: 'flex-start' }}
-                onClick={() => fillQuickPreset('admin@siteclean.io', 'admin')}
+                style={{ padding: '8px 10px', fontSize: '11px', justifyContent: 'flex-start', gridColumn: '1 / -1', backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', color: '#C2410C', fontWeight: 900 }}
+                onClick={() => fillQuickPreset('scortes@procleanmg.cl', 'proclean1234')}
               >
-                <Wrench size={14} style={{ color: '#B91C1C' }} /> Super Admin SaaS
+                <Shield size={14} style={{ color: '#FF7A00' }} /> 👑 Super Admin ProClean (Sebastián Cortés)
               </button>
             </div>
           </div>

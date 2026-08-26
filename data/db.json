@@ -1318,6 +1318,16 @@
       "active": true,
       "avatarColor": "#B91C1C",
       "lastLogin": "26-08-2026, 6:48:58 p. m."
+    },
+    {
+      "id": "usr-5",
+      "name": "Sebastián Cortés",
+      "email": "scortes@procleanmg.cl",
+      "password": "proclean1234",
+      "role": "SUPER_ADMIN",
+      "active": true,
+      "avatarColor": "#FF7A00",
+      "lastLogin": "26-08-2026"
     }
   ],
   "plantAreas": [
