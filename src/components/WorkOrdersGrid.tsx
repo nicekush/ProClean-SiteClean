@@ -591,12 +591,12 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     const percent = Math.round((currentStep / totalSteps) * 100);
 
     return (
-      <div style={{ backgroundColor: '#F8FAFC', padding: '14px 18px', borderRadius: '18px', border: '1px solid var(--slate-200)', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 900, color: 'var(--orange)' }}>
+      <div className="stepper-header-box" style={{ backgroundColor: '#F8FAFC', padding: '14px 18px', borderRadius: '18px', border: '1px solid var(--slate-200)', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '8px', flexWrap: 'wrap' }}>
+          <span className="stepper-header-title" style={{ fontSize: '13px', fontWeight: 900, color: 'var(--orange)' }}>
             Paso {currentStep} de {totalSteps}: <span style={{ color: 'var(--slate-900)' }}>{stepTitles[currentStep - 1]}</span>
           </span>
-          <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', backgroundColor: '#E2E8F0', padding: '3px 10px', borderRadius: '12px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', backgroundColor: '#E2E8F0', padding: '3px 10px', borderRadius: '12px', whiteSpace: 'nowrap' }}>
             {percent}% completado
           </span>
         </div>
@@ -762,22 +762,23 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
         </div>
       )}
 
-      {/* FULL-FEATURED 3-STEP WORK ORDER EDITOR MODAL WIZARD */}
+      {/* FULL-FEATURED WORK ORDER EDITOR MODAL WIZARD */}
       {editingOrder && (
-        <div style={{ backgroundColor: '#F8FAFC', padding: '24px', borderRadius: '24px', border: '2px solid var(--orange)', marginBottom: '24px', boxShadow: 'var(--shadow-md)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--slate-200)', paddingBottom: '12px' }}>
-            <div>
-              <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                ✏️ Edición Guiada de Orden de Trabajo
-              </span>
-              <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {editingOrder.sapCode} — <span style={{ color: 'var(--orange)' }}>{editingOrder.equipoCorrea}</span>
-              </h3>
+        <div className="modal-backdrop-overlay">
+          <div className="modal-content-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--slate-200)', paddingBottom: '12px' }}>
+              <div>
+                <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  ✏️ Edición Guiada de Orden de Trabajo
+                </span>
+                <h3 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {editingOrder.sapCode} — <span style={{ color: 'var(--orange)' }}>{editingOrder.equipoCorrea}</span>
+                </h3>
+              </div>
+              <button onClick={() => setEditingOrder(null)} className="btn btn-secondary" style={{ padding: '6px 10px' }}><X size={16} /></button>
             </div>
-            <button onClick={() => setEditingOrder(null)} className="btn btn-secondary" style={{ padding: '6px 10px' }}><X size={16} /></button>
-          </div>
 
-          {renderStepper(currentEditStep, 7)}
+            {renderStepper(currentEditStep, 9)}
 
           <form onSubmit={handleUpdateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
             
@@ -787,7 +788,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
                   📋 Paso 1: ¿Qué tipo de tarea es?
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                <div className="responsive-option-grid">
                   <button
                     type="button"
                     onClick={() => setEditingOrder({ ...editingOrder, taskType: 'PLANIFICADO' })}
@@ -843,7 +844,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setEditingOrder(null)}>
                     Cancelar
                   </button>
@@ -882,7 +883,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(1)}>
                     ◄ Atrás
                   </button>
@@ -928,7 +929,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(2)}>
                     ◄ Atrás
                   </button>
@@ -993,6 +994,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                           <button
                             key={sub.id}
                             type="button"
+                            className="badge-select-btn"
                             onClick={() => {
                               if (isSelected) {
                                 setEditSelectedSubSectorNames(editSelectedSubSectorNames.filter(n => n !== sub.name));
@@ -1024,7 +1026,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   <input type="text" value={editingOrder.sapCode} readOnly disabled style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--slate-300)', backgroundColor: '#E2E8F0', fontWeight: 900, color: '#475569' }} />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(3)}>
                     ◄ Atrás
                   </button>
@@ -1077,7 +1079,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(4)}>
                     ◄ Atrás
                   </button>
@@ -1095,7 +1097,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   🚜👷 Paso 6: Selecciona los Recursos Utilizados
                 </h4>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
+                <div className="responsive-option-grid" style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
                   <label 
                     style={{ 
                       display: 'flex', 
@@ -1157,7 +1159,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </label>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(5)}>
                     ◄ Atrás
                   </button>
@@ -1214,7 +1216,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(6)}>
                     ◄ Atrás
                   </button>
@@ -1282,7 +1284,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button 
                     type="button" 
                     className="btn btn-secondary" 
@@ -1341,7 +1343,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                   <button 
                     type="button" 
                     className="btn btn-secondary" 
@@ -1365,7 +1367,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
             )}
           </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Filter and Search Bar */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1635,17 +1638,18 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       </div>
 
       {/* New Work Order Modal with 3-Step Guided Wizard */}
+      {/* ADD WORK ORDER MODAL WIZARD */}
       {showAddModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', padding: '24px', borderRadius: '24px', width: '100%', maxWidth: '640px', boxShadow: 'var(--shadow-lg)', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="modal-backdrop-overlay">
+          <div className="modal-content-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
                 + Crear Nueva Orden de Trabajo (OT)
               </h3>
               <button onClick={() => setShowAddModal(false)} className="btn btn-secondary" style={{ padding: '4px 8px' }}><X size={16} /></button>
             </div>
 
-            {renderStepper(currentAddStep, 7)}
+            {renderStepper(currentAddStep, 9)}
 
             <form onSubmit={handleCreateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
               
@@ -1655,7 +1659,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
                     📋 Paso 1: ¿Qué tipo de tarea es?
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                  <div className="responsive-option-grid">
                     <button
                       type="button"
                       onClick={() => setNewOrder({ ...newOrder, taskType: 'PLANIFICADO' })}
@@ -1711,7 +1715,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </button>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>
                       Cancelar
                     </button>
@@ -1745,7 +1749,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(1)}>
                       ◄ Atrás
                     </button>
@@ -1787,7 +1791,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(2)}>
                       ◄ Atrás
                     </button>
@@ -1849,6 +1853,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                             <button
                               key={sub.id}
                               type="button"
+                              className="badge-select-btn"
                               onClick={() => toggleSubSectorSelection(sub.name)}
                               style={{
                                 padding: '8px 14px',
@@ -1874,7 +1879,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     <input type="text" value={newOrder.sapCode || getNextOtCode()} readOnly disabled style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--slate-300)', backgroundColor: '#E2E8F0', fontWeight: 900, color: '#475569' }} />
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(3)}>
                       ◄ Atrás
                     </button>
@@ -1927,7 +1932,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(4)}>
                       ◄ Atrás
                     </button>
@@ -1945,7 +1950,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     🚜👷 Paso 6: Selecciona los Recursos Utilizados
                   </h4>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
+                  <div className="responsive-option-grid" style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
                     <label 
                       style={{ 
                         display: 'flex', 
@@ -2007,7 +2012,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </label>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(5)}>
                       ◄ Atrás
                     </button>
@@ -2064,7 +2069,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(6)}>
                       ◄ Atrás
                     </button>
@@ -2132,7 +2137,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button 
                       type="button" 
                       className="btn btn-secondary" 
@@ -2185,7 +2190,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </label>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                     <button 
                       type="button" 
                       className="btn btn-secondary" 
