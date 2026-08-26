@@ -524,3 +524,61 @@ h1, h2, h3, h4, h5, h6 {
     border-top: 1px solid var(--slate-100);
   }
 }
+
+/* Responsive Login View */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  background-color: var(--color-bg-offwhite);
+  width: 100%;
+}
+
+.login-visual-panel {
+  flex: 1;
+  background-color: var(--color-primary-dark);
+  color: #FFF;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .login-container {
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  .login-visual-panel {
+    padding: 32px 20px 24px 20px;
+    flex: none;
+    border-bottom: 2px solid var(--orange);
+  }
+
+  .login-visual-panel h1 {
+    font-size: 22px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .login-visual-panel p {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
+
+  .login-form-panel {
+    padding: 32px 20px;
+    flex: 1;
+    align-items: flex-start;
+  }
+}

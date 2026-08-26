@@ -38,40 +38,40 @@ export const LoginView: React.FC<LoginViewProps> = ({ whiteLabel, onLoginSuccess
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', backgroundColor: 'var(--color-bg-offwhite)' }}>
+    <div className="login-container">
       
       {/* Left Visual Panel */}
-      <div style={{ flex: 1, backgroundColor: whiteLabel.primaryColor, color: '#FFF', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '60px', position: 'relative', overflow: 'hidden' }}>
+      <div className="login-visual-panel" style={{ backgroundColor: whiteLabel.primaryColor }}>
         <div style={{ position: 'relative', zIndex: 2 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
             {whiteLabel.companyLogoUrl ? (
-              <img src={whiteLabel.companyLogoUrl} alt="Logo" style={{ height: '48px', objectFit: 'contain' }} />
+              <img src={whiteLabel.companyLogoUrl} alt="Logo" style={{ height: '44px', objectFit: 'contain' }} />
             ) : (
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: whiteLabel.actionColor, color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: whiteLabel.actionColor, color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px' }}>
                 {whiteLabel.brandBadgeText}
               </div>
             )}
             <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#FFF', letterSpacing: '-0.3px' }}>{whiteLabel.companyName.toUpperCase()}</h2>
+              <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#FFF', letterSpacing: '-0.3px', margin: 0 }}>{whiteLabel.companyName.toUpperCase()}</h2>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', letterSpacing: '1px', fontWeight: 700 }}>SITE CLEAN SYSTEM v2.0</div>
             </div>
           </div>
 
-          <h1 style={{ fontSize: '36px', fontWeight: 900, lineHeight: 1.2, marginBottom: '20px', letterSpacing: '-1px' }}>
+          <h1 style={{ fontWeight: 900, lineHeight: 1.2, marginBottom: '16px', letterSpacing: '-1px' }}>
             Plataforma de Control Operacional & Certificación Minera
           </h1>
-          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.8)', maxWidth: '480px', lineHeight: 1.6 }}>
+          <p style={{ color: 'rgba(255,255,255,0.85)', maxWidth: '480px', lineHeight: 1.5 }}>
             Gestión agnóstica multi-tenant de aseo industrial, control de adherencia de HH, flujo de firmas ITO Mandante y trazabilidad inmutable.
           </p>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 2, fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+        <div style={{ position: 'relative', zIndex: 2, fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '20px' }}>
           © 2026 {whiteLabel.companyName}. Todos los derechos reservados.
         </div>
       </div>
 
       {/* Right Login Form */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+      <div className="login-form-panel">
         <div style={{ width: '100%', maxWidth: '440px' }}>
           
           <div style={{ marginBottom: '32px' }}>
