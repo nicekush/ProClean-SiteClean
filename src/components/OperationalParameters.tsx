@@ -1,0 +1,918 @@
+import React, { useState } from 'react';
+import type { PlantArea, Sector, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig } from '../types';
+import { 
+  Plus, 
+  Trash2, 
+  MapPin, 
+  Truck, 
+  Users, 
+  CheckCircle, 
+  AlertTriangle,
+  XCircle,
+  Search,
+  Edit,
+  X,
+  Save,
+  Layers,
+  Grid
+} from 'lucide-react';
+
+interface OperationalParametersProps {
+  plantAreas: PlantArea[];
+  setPlantAreas: React.Dispatch<React.SetStateAction<PlantArea[]>>;
+  sectors: Sector[];
+  setSectors: React.Dispatch<React.SetStateAction<Sector[]>>;
+  subSectors: SubSector[];
+  setSubSectors: React.Dispatch<React.SetStateAction<SubSector[]>>;
+  machines: Machine[];
+  setMachines: React.Dispatch<React.SetStateAction<Machine[]>>;
+  workers: Worker[];
+  setWorkers: React.Dispatch<React.SetStateAction<Worker[]>>;
+  shifts: ShiftType[];
+  whiteLabel?: WhiteLabelConfig;
+  setWhiteLabel?: (updater: (prev: WhiteLabelConfig) => WhiteLabelConfig) => void;
+}
+
+export const OperationalParameters: React.FC<OperationalParametersProps> = ({
+  plantAreas,
+  setPlantAreas,
+  sectors,
+  setSectors,
+  subSectors,
+  setSubSectors,
+  machines,
+  setMachines,
+  workers,
+  setWorkers,
+  whiteLabel,
+  setWhiteLabel
+}) => {
+  const [activeTab, setActiveTab] = useState<'areas' | 'sectors' | 'subsectors' | 'machines' | 'workers' | 'manual_matrix'>('areas');
+
+  // Search Filters
+  const [searchMachine, setSearchMachine] = useState('');
+  const [searchWorker, setSearchWorker] = useState('');
+
+  // Editing States
+  const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
+  const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
+
+  // New Items Forms
+  const [newArea, setNewArea] = useState({ name: '', code: '' });
+  const [newSector, setNewSector] = useState({ areaId: '', name: '', code: '', description: '' });
+  const [newSubSector, setNewSubSector] = useState({ sectorId: '', name: '', code: '' });
+  const [newMachine, setNewMachine] = useState<{ name: string; patent: string; type: string; capacity: string; capacityM3?: number }>({ name: '', patent: '', type: '', capacity: '', capacityM3: undefined });
+  const [newWorker, setNewWorker] = useState({ name: '', rut: '', role: 'OPERADOR_HIDRO' });
+
+  // Plant Areas CRUD
+  const handleAddArea = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newArea.name) return;
+    setPlantAreas([
+      ...plantAreas,
+      {
+        id: `pa-${Date.now()}`,
+        name: newArea.name,
+        code: newArea.code || `AREA-${plantAreas.length + 1}`
+      }
+    ]);
+    setNewArea({ name: '', code: '' });
+  };
+
+  const handleDeleteArea = (id: string) => {
+    if (confirm('¿Deseas eliminar esta área de planta? Se eliminará la categoría para los sectores vinculados.')) {
+      setPlantAreas(plantAreas.filter(a => a.id !== id));
+    }
+  };
+
+  // Sectors CRUD
+  const handleAddSector = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSector.name || !newSector.areaId) return;
+    const linkedArea = plantAreas.find(a => a.id === newSector.areaId);
+
+    setSectors([
+      ...sectors,
+      {
+        id: `sec-${Date.now()}`,
+        areaId: newSector.areaId,
+        areaName: linkedArea ? linkedArea.name : 'General',
+        name: newSector.name,
+        code: newSector.code || `SEC-${sectors.length + 1}`,
+        description: newSector.description
+      }
+    ]);
+    setNewSector({ areaId: '', name: '', code: '', description: '' });
+  };
+
+  const handleDeleteSector = (id: string) => {
+    if (confirm('¿Deseas eliminar este sector operativo?')) {
+      setSectors(sectors.filter(s => s.id !== id));
+    }
+  };
+
+  // Sub-Sectors CRUD
+  const handleAddSubSector = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubSector.name || !newSubSector.sectorId) return;
+    const linkedSector = sectors.find(s => s.id === newSubSector.sectorId);
+
+    setSubSectors([
+      ...subSectors,
+      {
+        id: `sub-${Date.now()}`,
+        sectorId: newSubSector.sectorId,
+        sectorName: linkedSector ? linkedSector.name : 'Sector',
+        name: newSubSector.name,
+        code: newSubSector.code || `SUB-${subSectors.length + 1}`
+      }
+    ]);
+    setNewSubSector({ sectorId: '', name: '', code: '' });
+  };
+
+  const handleDeleteSubSector = (id: string) => {
+    if (confirm('¿Deseas eliminar este sub-sector / equipo?')) {
+      setSubSectors(subSectors.filter(s => s.id !== id));
+    }
+  };
+
+  // Machines CRUD
+  const handleAddMachine = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMachine.name || !newMachine.patent) return;
+    const capValue = newMachine.capacityM3 !== undefined && !isNaN(newMachine.capacityM3) ? Number(newMachine.capacityM3) : 0;
+    setMachines([
+      ...machines,
+      {
+        id: Date.now().toString(),
+        name: newMachine.name,
+        patent: newMachine.patent,
+        type: newMachine.type || 'Equipos',
+        capacity: capValue > 0 ? `${capValue} m³` : 'N/A',
+        capacityM3: capValue,
+        status: 'DISPONIBLE'
+      }
+    ]);
+    setNewMachine({ name: '', patent: '', type: '', capacity: '', capacityM3: undefined });
+  };
+
+  const toggleMachineStatus = (id: string) => {
+    setMachines(machines.map(m => {
+      if (m.id === id) {
+        const nextStatus: Machine['status'] = 
+          m.status === 'DISPONIBLE' ? 'MANTENCION' :
+          m.status === 'MANTENCION' ? 'FUERA_SERVICIO' : 'DISPONIBLE';
+        return { ...m, status: nextStatus };
+      }
+      return m;
+    }));
+  };
+
+  const handleUpdateMachineSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMachine) return;
+    const capValue = Number(editingMachine.capacityM3) || 0.45;
+    setMachines(machines.map(m => m.id === editingMachine.id ? {
+      ...editingMachine,
+      capacityM3: capValue,
+      capacity: `${capValue} m³`
+    } : m));
+    setEditingMachine(null);
+  };
+
+  const handleDeleteMachine = (id: string) => {
+    if (confirm('¿Deseas eliminar este vehículo de la flota?')) {
+      setMachines(machines.filter(m => m.id !== id));
+    }
+  };
+
+  // Workers CRUD
+  const handleAddWorker = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWorker.name) return;
+    setWorkers([
+      ...workers,
+      {
+        id: Date.now().toString(),
+        name: newWorker.name,
+        rut: newWorker.rut || '15.482.910-K',
+        role: newWorker.role,
+        active: true
+      }
+    ]);
+    setNewWorker({ name: '', rut: '', role: 'OPERADOR_HIDRO' });
+  };
+
+  const handleDeleteWorker = (id: string) => {
+    if (confirm('¿Deseas desvincular a este operario de la nómina?')) {
+      setWorkers(workers.filter(w => w.id !== id));
+    }
+  };
+
+  const filteredMachines = (machines || []).filter(m => 
+    m.name.toLowerCase().includes(searchMachine.toLowerCase()) ||
+    m.patent.toLowerCase().includes(searchMachine.toLowerCase()) ||
+    (m.type && m.type.toLowerCase().includes(searchMachine.toLowerCase()))
+  );
+
+  const filteredWorkers = (workers || []).filter(w => 
+    w.name.toLowerCase().includes(searchWorker.toLowerCase()) ||
+    (w.rut && w.rut.toLowerCase().includes(searchWorker.toLowerCase())) ||
+    w.role.toLowerCase().includes(searchWorker.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ color: 'var(--color-primary-dark)', fontSize: '22px', fontWeight: 800 }}>
+          ⚙️ Parametrización de Jerarquía de Planta, Flota y Nómina
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '2px' }}>
+          Configuración en 3 Niveles: Áreas de Planta ➔ Sectores ➔ Sub-Sectores / Equipos
+        </p>
+      </div>
+
+      {/* Subtabs Navigation Bar */}
+      <div className="scrollable-tabs" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '24px', flexWrap: 'nowrap' }}>
+        <button
+          className={`btn ${activeTab === 'areas' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('areas')}
+          style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+        >
+          <Layers size={16} /> 1. Áreas ({plantAreas.length})
+        </button>
+
+        <button
+          className={`btn ${activeTab === 'sectors' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('sectors')}
+          style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+        >
+          <MapPin size={16} /> 2. Sectores ({sectors.length})
+        </button>
+
+        <button
+          className={`btn ${activeTab === 'subsectors' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('subsectors')}
+          style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+        >
+          <Grid size={16} /> 3. Sub-Sectores ({subSectors.length})
+        </button>
+
+        <button
+          className={`btn ${activeTab === 'machines' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('machines')}
+          style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+        >
+          <Truck size={16} /> Flota Maquinaria ({machines.length})
+        </button>
+
+        <button
+          className={`btn ${activeTab === 'workers' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('workers')}
+          style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+        >
+          <Users size={16} /> Nómina Personal ({workers.length})
+        </button>
+
+        <button
+          className={`btn ${activeTab === 'manual_matrix' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('manual_matrix')}
+          style={{ 
+            flexShrink: 0, 
+            whiteSpace: 'nowrap',
+            backgroundColor: activeTab === 'manual_matrix' ? 'var(--orange)' : 'transparent', 
+            color: activeTab === 'manual_matrix' ? '#FFF' : 'var(--slate-600)',
+            fontWeight: 900
+          }}
+        >
+          🧹 Rendimiento Manual
+        </button>
+      </div>
+
+      {/* TAB 1: PLANT AREAS */}
+      {activeTab === 'areas' && (
+        <div className="card">
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '16px' }}>
+            Nivel 1: Configuración de Áreas Principales de la Planta Minera
+          </h3>
+
+          <form onSubmit={handleAddArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            <input
+              type="text"
+              placeholder="Nombre del Área (Ej: Chancador Terciario)"
+              value={newArea.name}
+              onChange={e => setNewArea({ ...newArea, name: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Código Abreviado (Ej: CH-TERC)"
+              value={newArea.code}
+              onChange={e => setNewArea({ ...newArea, code: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+            />
+            <button type="submit" className="btn btn-primary">
+              <Plus size={16} /> Crear Área de Planta
+            </button>
+          </form>
+
+          <div className="grid-table-container">
+            <table className="operational-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Área de Planta</th>
+                  <th>Sectores Asociados</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {plantAreas.map(area => {
+                  const areaSectors = sectors.filter(s => s.areaId === area.id);
+                  return (
+                    <tr key={area.id}>
+                      <td><span style={{ fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#F1F5F9', padding: '4px 8px', borderRadius: '4px' }}>{area.code}</span></td>
+                      <td style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-primary-dark)' }}>{area.name}</td>
+                      <td>
+                        <span className="pill pill-complete">
+                          {areaSectors.length} sector(es) vinculado(s)
+                        </span>
+                      </td>
+                      <td>
+                        <button onClick={() => handleDeleteArea(area.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                          <Trash2 size={14} /> Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: SECTORS */}
+      {activeTab === 'sectors' && (
+        <div className="card">
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '16px' }}>
+            Nivel 2: Configuración de Sectores Vincualdos a un Área
+          </h3>
+
+          <form onSubmit={handleAddSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            <select
+              value={newSector.areaId}
+              onChange={e => setNewSector({ ...newSector, areaId: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9', fontWeight: 700 }}
+              required
+            >
+              <option value="">Selecciona Área de Planta Perteneciente...</option>
+              {plantAreas.map(a => (
+                <option key={a.id} value={a.id}>{a.name} ({a.code})</option>
+              ))}
+            </select>
+
+            <input
+              type="text"
+              placeholder="Nombre del Sector (Ej: Edificio de Harneros)"
+              value={newSector.name}
+              onChange={e => setNewSector({ ...newSector, name: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+              required
+            />
+
+            <input
+              type="text"
+              placeholder="Código Sector (Ej: SEC-HAR)"
+              value={newSector.code}
+              onChange={e => setNewSector({ ...newSector, code: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+            />
+
+            <button type="submit" className="btn btn-primary">
+              <Plus size={16} /> Crear Sector
+            </button>
+          </form>
+
+          <div className="grid-table-container">
+            <table className="operational-table">
+              <thead>
+                <tr>
+                  <th>Área Perteneciente</th>
+                  <th>Código</th>
+                  <th>Nombre del Sector</th>
+                  <th>Sub-Sectores Vincualdos</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sectors.map(sector => {
+                  const linkedArea = plantAreas.find(a => a.id === sector.areaId);
+                  const sectorSubSectors = subSectors.filter(sub => sub.sectorId === sector.id);
+                  return (
+                    <tr key={sector.id}>
+                      <td>
+                        <span className="pill pill-complete" style={{ backgroundColor: '#E0F2FE', color: '#0369A1', border: '1px solid #7DD3FC' }}>
+                          {linkedArea ? linkedArea.name : sector.areaName || 'General'}
+                        </span>
+                      </td>
+                      <td><span style={{ fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#F1F5F9', padding: '4px 8px', borderRadius: '4px' }}>{sector.code}</span></td>
+                      <td style={{ fontWeight: 800, color: 'var(--color-primary-dark)' }}>{sector.name}</td>
+                      <td>
+                        <span className="pill pill-complete">
+                          {sectorSubSectors.length} sub-sector(es)
+                        </span>
+                      </td>
+                      <td>
+                        <button onClick={() => handleDeleteSector(sector.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                          <Trash2 size={14} /> Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: SUB-SECTORS / EQUIPOS */}
+      {activeTab === 'subsectors' && (
+        <div className="card">
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '16px' }}>
+            Nivel 3: Sub-Sectores / Equipos Vincualdos a un Sector
+          </h3>
+
+          <form onSubmit={handleAddSubSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            <select
+              value={newSubSector.sectorId}
+              onChange={e => setNewSubSector({ ...newSubSector, sectorId: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9', fontWeight: 700 }}
+              required
+            >
+              <option value="">Selecciona Sector Perteneciente...</option>
+              {sectors.map(s => (
+                <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+              ))}
+            </select>
+
+            <input
+              type="text"
+              placeholder="Nombre Sub-Sector / Equipo (Ej: Correa 002-CV-001)"
+              value={newSubSector.name}
+              onChange={e => setNewSubSector({ ...newSubSector, name: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+              required
+            />
+
+            <input
+              type="text"
+              placeholder="Código SAP / Identificador (Ej: CV-001)"
+              value={newSubSector.code}
+              onChange={e => setNewSubSector({ ...newSubSector, code: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+            />
+
+            <button type="submit" className="btn btn-primary">
+              <Plus size={16} /> Crear Sub-Sector
+            </button>
+          </form>
+
+          <div className="grid-table-container">
+            <table className="operational-table">
+              <thead>
+                <tr>
+                  <th>Sector Perteneciente</th>
+                  <th>Código</th>
+                  <th>Sub-Sector / Equipo</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subSectors.map(sub => {
+                  const linkedSector = sectors.find(s => s.id === sub.sectorId);
+                  return (
+                    <tr key={sub.id}>
+                      <td>
+                        <span className="pill pill-complete">
+                          {linkedSector ? linkedSector.name : sub.sectorName || 'Sector'}
+                        </span>
+                      </td>
+                      <td><span style={{ fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#F1F5F9', padding: '4px 8px', borderRadius: '4px' }}>{sub.code}</span></td>
+                      <td style={{ fontWeight: 800, color: 'var(--color-forest-teal)' }}>{sub.name}</td>
+                      <td>
+                        <button onClick={() => handleDeleteSubSector(sub.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                          <Trash2 size={14} /> Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: MACHINES */}
+      {activeTab === 'machines' && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
+              Flota de Maquinaria y Equipos de Aseo Industrial
+            </h3>
+
+            {/* Quick Search */}
+            <div style={{ position: 'relative', width: '260px' }}>
+              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                placeholder="Buscar patente, nombre..."
+                value={searchMachine}
+                onChange={e => setSearchMachine(e.target.value)}
+                style={{ width: '100%', padding: '6px 10px 6px 30px', borderRadius: '6px', border: '1px solid #D2D2D9', fontSize: '12px' }}
+              />
+            </div>
+          </div>
+
+          {/* Edit Machine Modal */}
+          {editingMachine && (
+            <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '2px solid var(--color-action-teal)', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-action-teal)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Edit size={16} /> Editar Datos del Vehículo
+                </h4>
+                <button onClick={() => setEditingMachine(null)} className="btn btn-secondary" style={{ padding: '2px 6px' }}><X size={14} /></button>
+              </div>
+
+              <form onSubmit={handleUpdateMachineSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '2px' }}>Nombre / Modelo</label>
+                  <input
+                    type="text"
+                    value={editingMachine.name}
+                    onChange={e => setEditingMachine({ ...editingMachine, name: e.target.value })}
+                    style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '2px' }}>Patente / Matrícula</label>
+                  <input
+                    type="text"
+                    value={editingMachine.patent}
+                    onChange={e => setEditingMachine({ ...editingMachine, patent: e.target.value })}
+                    style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '2px' }}>Tipo de Equipo</label>
+                  <input
+                    type="text"
+                    value={editingMachine.type || 'Hidrolavadora'}
+                    onChange={e => setEditingMachine({ ...editingMachine, type: e.target.value })}
+                    style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '2px' }}>Capacidad Balde/Tanque ($m^3$)</label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    value={editingMachine.capacityM3 || 0}
+                    onChange={e => setEditingMachine({ ...editingMachine, capacityM3: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #D2D2D9', fontWeight: 800 }}
+                  />
+                </div>
+
+                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setEditingMachine(null)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary"><Save size={14} /> Actualizar Vehículo</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* New Machine Form */}
+          <form onSubmit={handleAddMachine} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            <input
+              type="text"
+              placeholder="Nombre del Vehículo (Ej: Mini Cargador Bobcat S650)"
+              value={newMachine.name}
+              onChange={e => setNewMachine({ ...newMachine, name: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Patente (Ej: BC-88-12)"
+              value={newMachine.patent}
+              onChange={e => setNewMachine({ ...newMachine, patent: e.target.value.toUpperCase() })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+              required
+            />
+            <input
+              type="number"
+              step="0.05"
+              min="0"
+              placeholder="Capacidad m³ por Vuelta (Ej: 7.5)"
+              value={newMachine.capacityM3 ?? ''}
+              onChange={e => setNewMachine({ ...newMachine, capacityM3: e.target.value === '' ? undefined : Number(e.target.value) })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9', fontWeight: 800 }}
+            />
+            <button type="submit" className="btn btn-primary">
+              <Plus size={16} /> Registrar Vehículo
+            </button>
+          </form>
+
+          <div className="grid-table-container">
+            <table className="operational-table">
+              <thead>
+                <tr>
+                  <th>Vehículo / Equipo</th>
+                  <th>Patente</th>
+                  <th>Capacidad m³ por Vuelta</th>
+                  <th>Estado Operativo</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMachines.map(m => (
+                  <tr key={m.id}>
+                    <td style={{ fontWeight: 800, color: 'var(--color-primary-dark)' }}>{m.name}</td>
+                    <td><span className="sap-code-badge">{m.patent}</span></td>
+                    <td style={{ fontWeight: 900, color: 'var(--orange)' }}>
+                      {m.capacityM3 ? `${m.capacityM3} m³ / vuelta` : '-'}
+                    </td>
+                    <td>
+                      <button 
+                        onClick={() => toggleMachineStatus(m.id)}
+                        className="btn"
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: '11px',
+                          backgroundColor: m.status === 'DISPONIBLE' ? '#ECFDF5' : m.status === 'MANTENCION' ? '#FEF3C7' : '#FEF2F2',
+                          color: m.status === 'DISPONIBLE' ? '#047857' : m.status === 'MANTENCION' ? '#92400E' : '#991B1B',
+                          border: `1px solid ${m.status === 'DISPONIBLE' ? '#6EE7B7' : m.status === 'MANTENCION' ? '#FCD34D' : '#FCA5A5'}`
+                        }}
+                      >
+                        {m.status === 'DISPONIBLE' ? <CheckCircle size={12} /> : m.status === 'MANTENCION' ? <AlertTriangle size={12} /> : <XCircle size={12} />}
+                        {m.status === 'MANTENCION' ? 'EN MANTENCIÓN' : m.status === 'FUERA_SERVICIO' ? 'FUERA DE SERVICIO' : m.status} (Cambiar)
+                      </button>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={() => setEditingMachine(m)} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }}>
+                          <Edit size={14} /> Editar
+                        </button>
+                        <button onClick={() => handleDeleteMachine(m.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                          <Trash2 size={14} /> Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* EXPLANATORY SYNCHRONIZATION BANNER */}
+          <div style={{ marginTop: '20px', backgroundColor: '#F0F9FF', borderRadius: '12px', border: '1px solid #7DD3FC', padding: '14px', fontSize: '12px', color: '#0369A1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            💡 <strong>Sincronización en OT:</strong> Cada vehículo registrado tiene su propia capacidad por vuelta (m³). Al seleccionar cualquiera de estos vehículos en la creación o edición de una OT e ingresar las vueltas reales ejecutadas en terreno, el sistema calculará automáticamente el volumen removido multiplicando <strong>(Vueltas reales × m³ por Vuelta del Vehículo)</strong>.
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: WORKERS */}
+      {activeTab === 'workers' && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
+              Nómina de Personal y Operadores de Cuadrilla
+            </h3>
+
+            {/* Quick Search */}
+            <div style={{ position: 'relative', width: '260px' }}>
+              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                placeholder="Buscar operario por RUT o Nombre..."
+                value={searchWorker}
+                onChange={e => setSearchWorker(e.target.value)}
+                style={{ width: '100%', padding: '6px 10px 6px 30px', borderRadius: '6px', border: '1px solid #D2D2D9', fontSize: '12px' }}
+              />
+            </div>
+          </div>
+
+          <form onSubmit={handleAddWorker} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            <input
+              type="text"
+              placeholder="Nombre Completo (Ej: Manuel Torres)"
+              value={newWorker.name}
+              onChange={e => setNewWorker({ ...newWorker, name: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+              required
+            />
+            <input
+              type="text"
+              placeholder="RUT / DNI (Ej: 15.482.910-K)"
+              value={newWorker.rut}
+              onChange={e => setNewWorker({ ...newWorker, rut: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+            />
+            <select
+              value={newWorker.role}
+              onChange={e => setNewWorker({ ...newWorker, role: e.target.value })}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
+            >
+              <option value="OPERADOR_HIDRO">Operador Hidrolavadora</option>
+              <option value="CONDUCTOR_ALJIBE">Conductor Camión Aljibe</option>
+              <option value="SUPERVISOR_LINEA">Supervisor de Línea</option>
+            </select>
+            <button type="submit" className="btn btn-primary">
+              <Plus size={16} /> Agregar a Nómina
+            </button>
+          </form>
+
+          <div className="grid-table-container">
+            <table className="operational-table">
+              <thead>
+                <tr>
+                  <th>Nombre Operario</th>
+                  <th>RUT / DNI</th>
+                  <th>Cargo / Especialidad</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredWorkers.map(w => (
+                  <tr key={w.id}>
+                    <td style={{ fontWeight: 800, color: 'var(--color-primary-dark)' }}>{w.name}</td>
+                    <td style={{ fontFamily: 'monospace' }}>{w.rut || '15.482.910-K'}</td>
+                    <td><span className="pill pill-complete">{w.role}</span></td>
+                    <td><span className="pill pill-complete">ACTIVO</span></td>
+                    <td>
+                      <button onClick={() => handleDeleteWorker(w.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                        <Trash2 size={14} /> Desvincular
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: MANUAL LABOR & WHEELBARROW MATRIX CONFIG */}
+      {activeTab === 'manual_matrix' && (
+        <div className="card" style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            🧹 Matriz de Rendimiento Aseo Manual & Carretillas
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--slate-600)', marginBottom: '20px' }}>
+            Parametriza la matriz física para calcular automáticamente los metros cúbicos (m³) removidos por persona/hora en terreno según la capacidad de carretillas.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>
+                🛒 Carretillas x Día (por Persona)
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={whiteLabel?.manualLaborConfig?.wheelbarrowsPerDay ?? 60}
+                onChange={e => {
+                  const val = Number(e.target.value);
+                  if (setWhiteLabel) {
+                    setWhiteLabel(prev => ({
+                      ...prev,
+                      manualLaborConfig: {
+                        wheelbarrowsPerDay: val,
+                        effectiveHoursPerDay: prev.manualLaborConfig?.effectiveHoursPerDay ?? 6,
+                        wheelbarrowCapacityM3: prev.manualLaborConfig?.wheelbarrowCapacityM3 ?? 0.08
+                      }
+                    }));
+                  }
+                }}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--slate-300)', fontWeight: 800 }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>
+                ⏱️ Horas Efectivas de Turno
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={whiteLabel?.manualLaborConfig?.effectiveHoursPerDay ?? 6}
+                onChange={e => {
+                  const val = Number(e.target.value);
+                  if (setWhiteLabel) {
+                    setWhiteLabel(prev => ({
+                      ...prev,
+                      manualLaborConfig: {
+                        wheelbarrowsPerDay: prev.manualLaborConfig?.wheelbarrowsPerDay ?? 60,
+                        effectiveHoursPerDay: val,
+                        wheelbarrowCapacityM3: prev.manualLaborConfig?.wheelbarrowCapacityM3 ?? 0.08
+                      }
+                    }));
+                  }
+                }}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--slate-300)', fontWeight: 800 }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>
+                📦 m³ x Carretilla (Capacidad)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={whiteLabel?.manualLaborConfig?.wheelbarrowCapacityM3 ?? 0.08}
+                onChange={e => {
+                  const val = Number(e.target.value);
+                  if (setWhiteLabel) {
+                    setWhiteLabel(prev => ({
+                      ...prev,
+                      manualLaborConfig: {
+                        wheelbarrowsPerDay: prev.manualLaborConfig?.wheelbarrowsPerDay ?? 60,
+                        effectiveHoursPerDay: prev.manualLaborConfig?.effectiveHoursPerDay ?? 6,
+                        wheelbarrowCapacityM3: val
+                      }
+                    }));
+                  }
+                }}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--slate-300)', fontWeight: 800 }}
+              />
+            </div>
+
+          </div>
+
+          {/* LIVE COMPUTED SUMMARY TABLE (EXACT MATCH FOR USER SPECS) */}
+          {(() => {
+            const wPerDay = whiteLabel?.manualLaborConfig?.wheelbarrowsPerDay ?? 60;
+            const hEff = whiteLabel?.manualLaborConfig?.effectiveHoursPerDay ?? 6;
+            const capM3 = whiteLabel?.manualLaborConfig?.wheelbarrowCapacityM3 ?? 0.08;
+            const wPerHour = hEff > 0 ? wPerDay / hEff : 10;
+            const m3PerHour = wPerHour * capM3;
+
+            return (
+              <div style={{ backgroundColor: '#F8FAFC', borderRadius: '16px', border: '2px solid var(--orange)', padding: '20px', overflow: 'hidden' }}>
+                <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '12px' }}>
+                  📊 Matriz Operativa de Rendimiento Calculado (Empírico)
+                </span>
+
+                <div style={{ overflowX: 'auto', width: '100%', borderRadius: '12px' }}>
+                  <table className="operational-table" style={{ width: '100%', backgroundColor: '#FFFFFF', minWidth: '600px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: 'var(--slate-900)', color: '#FFFFFF' }}>
+                        <th style={{ padding: '12px' }}>Modalidad</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Carretillas x Día</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Horas Efectivas</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>m³ x Carretilla</th>
+                        <th style={{ padding: '12px', textAlign: 'center', color: '#FDBA74' }}>⚡ Carretillas por Hora</th>
+                        <th style={{ padding: '12px', textAlign: 'center', color: '#FDBA74' }}>📦 m³ x Hora (por Persona)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style={{ fontWeight: 900, color: 'var(--slate-900)', padding: '14px' }}>👷 Manuales</td>
+                        <td style={{ textAlign: 'center', fontWeight: 800 }}>{wPerDay}</td>
+                        <td style={{ textAlign: 'center', fontWeight: 800 }}>{hEff} hrs</td>
+                        <td style={{ textAlign: 'center', fontWeight: 800 }}>{capM3} m³</td>
+                        <td style={{ textAlign: 'center', fontWeight: 900, color: 'var(--orange)', fontSize: '15px' }}>
+                          {wPerHour.toFixed(1)} carr/h
+                        </td>
+                        <td style={{ textAlign: 'center', fontWeight: 900, color: 'var(--orange)', fontSize: '16px' }}>
+                          {m3PerHour.toFixed(2)} m³/h
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ marginTop: '14px', fontSize: '12px', color: 'var(--slate-600)', fontStyle: 'italic' }}>
+                  💡 <strong>Ejemplo en OT:</strong> Una cuadrilla de 2 personas trabajando 6 horas efectivas (12 HH) generará automáticamente <strong>{(12 * wPerHour).toFixed(0)} carretillas ({(12 * m3PerHour).toFixed(1)} m³)</strong>.
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+    </div>
+  );
+};

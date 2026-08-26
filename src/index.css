@@ -1,0 +1,526 @@
+/* ProCleanMG Elite ERP Global Design System */
+:root {
+  --orange: #FF7A00;
+  --emerald: #10b981;
+  --rose: #f43f5e;
+  --sky: #0ea5e9;
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-400: #94a3b8;
+  --slate-600: #475569;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+
+  --color-primary-dark: #0f172a;
+  --color-action-teal: #FF7A00;
+  --color-forest-teal: #0ea5e9;
+  --color-bg-offwhite: #f8fafc;
+  --color-card-white: #ffffff;
+  --color-border-light: #e2e8f0;
+  
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  
+  --status-pending-bg: #fff7ed;
+  --status-pending-text: #c2410c;
+  --status-complete-bg: #ecfdf5;
+  --status-complete-text: #047857;
+  --status-contingency-bg: #fef2f2;
+  --status-contingency-text: #b91c1c;
+
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+
+  --sidebar-width: 280px;
+  --header-height: 76px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  background-color: var(--slate-50);
+  color: var(--slate-900);
+  line-height: 1.5;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Headings ProClean Elite Rules */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 900 !important;
+  letter-spacing: -0.03em !important;
+  color: var(--slate-900);
+}
+
+/* App Container Layout */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+  width: 100%;
+  background-color: var(--slate-50);
+}
+
+/* Desktop Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: #ffffff;
+  color: var(--slate-900);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 100;
+  border-right: 1px solid var(--slate-200);
+  transition: transform 0.3s ease, width 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--slate-100);
+}
+
+.sidebar-logo-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 18px;
+  color: #ffffff;
+  background-color: var(--orange);
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.sidebar-logo-text {
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--slate-900);
+}
+
+.sidebar-logo-sub {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--orange);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sidebar-menu {
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  color: var(--slate-600);
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.2s ease;
+  min-height: 46px;
+}
+
+.nav-item:hover {
+  background-color: var(--slate-100);
+  color: var(--orange);
+}
+
+.nav-item.active {
+  background-color: #fff7ed;
+  color: var(--orange);
+  font-weight: 900;
+  border-right: 4px solid var(--orange);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Main Content Area */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--slate-50);
+}
+
+/* Top Header */
+.top-header {
+  height: var(--header-height);
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--slate-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(16px, 3vw, 36px);
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  box-shadow: var(--shadow-sm);
+  gap: 12px;
+}
+
+.header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.header-title-group h1 {
+  font-size: clamp(15px, 1.8vw, 19px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--slate-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Body Content */
+.content-body {
+  padding: clamp(16px, 2.5vw, 36px);
+  flex: 1;
+  min-width: 0;
+}
+
+/* Card Component ProClean 3XL Rounded */
+.card {
+  background-color: #ffffff;
+  border-radius: 24px;
+  border: 1px solid var(--slate-200);
+  padding: clamp(16px, 2.5vw, 32px);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+}
+
+/* Master Data-Grid ProClean */
+.grid-table-container {
+  overflow-x: auto;
+  width: 100%;
+  border-radius: 20px;
+  border: 1px solid var(--slate-200);
+  background-color: #ffffff;
+  box-shadow: var(--shadow-md);
+}
+
+.operational-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.operational-table th {
+  background-color: #ffffff;
+  color: var(--slate-400);
+  padding: 14px 16px;
+  font-weight: 900;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.operational-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--slate-100);
+  vertical-align: middle;
+}
+
+.operational-table tbody tr:hover {
+  background-color: var(--slate-50);
+}
+
+.sap-code-badge {
+  display: inline-block;
+  white-space: nowrap;
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--slate-900);
+  background-color: var(--slate-100);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--slate-200);
+}
+
+/* Status Pills / Badges ProClean Semantic */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.pill-pending {
+  background-color: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+}
+
+.pill-complete {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.pill-contingency {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* User Avatar ProClean Orange */
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: var(--orange);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 13px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(255, 122, 0, 0.2);
+}
+
+/* Buttons ProClean Elite ERP */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 42px;
+}
+
+.btn-primary {
+  background-color: var(--orange);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(255, 122, 0, 0.25);
+}
+
+.btn-primary:hover {
+  background-color: #e66e00;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: #ffffff;
+  color: var(--slate-600);
+  border: 1px solid var(--slate-200);
+}
+
+.btn-secondary:hover {
+  background-color: var(--slate-50);
+  color: var(--slate-900);
+}
+
+/* Mobile Responsive Drawer Overlay & Hamburger */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 95;
+}
+
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--slate-900);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* Touch Scrollable Subtabs */
+.scrollable-tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 2px solid var(--slate-200);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scrollable-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.scrollable-tabs::-webkit-scrollbar-thumb {
+  background-color: var(--slate-200);
+  border-radius: 4px;
+}
+
+/* Responsive Table vs Mobile Cards Switcher */
+.desktop-only-table {
+  display: block;
+}
+
+.mobile-only-cards {
+  display: none;
+}
+
+.mobile-drawer-status-block {
+  display: none;
+}
+
+/* RESPONSIVE BREAKPOINTS */
+@media (max-width: 1024px) {
+  .mobile-drawer-status-block {
+    display: flex !important;
+  }
+
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .mobile-overlay.open {
+    display: block;
+  }
+
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --header-height: 64px;
+  }
+
+  .top-header {
+    padding: 0 14px;
+  }
+
+  .content-body {
+    padding: 14px 10px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .desktop-only-table {
+    display: none;
+  }
+
+  .mobile-only-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobile-ot-card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    border: 1px solid var(--slate-200);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobile-ot-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--slate-100);
+    padding-bottom: 10px;
+  }
+
+  .mobile-ot-card-body {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .mobile-ot-card-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px;
+    background-color: var(--slate-50);
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .mobile-ot-card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+    padding-top: 10px;
+    border-top: 1px solid var(--slate-100);
+  }
+}
