@@ -41,6 +41,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   onClearTargetEditOrder
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [quickFilterStatus, setQuickFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
+  const [quickFilterTime, setQuickFilterTime] = useState<'ALL' | 'SHIFT_7X7' | 'TODAY'>('ALL');
   const [filterShiftId, setFilterShiftId] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterAreaId, setFilterAreaId] = useState<string>('ALL');
@@ -415,7 +417,56 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     }
   };
 
+  // Helper to calculate active Wednesday-to-Tuesday 7x7 shift date range
+  const getActive7x7ShiftRange = (dateStr?: string) => {
+    const today = dateStr ? new Date(dateStr) : new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
+    
+    // Calculate days back to most recent Wednesday (3)
+    let daysToWed = (dayOfWeek - 3 + 7) % 7;
+    const startWed = new Date(today);
+    startWed.setDate(today.getDate() - daysToWed);
+    startWed.setHours(0, 0, 0, 0);
+
+    const endTue = new Date(startWed);
+    endTue.setDate(startWed.getDate() + 6);
+    endTue.setHours(23, 59, 59, 999);
+
+    const startStr = startWed.toISOString().split('T')[0];
+    const endStr = endTue.toISOString().split('T')[0];
+
+    const formatShort = (d: Date) => {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      return `${dd}/${mm}`;
+    };
+
+    return {
+      startStr,
+      endStr,
+      label: `Mié ${formatShort(startWed)} - Mar ${formatShort(endTue)}`
+    };
+  };
+
+  const active7x7Range = getActive7x7ShiftRange();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const totalCount = workOrders.length;
+  const pendingCount = workOrders.filter(o => o.status === 'PENDIENTE_APROBACION_ITO').length;
+  const approvedCount = workOrders.filter(o => o.status === 'APROBADO_MANDANTE' || o.status === 'COMPLETADO').length;
+
   const filteredOrders = workOrders.filter(order => {
+    // Quick Filter Status (A prueba de niños)
+    if (quickFilterStatus === 'PENDING' && order.status !== 'PENDIENTE_APROBACION_ITO') return false;
+    if (quickFilterStatus === 'APPROVED' && order.status !== 'APROBADO_MANDANTE' && order.status !== 'COMPLETADO') return false;
+
+    // Quick Filter Time & Shift 7x7 (A prueba de niños)
+    if (quickFilterTime === 'TODAY' && order.executionDate !== todayStr) return false;
+    if (quickFilterTime === 'SHIFT_7X7') {
+      const orderDateStr = order.executionDate || '';
+      if (orderDateStr < active7x7Range.startStr || orderDateStr > active7x7Range.endStr) return false;
+    }
+
     const matchesSearch = 
       order.sapCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.equipoCorrea.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -434,7 +485,6 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     let matchesDate = true;
     if (filterDatePreset !== 'ALL') {
       const orderDateStr = order.executionDate || '';
-      const todayStr = new Date().toISOString().split('T')[0];
 
       if (filterDatePreset === 'TODAY') {
         matchesDate = orderDateStr === todayStr;
@@ -1520,6 +1570,130 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
         </div>
       </div>
     )}
+
+      {/* 1-TOUCH QUICK FILTER BAR ("A PRUEBA DE NIÑOS") */}
+      <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '18px', border: '1px solid var(--slate-200)', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* Row 1: Status Filters */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-500)', textTransform: 'uppercase', marginRight: '4px' }}>Filtro Estado:</span>
+          
+          <button
+            type="button"
+            onClick={() => setQuickFilterStatus('ALL')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: 'pointer',
+              border: quickFilterStatus === 'ALL' ? '2px solid var(--slate-800)' : '1px solid var(--slate-300)',
+              backgroundColor: quickFilterStatus === 'ALL' ? 'var(--slate-800)' : '#FFF',
+              color: quickFilterStatus === 'ALL' ? '#FFF' : 'var(--slate-700)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            📋 Todas las OTs <span style={{ backgroundColor: quickFilterStatus === 'ALL' ? 'rgba(255,255,255,0.2)' : '#E2E8F0', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>{totalCount}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setQuickFilterStatus('PENDING')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: 'pointer',
+              border: quickFilterStatus === 'PENDING' ? '2px solid var(--orange)' : '1px solid #FED7AA',
+              backgroundColor: quickFilterStatus === 'PENDING' ? 'var(--orange)' : '#FFF7ED',
+              color: quickFilterStatus === 'PENDING' ? '#FFF' : 'var(--orange)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            ⏳ Pendientes ITO <span style={{ backgroundColor: quickFilterStatus === 'PENDING' ? 'rgba(255,255,255,0.25)' : '#FDBA74', color: quickFilterStatus === 'PENDING' ? '#FFF' : '#9A3412', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>{pendingCount}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setQuickFilterStatus('APPROVED')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: 'pointer',
+              border: quickFilterStatus === 'APPROVED' ? '2px solid #047857' : '1px solid #A7F3D0',
+              backgroundColor: quickFilterStatus === 'APPROVED' ? '#047857' : '#ECFDF5',
+              color: quickFilterStatus === 'APPROVED' ? '#FFF' : '#047857',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            ✅ Aprobadas ITO <span style={{ backgroundColor: quickFilterStatus === 'APPROVED' ? 'rgba(255,255,255,0.25)' : '#6EE7B7', color: quickFilterStatus === 'APPROVED' ? '#FFF' : '#064E3B', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>{approvedCount}</span>
+          </button>
+        </div>
+
+        {/* Row 2: Shift & Period Filters */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-500)', textTransform: 'uppercase', marginRight: '4px' }}>Turno & Período:</span>
+
+          <button
+            type="button"
+            onClick={() => setQuickFilterTime('ALL')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '16px',
+              fontWeight: 800,
+              fontSize: '12px',
+              cursor: 'pointer',
+              border: quickFilterTime === 'ALL' ? '2px solid #0284C7' : '1px solid var(--slate-300)',
+              backgroundColor: quickFilterTime === 'ALL' ? '#0284C7' : '#FFF',
+              color: quickFilterTime === 'ALL' ? '#FFF' : 'var(--slate-700)'
+            }}
+          >
+            🌐 Todo el Período
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setQuickFilterTime('SHIFT_7X7')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '16px',
+              fontWeight: 800,
+              fontSize: '12px',
+              cursor: 'pointer',
+              border: quickFilterTime === 'SHIFT_7X7' ? '2px solid #7C3AED' : '1px solid #DDD6FE',
+              backgroundColor: quickFilterTime === 'SHIFT_7X7' ? '#7C3AED' : '#F5F3FF',
+              color: quickFilterTime === 'SHIFT_7X7' ? '#FFF' : '#6D28D9'
+            }}
+          >
+            🗓️ Mi Turno 7x7 ({active7x7Range.label})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setQuickFilterTime('TODAY')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '16px',
+              fontWeight: 800,
+              fontSize: '12px',
+              cursor: 'pointer',
+              border: quickFilterTime === 'TODAY' ? '2px solid #2563EB' : '1px solid #BFDBFE',
+              backgroundColor: quickFilterTime === 'TODAY' ? '#2563EB' : '#EFF6FF',
+              color: quickFilterTime === 'TODAY' ? '#FFF' : '#1D4ED8'
+            }}
+          >
+            ☀️ Mis OTs de Hoy
+          </button>
+        </div>
+      </div>
 
       {/* Search and Collapsible Filter Controls */}
       <div style={{ marginBottom: '20px' }}>

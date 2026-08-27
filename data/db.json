@@ -37,16 +37,16 @@
       "id": "s1",
       "name": "Turno Día",
       "code": "TRN-DIA",
-      "startTime": "08:00",
-      "endTime": "20:00",
+      "startTime": "07:00",
+      "endTime": "19:00",
       "colorHex": "#05A6A6"
     },
     {
       "id": "s2",
       "name": "Turno Noche",
       "code": "TRN-NCH",
-      "startTime": "20:00",
-      "endTime": "08:00",
+      "startTime": "19:00",
+      "endTime": "07:00",
       "colorHex": "#3F3D73"
     }
   ],
