@@ -11,20 +11,19 @@ import {
 } from 'firebase/firestore';
 import type { WorkOrder } from '../types';
 
-// Read Firebase Config from Vite env variables
+// Official Firebase Config for proclean-siteclean Cloud DB
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCyRmnH6xKA41-lVm5jzb56qCsED1gpWsI",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "proclean-siteclean.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "proclean-siteclean",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "proclean-siteclean.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "345091105482",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:345091105482:web:b2e0e82b9e7280608f8a33"
 };
 
 export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey && 
-  firebaseConfig.projectId && 
-  firebaseConfig.projectId !== 'YOUR_PROJECT_ID'
+  firebaseConfig.projectId
 );
 
 const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
