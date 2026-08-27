@@ -181,42 +181,49 @@ export function App() {
 
   const [equipments, setEquipments] = useState<PlantEquipment[]>([]);
 
-  // Load from Local REST DB on mount with Vercel production fallback
+  // Load from Local REST DB on mount with Vercel production fallback & LocalStorage Persistence
   useEffect(() => {
+    const processDbData = (db: any) => {
+      if (db.whiteLabel) setWhiteLabel(db.whiteLabel);
+      if (db.contracts) setContracts(db.contracts);
+      if (db.shifts) setShifts(db.shifts);
+      if (db.contingencies) setContingencies(db.contingencies);
+
+      // Prioritize saved workOrders in localStorage for permanent persistence on Vercel
+      const localOrders = localStorage.getItem('proclean_work_orders');
+      if (localOrders) {
+        try {
+          const parsed = JSON.parse(localOrders);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setWorkOrders(parsed);
+          } else if (db.workOrders) {
+            setWorkOrders(db.workOrders);
+          }
+        } catch {
+          if (db.workOrders) setWorkOrders(db.workOrders);
+        }
+      } else if (db.workOrders) {
+        setWorkOrders(db.workOrders);
+      }
+
+      if (db.plantAreas && db.plantAreas.length > 0) setPlantAreas(db.plantAreas);
+      if (db.sectors && db.sectors.length > 0) setSectors(db.sectors);
+      if (db.equipments && db.equipments.length > 0) setEquipments(db.equipments);
+      if (db.subSectors && db.subSectors.length > 0) setSubSectors(db.subSectors);
+      if (db.machines) setMachines(db.machines);
+      if (db.workers) setWorkers(db.workers);
+      if (db.auditLogs) setAuditLogs(db.auditLogs);
+      if (db.users) setUsers(db.users);
+      setDbConnected(true);
+    };
+
     fetchFullDb()
       .then(db => {
-        if (db.whiteLabel) setWhiteLabel(db.whiteLabel);
-        if (db.contracts) setContracts(db.contracts);
-        if (db.shifts) setShifts(db.shifts);
-        if (db.contingencies) setContingencies(db.contingencies);
-        if (db.workOrders) setWorkOrders(db.workOrders);
-        if (db.plantAreas && db.plantAreas.length > 0) setPlantAreas(db.plantAreas);
-        if (db.sectors && db.sectors.length > 0) setSectors(db.sectors);
-        if (db.equipments && db.equipments.length > 0) setEquipments(db.equipments);
-        if (db.subSectors && db.subSectors.length > 0) setSubSectors(db.subSectors);
-        if (db.machines) setMachines(db.machines);
-        if (db.workers) setWorkers(db.workers);
-        if (db.auditLogs) setAuditLogs(db.auditLogs);
-        if (db.users) setUsers(db.users);
-        setDbConnected(true);
+        processDbData(db);
       })
       .catch(err => {
         console.warn('Servidor de Base de Datos local no detectado en 3001. Cargando datos de respaldo para producción Vercel.', err);
-        const db = initialDbData as any;
-        if (db.whiteLabel) setWhiteLabel(db.whiteLabel);
-        if (db.contracts) setContracts(db.contracts);
-        if (db.shifts) setShifts(db.shifts);
-        if (db.contingencies) setContingencies(db.contingencies);
-        if (db.workOrders) setWorkOrders(db.workOrders);
-        if (db.plantAreas && db.plantAreas.length > 0) setPlantAreas(db.plantAreas);
-        if (db.sectors && db.sectors.length > 0) setSectors(db.sectors);
-        if (db.equipments && db.equipments.length > 0) setEquipments(db.equipments);
-        if (db.subSectors && db.subSectors.length > 0) setSubSectors(db.subSectors);
-        if (db.machines) setMachines(db.machines);
-        if (db.workers) setWorkers(db.workers);
-        if (db.auditLogs) setAuditLogs(db.auditLogs);
-        if (db.users) setUsers(db.users);
-        setDbConnected(true);
+        processDbData(initialDbData as any);
       });
   }, []);
 

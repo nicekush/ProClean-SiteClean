@@ -237,6 +237,12 @@ export async function saveContingencies(data: ContingencyReasonConfig[]): Promis
 // Work Orders API
 export async function saveWorkOrders(data: WorkOrder[]): Promise<WorkOrder[]> {
   try {
+    localStorage.setItem('proclean_work_orders', JSON.stringify(data));
+  } catch (err) {
+    console.warn('Error guardando en localStorage', err);
+  }
+
+  try {
     const res = await fetch(`${API_BASE}/work-orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
