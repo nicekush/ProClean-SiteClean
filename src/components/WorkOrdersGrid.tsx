@@ -1477,42 +1477,24 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               </div>
             )}
 
-            {/* PASO 9: DETALLE & FOTOS */}
-            {currentEditStep === 9 && (
+            {/* PASO 10: DETALLE / OBSERVACIONES (OPCIONAL) */}
+            {currentEditStep === 10 && (
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                  📸 Paso 9: Descripción de la Operación & Evidencias Fotográficas
+                  📝 Paso 10: Descripción u Observaciones de la Operación (Opcional)
                 </h4>
 
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>Detalle de la Operación</label>
+                  <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>
+                    Detalle u Observaciones (Opcional)
+                  </label>
                   <textarea
+                    placeholder="Opcional: Escribe aquí cualquier detalle u observación adicional..."
                     value={editingOrder.operationDetail}
                     onChange={e => setEditingOrder({ ...editingOrder, operationDetail: e.target.value })}
                     rows={3}
                     style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--slate-300)' }}
-                    required
                   />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '14px', backgroundColor: 'var(--slate-50)', borderRadius: '16px', border: '1px dashed var(--slate-300)' }}>
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: 900, color: '#991B1B', display: 'block', marginBottom: '6px' }}>📸 Foto ANTES</label>
-                    {editingOrder.beforePhotoUrl && <div style={{ fontSize: '11px', color: '#047857', fontWeight: 900, marginBottom: '4px' }}>✓ Foto Inicial Cargada</div>}
-                    <label className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px', cursor: 'pointer', display: 'inline-flex' }}>
-                      <Upload size={14} /> Cargar ANTES
-                      <input type="file" accept="image/*" onChange={e => handleBeforeFileUpload(e, true)} style={{ display: 'none' }} />
-                    </label>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: 900, color: '#047857', display: 'block', marginBottom: '6px' }}>📸 Foto DESPUÉS</label>
-                    {editingOrder.afterPhotoUrl && <div style={{ fontSize: '11px', color: '#047857', fontWeight: 900, marginBottom: '4px' }}>✓ Foto Final Cargada</div>}
-                    <label className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px', cursor: 'pointer', display: 'inline-flex' }}>
-                      <Upload size={14} /> Cargar DESPUÉS
-                      <input type="file" accept="image/*" onChange={e => handleAfterFileUpload(e, true)} style={{ display: 'none' }} />
-                    </label>
-                  </div>
                 </div>
 
                 <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
@@ -1520,15 +1502,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     <button 
                       type="button" 
                       className="btn btn-secondary" 
-                      onClick={() => {
-                        if (editingOrder.hasEquipment !== false) {
-                          setCurrentEditStep(8);
-                        } else if (editingOrder.hasManualLabor !== false) {
-                          setCurrentEditStep(7);
-                        } else {
-                          setCurrentEditStep(6);
-                        }
-                      }}
+                      onClick={() => setCurrentEditStep(9)}
                     >
                       ◄ Atrás
                     </button>
@@ -2513,36 +2487,24 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 </div>
               )}
 
-              {/* PASO 10: DETALLE & FOTOS */}
+              {/* PASO 10: DETALLE / OBSERVACIONES (OPCIONAL) */}
               {currentAddStep === 10 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    📸 Paso 10: Descripción de la Operación & Evidencias Fotográficas
+                    📝 Paso 10: Descripción u Observaciones de la Operación (Opcional)
                   </h4>
 
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>Detalle de la Operación</label>
+                    <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>
+                      Detalle u Observaciones (Opcional)
+                    </label>
                     <textarea
-                      placeholder="Descripción del trabajo de aseo industrial..."
+                      placeholder="Opcional: Escribe aquí cualquier detalle u observación adicional..."
                       value={newOrder.operationDetail}
                       onChange={e => setNewOrder({ ...newOrder, operationDetail: e.target.value })}
                       rows={3}
                       style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--slate-300)' }}
-                      required
                     />
-                  </div>
-
-                  <div style={{ gridColumn: '1 / -1', padding: '14px', borderRadius: '14px', backgroundColor: '#FEF2F2', border: '1px dashed #FCA5A5' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 900, color: '#991B1B', display: 'block', marginBottom: '6px' }}>
-                      📸 Adjuntar Foto ANTES (Estado Inicial / Sucio) [Opcional]
-                    </label>
-                    {newOrder.beforePhotoUrl && (
-                      <div style={{ fontSize: '11px', color: '#047857', fontWeight: 900, marginBottom: '4px' }}>✓ Foto Inicial Cargada</div>
-                    )}
-                    <label className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer', display: 'inline-flex' }}>
-                      <Upload size={14} /> Seleccionar Imagen ANTES
-                      <input type="file" accept="image/*" onChange={e => handleBeforeFileUpload(e, false)} style={{ display: 'none' }} />
-                    </label>
                   </div>
 
                   <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
