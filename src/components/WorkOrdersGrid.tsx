@@ -147,65 +147,41 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     }
   }, [targetEditOrder]);
 
-  // Filtered Options for 4-Level Cascading Dropdowns (New OT & Edit OT)
-  const getSectorsForArea = (areaId: string) => {
-    const matched = (sectors || []).filter(s => !areaId || s.areaId === areaId);
-    if (matched.length === 0 && sectors && sectors.length > 0) return sectors;
-    return matched;
-  };
+  // Filtered Options for 4-Level Cascading Dropdowns strictly sourced from Database
+  const availableSectors = (sectors || []).filter(s => !selectedAreaId || s.areaId === selectedAreaId);
+  const availableEquipments = (equipments || []).filter(e => !selectedSectorId || e.sectorId === selectedSectorId);
 
-  const getEquipmentsForSector = (sectorId: string) => {
-    const matched = (equipments || []).filter(e => !sectorId || e.sectorId === sectorId);
-    if (matched.length === 0 && equipments && equipments.length > 0) return equipments;
-    return matched;
-  };
+  const editAvailableSectors = (sectors || []).filter(s => !editSelectedAreaId || s.areaId === editSelectedAreaId);
+  const editAvailableEquipments = (equipments || []).filter(e => !editSelectedSectorId || e.sectorId === editSelectedSectorId);
 
-  const availableSectors = getSectorsForArea(selectedAreaId);
-  const availableEquipments = getEquipmentsForSector(selectedSectorId);
-
-  const editAvailableSectors = getSectorsForArea(editSelectedAreaId);
-  const editAvailableEquipments = getEquipmentsForSector(editSelectedSectorId);
-
-  // Helper to ensure ALL equipments in ALL sectors always show valid component badges
-  const getSubSectorsForSelection = (equipId: string, sectorId: string) => {
+  // Helper to query Component Badges directly from DB (without generating artificial catalogs)
+  const getSubSectorsFromDb = (equipId: string, sectorId: string) => {
     const equipObj = (equipments || []).find(e => e.id === equipId);
     const sectorObj = (sectors || []).find(s => s.id === sectorId);
 
-    // 1. Direct match by equipmentId or equipmentName
+    // 1. Direct match by equipmentId or equipmentName in DB
     let matched = (subSectors || []).filter(sub => {
       if (equipId && (sub.equipmentId === equipId || (equipObj && sub.equipmentName === equipObj.name))) return true;
       return false;
     });
 
-    // 2. If no direct equipment match, match by sectorId or sectorName
+    // 2. Match by sectorId or sectorName in DB
     if (matched.length === 0 && sectorId) {
       matched = (subSectors || []).filter(sub => {
         return sub.sectorId === sectorId || (sectorObj && sub.sectorName === sectorObj.name);
       });
     }
 
-    // 3. Universal Fallback Components if no specific sub-sectors exist in DB
+    // 3. Fallback to official DB subSectors list if specific sub-association is unassigned
     if (matched.length === 0) {
-      return [
-        { id: 'def_1', name: 'Pasillo Lateral Izquierdo' },
-        { id: 'def_2', name: 'Pasillo Lateral Derecho' },
-        { id: 'def_3', name: 'Chute de Carga' },
-        { id: 'def_4', name: 'Chute de Descarga' },
-        { id: 'def_5', name: 'Polines de Carga' },
-        { id: 'def_6', name: 'Polines de Retorno' },
-        { id: 'def_7', name: 'Polea Motriz' },
-        { id: 'def_8', name: 'Polea Retorno' },
-        { id: 'def_9', name: 'Carro Tensor' },
-        { id: 'def_10', name: 'Estructura Principal' },
-        { id: 'def_11', name: 'Piso / Zócalo' }
-      ] as SubSector[];
+      return (subSectors || []);
     }
 
     return matched;
   };
 
-  const availableSubSectors = getSubSectorsForSelection(selectedEquipmentId, selectedSectorId);
-  const editAvailableSubSectors = getSubSectorsForSelection(editSelectedEquipmentId, editSelectedSectorId);
+  const availableSubSectors = getSubSectorsFromDb(selectedEquipmentId, selectedSectorId);
+  const editAvailableSubSectors = getSubSectorsFromDb(editSelectedEquipmentId, editSelectedSectorId);
 
   const handleOpenAddModal = () => {
     setCurrentAddStep(1);
@@ -382,7 +358,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const handleEquipmentChange = (equipmentId: string) => {
     setSelectedEquipmentId(equipmentId);
     const equip = (equipments || []).find(e => e.id === equipmentId);
-    const subs = getSubSectorsForSelection(equipmentId, selectedSectorId);
+    const subs = getSubSectorsFromDb(equipmentId, selectedSectorId);
     const defaultSubName = subs && subs.length > 0 ? [subs[0].name] : ['General / Equipo'];
     setSelectedSubSectorNames(defaultSubName);
     setNewOrder(prev => ({
