@@ -207,7 +207,59 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const availableSubSectors = getSubSectorsForSelection(selectedEquipmentId, selectedSectorId);
   const editAvailableSubSectors = getSubSectorsForSelection(editSelectedEquipmentId, editSelectedSectorId);
 
+  const handleOpenAddModal = () => {
+    setCurrentAddStep(1);
+    setSelectedAreaId('');
+    setSelectedSectorId('');
+    setSelectedEquipmentId('');
+    setSelectedSubSectorNames([]);
+    setNewOrder({
+      executionDate: new Date().toISOString().split('T')[0],
+      semana: 33,
+      dia: 'Lunes 15/08',
+      sapCode: '',
+      equipoCorrea: '',
+      operationDetail: '',
+      headcount: 4,
+      estimatedHours: 8,
+      realHours: 8,
+      shiftId: defaultShift.id,
+      shiftName: defaultShift.name,
+      vehiclePatent: '',
+      status: 'PENDIENTE_APROBACION_ITO',
+      contingencyReason: '',
+      beforePhotoUrl: '',
+      afterPhotoUrl: '',
+      areaId: '',
+      areaName: '',
+      sectorId: '',
+      sectorName: '',
+      equipmentId: '',
+      equipmentName: '',
+      subSectorId: '',
+      subSectorName: '',
+      hasManualLabor: true,
+      hasEquipment: true,
+      taskType: 'PLANIFICADO',
+      cubicMetersRemoved: 0,
+      fleetTripsCount: 0,
+      bucketCapacityM3: 0,
+      machineHours: 0
+    });
+    setShowAddModal(true);
+  };
+
+  const handleCancelAddModal = () => {
+    setShowAddModal(false);
+    setCurrentAddStep(1);
+    setSelectedAreaId('');
+    setSelectedSectorId('');
+    setSelectedEquipmentId('');
+    setSelectedSubSectorNames([]);
+  };
+
   const handleOpenEditModal = (order: WorkOrder) => {
+    setCurrentEditStep(1);
     setEditingOrder({ ...order });
     setEditSelectedAreaId(order.areaId || '');
     setEditSelectedSectorId(order.sectorId || '');
@@ -698,7 +750,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           </button>
 
           {(currentRole === 'SUPERVISOR_TERRENO' || currentRole === 'ADMINISTRADOR_CONTRATO' || currentRole === 'SUPER_ADMIN') && (
-            <button onClick={() => setShowAddModal(true)} className="btn btn-primary">
+            <button onClick={handleOpenAddModal} className="btn btn-primary">
               <Plus size={16} /> + Nueva Orden de Trabajo
             </button>
           )}
@@ -1869,7 +1921,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               <h3 style={{ fontSize: '17px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
                 + Crear Nueva Orden de Trabajo (OT)
               </h3>
-              <button onClick={() => setShowAddModal(false)} className="btn btn-secondary" style={{ padding: '4px 8px' }}><X size={16} /></button>
+              <button onClick={handleCancelAddModal} className="btn btn-secondary" style={{ padding: '4px 8px' }}><X size={16} /></button>
             </div>
 
             {renderStepper(currentAddStep, 9)}
@@ -1939,7 +1991,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
 
                   <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>
+                    <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal}>
                       Cancelar
                     </button>
                     <button type="button" className="btn btn-primary" onClick={() => setCurrentAddStep(2)} style={{ padding: '12px 24px', fontSize: '13px' }}>
@@ -1977,7 +2029,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(1)}>
                         ◄ Atrás
                       </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
                         ✖ Cancelar
                       </button>
                     </div>
@@ -2024,7 +2076,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(2)}>
                         ◄ Atrás
                       </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
                         ✖ Cancelar
                       </button>
                     </div>
@@ -2134,7 +2186,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(3)}>
                         ◄ Atrás
                       </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
                         ✖ Cancelar
                       </button>
                     </div>
@@ -2195,7 +2247,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(4)}>
                         ◄ Atrás
                       </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
                         ✖ Cancelar
                       </button>
                     </div>
@@ -2280,7 +2332,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(5)}>
                         ◄ Atrás
                       </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
                         ✖ Cancelar
                       </button>
                     </div>
@@ -2342,7 +2394,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(6)}>
                         ◄ Atrás
                       </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
                         ✖ Cancelar
                       </button>
                     </div>
@@ -2425,7 +2477,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       >
                         ◄ Atrás
                       </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
                         ✖ Cancelar
                       </button>
                     </div>
@@ -2485,7 +2537,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       >
                         ◄ Atrás
                       </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
                         ✖ Cancelar
                       </button>
                     </div>
