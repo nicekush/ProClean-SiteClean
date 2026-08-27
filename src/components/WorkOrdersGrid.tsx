@@ -1571,127 +1571,175 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       </div>
     )}
 
-      {/* 1-TOUCH QUICK FILTER BAR ("A PRUEBA DE NIÑOS") */}
-      <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '18px', border: '1px solid var(--slate-200)', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {/* Row 1: Status Filters */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-500)', textTransform: 'uppercase', marginRight: '4px' }}>Filtro Estado:</span>
-          
-          <button
-            type="button"
-            onClick={() => setQuickFilterStatus('ALL')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '20px',
-              fontWeight: 800,
-              fontSize: '13px',
-              cursor: 'pointer',
-              border: quickFilterStatus === 'ALL' ? '2px solid var(--slate-800)' : '1px solid var(--slate-300)',
-              backgroundColor: quickFilterStatus === 'ALL' ? 'var(--slate-800)' : '#FFF',
-              color: quickFilterStatus === 'ALL' ? '#FFF' : 'var(--slate-700)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            📋 Todas las OTs <span style={{ backgroundColor: quickFilterStatus === 'ALL' ? 'rgba(255,255,255,0.2)' : '#E2E8F0', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>{totalCount}</span>
-          </button>
+      {/* 1-TOUCH SEGMENTED CONTROL BAR ("A PRUEBA DE NIÑOS" - OPTION 1) */}
+      <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '20px', border: '1px solid var(--slate-200)', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* Control Segmentado 1: Estado */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', padding: '0 4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              📌 Filtro por Estado:
+            </span>
+          </div>
+          <div style={{ display: 'flex', backgroundColor: '#E2E8F0', padding: '4px', borderRadius: '14px', gap: '4px', width: '100%' }}>
+            <button
+              type="button"
+              onClick={() => setQuickFilterStatus('ALL')}
+              style={{
+                flex: 1,
+                padding: '10px 4px',
+                borderRadius: '10px',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+                border: 'none',
+                backgroundColor: quickFilterStatus === 'ALL' ? 'var(--slate-900)' : 'transparent',
+                color: quickFilterStatus === 'ALL' ? '#FFFFFF' : 'var(--slate-700)',
+                boxShadow: quickFilterStatus === 'ALL' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              📋 Todas ({totalCount})
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setQuickFilterStatus('PENDING')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '20px',
-              fontWeight: 800,
-              fontSize: '13px',
-              cursor: 'pointer',
-              border: quickFilterStatus === 'PENDING' ? '2px solid var(--orange)' : '1px solid #FED7AA',
-              backgroundColor: quickFilterStatus === 'PENDING' ? 'var(--orange)' : '#FFF7ED',
-              color: quickFilterStatus === 'PENDING' ? '#FFF' : 'var(--orange)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            ⏳ Pendientes ITO <span style={{ backgroundColor: quickFilterStatus === 'PENDING' ? 'rgba(255,255,255,0.25)' : '#FDBA74', color: quickFilterStatus === 'PENDING' ? '#FFF' : '#9A3412', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>{pendingCount}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setQuickFilterStatus('PENDING')}
+              style={{
+                flex: 1,
+                padding: '10px 4px',
+                borderRadius: '10px',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+                border: 'none',
+                backgroundColor: quickFilterStatus === 'PENDING' ? 'var(--orange)' : 'transparent',
+                color: quickFilterStatus === 'PENDING' ? '#FFFFFF' : '#C2410C',
+                boxShadow: quickFilterStatus === 'PENDING' ? '0 2px 6px rgba(247,122,6,0.3)' : 'none',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              ⏳ Pendientes ({pendingCount})
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setQuickFilterStatus('APPROVED')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '20px',
-              fontWeight: 800,
-              fontSize: '13px',
-              cursor: 'pointer',
-              border: quickFilterStatus === 'APPROVED' ? '2px solid #047857' : '1px solid #A7F3D0',
-              backgroundColor: quickFilterStatus === 'APPROVED' ? '#047857' : '#ECFDF5',
-              color: quickFilterStatus === 'APPROVED' ? '#FFF' : '#047857',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            ✅ Aprobadas ITO <span style={{ backgroundColor: quickFilterStatus === 'APPROVED' ? 'rgba(255,255,255,0.25)' : '#6EE7B7', color: quickFilterStatus === 'APPROVED' ? '#FFF' : '#064E3B', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>{approvedCount}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setQuickFilterStatus('APPROVED')}
+              style={{
+                flex: 1,
+                padding: '10px 4px',
+                borderRadius: '10px',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+                border: 'none',
+                backgroundColor: quickFilterStatus === 'APPROVED' ? '#047857' : 'transparent',
+                color: quickFilterStatus === 'APPROVED' ? '#FFFFFF' : '#047857',
+                boxShadow: quickFilterStatus === 'APPROVED' ? '0 2px 6px rgba(4,120,87,0.3)' : 'none',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              ✅ Aprobadas ({approvedCount})
+            </button>
+          </div>
         </div>
 
-        {/* Row 2: Shift & Period Filters */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-500)', textTransform: 'uppercase', marginRight: '4px' }}>Turno & Período:</span>
+        {/* Control Segmentado 2: Turno & Período */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', padding: '0 4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              ⏱️ Período & Turno:
+            </span>
+            {quickFilterTime === 'SHIFT_7X7' && (
+              <span style={{ fontSize: '10px', fontWeight: 900, color: '#7C3AED', backgroundColor: '#F5F3FF', padding: '2px 8px', borderRadius: '8px' }}>
+                🗓️ Turno Activo: {active7x7Range.label}
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', backgroundColor: '#E2E8F0', padding: '4px', borderRadius: '14px', gap: '4px', width: '100%' }}>
+            <button
+              type="button"
+              onClick={() => setQuickFilterTime('ALL')}
+              style={{
+                flex: 1,
+                padding: '10px 4px',
+                borderRadius: '10px',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+                border: 'none',
+                backgroundColor: quickFilterTime === 'ALL' ? '#0284C7' : 'transparent',
+                color: quickFilterTime === 'ALL' ? '#FFFFFF' : 'var(--slate-700)',
+                boxShadow: quickFilterTime === 'ALL' ? '0 2px 6px rgba(2,132,199,0.3)' : 'none',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              🌐 Todo
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setQuickFilterTime('ALL')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '16px',
-              fontWeight: 800,
-              fontSize: '12px',
-              cursor: 'pointer',
-              border: quickFilterTime === 'ALL' ? '2px solid #0284C7' : '1px solid var(--slate-300)',
-              backgroundColor: quickFilterTime === 'ALL' ? '#0284C7' : '#FFF',
-              color: quickFilterTime === 'ALL' ? '#FFF' : 'var(--slate-700)'
-            }}
-          >
-            🌐 Todo el Período
-          </button>
+            <button
+              type="button"
+              onClick={() => setQuickFilterTime('SHIFT_7X7')}
+              style={{
+                flex: 1,
+                padding: '10px 4px',
+                borderRadius: '10px',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+                border: 'none',
+                backgroundColor: quickFilterTime === 'SHIFT_7X7' ? '#7C3AED' : 'transparent',
+                color: quickFilterTime === 'SHIFT_7X7' ? '#FFFFFF' : '#6D28D9',
+                boxShadow: quickFilterTime === 'SHIFT_7X7' ? '0 2px 6px rgba(124,58,237,0.3)' : 'none',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              🗓️ Turno 7x7
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setQuickFilterTime('SHIFT_7X7')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '16px',
-              fontWeight: 800,
-              fontSize: '12px',
-              cursor: 'pointer',
-              border: quickFilterTime === 'SHIFT_7X7' ? '2px solid #7C3AED' : '1px solid #DDD6FE',
-              backgroundColor: quickFilterTime === 'SHIFT_7X7' ? '#7C3AED' : '#F5F3FF',
-              color: quickFilterTime === 'SHIFT_7X7' ? '#FFF' : '#6D28D9'
-            }}
-          >
-            🗓️ Mi Turno 7x7 ({active7x7Range.label})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setQuickFilterTime('TODAY')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '16px',
-              fontWeight: 800,
-              fontSize: '12px',
-              cursor: 'pointer',
-              border: quickFilterTime === 'TODAY' ? '2px solid #2563EB' : '1px solid #BFDBFE',
-              backgroundColor: quickFilterTime === 'TODAY' ? '#2563EB' : '#EFF6FF',
-              color: quickFilterTime === 'TODAY' ? '#FFF' : '#1D4ED8'
-            }}
-          >
-            ☀️ Mis OTs de Hoy
-          </button>
+            <button
+              type="button"
+              onClick={() => setQuickFilterTime('TODAY')}
+              style={{
+                flex: 1,
+                padding: '10px 4px',
+                borderRadius: '10px',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+                border: 'none',
+                backgroundColor: quickFilterTime === 'TODAY' ? '#2563EB' : 'transparent',
+                color: quickFilterTime === 'TODAY' ? '#FFFFFF' : '#1D4ED8',
+                boxShadow: quickFilterTime === 'TODAY' ? '0 2px 6px rgba(37,99,235,0.3)' : 'none',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              ☀️ Hoy
+            </button>
+          </div>
         </div>
       </div>
 
