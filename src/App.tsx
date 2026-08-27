@@ -197,10 +197,15 @@ export function App() {
       let cloudOrders: WorkOrder[] | null = null;
       if (isFirebaseConfigured) {
         cloudOrders = await fetchFirebaseWorkOrders();
-        // If Firestore is empty, seed initial work orders to cloud DB
-        if ((!cloudOrders || cloudOrders.length === 0) && db.workOrders && db.workOrders.length > 0) {
-          syncAllWorkOrdersToFirebase(db.workOrders);
-          cloudOrders = db.workOrders;
+        
+        // Ensure all initial seed work orders from db.json exist in Firebase
+        if (db.workOrders && db.workOrders.length > 0) {
+          const existingIds = new Set((cloudOrders || []).map(o => o.id));
+          const missingSeedOrders = db.workOrders.filter((seed: WorkOrder) => !existingIds.has(seed.id));
+          if (missingSeedOrders.length > 0) {
+            await syncAllWorkOrdersToFirebase(db.workOrders);
+            cloudOrders = await fetchFirebaseWorkOrders();
+          }
         }
 
         // Subscribe to real-time changes from Firestore on ALL devices
