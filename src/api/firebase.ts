@@ -234,3 +234,111 @@ export async function deleteFirebaseUser(id: string): Promise<boolean> {
     return false;
   }
 }
+
+// GENERIC CLOUD FIRESTORE HELPERS FOR ALL ERP COLLECTIONS
+export async function syncSingleDocToFirebase(collectionName: string, docId: string, data: any): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const docRef = doc(db, collectionName, docId);
+    await setDoc(docRef, { payload: data, updatedAt: new Date().toISOString() }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error(`Failed to sync doc to Firebase (${collectionName}):`, err);
+    return false;
+  }
+}
+
+export async function fetchSingleDocFromFirebase<T>(collectionName: string, docId: string): Promise<T | null> {
+  if (!db) return null;
+  try {
+    const colRef = collection(db, collectionName);
+    const snapshot = await getDocs(colRef);
+    let result: T | null = null;
+    snapshot.forEach(docSnap => {
+      if (docSnap.id === docId) {
+        const data = docSnap.data();
+        result = (data.payload || data) as T;
+      }
+    });
+    return result;
+  } catch (err) {
+    console.warn(`Error fetching single doc ${collectionName}/${docId}:`, err);
+    return null;
+  }
+}
+
+export async function syncArrayToFirebase(collectionName: string, items: any[]): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const colRef = collection(db, collectionName);
+    const snapshot = await getDocs(colRef);
+    const localIds = new Set(items.map(item => item.id || 'singleton'));
+
+    if (!snapshot.empty) {
+      for (const docSnap of snapshot.docs) {
+        if (!localIds.has(docSnap.id)) {
+          await deleteDoc(doc(db, collectionName, docSnap.id));
+        }
+      }
+    }
+
+    for (const item of items) {
+      const docId = item.id || 'singleton';
+      await syncSingleDocToFirebase(collectionName, docId, item);
+    }
+    return true;
+  } catch (err) {
+    console.error(`Failed array sync to Firebase (${collectionName}):`, err);
+    return false;
+  }
+}
+
+export async function fetchFirebaseCollection<T>(collectionName: string): Promise<T[] | null> {
+  if (!db) return null;
+  try {
+    const colRef = collection(db, collectionName);
+    const snapshot = await getDocs(colRef);
+    if (!snapshot.empty) {
+      const items: T[] = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.payload) {
+          items.push(data.payload as T);
+        } else {
+          items.push({ ...data, id: docSnap.id } as T);
+        }
+      });
+      return items;
+    }
+    return [];
+  } catch (err) {
+    console.warn(`Error fetching ${collectionName} from Firebase:`, err);
+    return null;
+  }
+}
+
+export function subscribeFirebaseCollection<T>(collectionName: string, onUpdate: (items: T[]) => void): (() => void) | null {
+  if (!db) return null;
+  try {
+    const colRef = collection(db, collectionName);
+    return onSnapshot(colRef, (snapshot) => {
+      const items: T[] = [];
+      if (!snapshot.empty) {
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.payload) {
+            items.push(data.payload as T);
+          } else {
+            items.push({ ...data, id: docSnap.id } as T);
+          }
+        });
+      }
+      onUpdate(items);
+    }, (err) => {
+      console.warn(`Error in Firestore ${collectionName} listener:`, err);
+    });
+  } catch (err) {
+    console.warn(`Failed setup listener for ${collectionName}:`, err);
+    return null;
+  }
+}

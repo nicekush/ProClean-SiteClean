@@ -24,7 +24,7 @@ import type {
   PlantEquipment
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
-import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser } from './api/firebase';
+import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection } from './api/firebase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
@@ -188,12 +188,7 @@ export function App() {
     let firebaseUnsub: (() => void) | null = null;
 
     const processDbData = async (db: any) => {
-      if (db.whiteLabel) setWhiteLabel(db.whiteLabel);
-      if (db.contracts) setContracts(db.contracts);
-      if (db.shifts) setShifts(db.shifts);
-      if (db.contingencies) setContingencies(db.contingencies);
-
-      // 1. Check Cloud DB (Firebase or Supabase) first if configured
+      // 1. Check Cloud DB (Firebase or Supabase) for Work Orders
       let cloudOrders: WorkOrder[] | null = null;
       if (isFirebaseConfigured) {
         cloudOrders = await fetchFirebaseWorkOrders();
@@ -223,7 +218,7 @@ export function App() {
         setWorkOrders(cloudOrders);
         localStorage.setItem('proclean_work_orders', JSON.stringify(cloudOrders));
       } else {
-        // 2. Fallback to localStorage
+        // Fallback to localStorage
         const localOrders = localStorage.getItem('proclean_work_orders');
         if (localOrders) {
           try {
@@ -240,14 +235,6 @@ export function App() {
           setWorkOrders(db.workOrders);
         }
       }
-
-      if (db.plantAreas && db.plantAreas.length > 0) setPlantAreas(db.plantAreas);
-      if (db.sectors && db.sectors.length > 0) setSectors(db.sectors);
-      if (db.equipments && db.equipments.length > 0) setEquipments(db.equipments);
-      if (db.subSectors && db.subSectors.length > 0) setSubSectors(db.subSectors);
-      if (db.machines) setMachines(db.machines);
-      if (db.workers) setWorkers(db.workers);
-      if (db.auditLogs) setAuditLogs(db.auditLogs);
 
       // Load Users: Cloud Firebase -> LocalStorage -> Seed JSON
       let cloudUsers: UserAccount[] | null = null;
@@ -296,6 +283,70 @@ export function App() {
         }
       }
 
+      // Generic loader function for ALL remaining ERP Entities (Cloud Firebase -> LocalStorage -> Seed JSON)
+      const loadEntity = async <T,>(
+        storageKey: string,
+        colName: string,
+        setter: React.Dispatch<React.SetStateAction<T>>,
+        seedData: T,
+        isSingleDoc: boolean = false
+      ) => {
+        let cloud: T | null = null;
+        if (isFirebaseConfigured) {
+          if (isSingleDoc) {
+            cloud = await fetchSingleDocFromFirebase<T>(colName, 'config');
+          } else {
+            cloud = await fetchFirebaseCollection(colName) as unknown as T;
+            const isSeededKey = `proclean_seeded_${colName}`;
+            if ((!cloud || (Array.isArray(cloud) && cloud.length === 0)) && !localStorage.getItem(isSeededKey) && Array.isArray(seedData) && seedData.length > 0) {
+              await syncArrayToFirebase(colName, seedData as any[]);
+              localStorage.setItem(isSeededKey, 'true');
+              cloud = await fetchFirebaseCollection(colName) as unknown as T;
+            }
+
+            subscribeFirebaseCollection(colName, (liveItems) => {
+              if (liveItems && liveItems.length > 0) {
+                setter(liveItems as unknown as T);
+                try { localStorage.setItem(storageKey, JSON.stringify(liveItems)); } catch (e) {}
+              }
+            });
+          }
+        }
+
+        if (cloud && ((Array.isArray(cloud) && cloud.length > 0) || (!Array.isArray(cloud) && cloud))) {
+          setter(cloud);
+          localStorage.setItem(storageKey, JSON.stringify(cloud));
+        } else {
+          const local = localStorage.getItem(storageKey);
+          if (local) {
+            try {
+              const parsed = JSON.parse(local);
+              if (parsed && ((Array.isArray(parsed) && parsed.length > 0) || !Array.isArray(parsed))) {
+                setter(parsed);
+              } else if (seedData) {
+                setter(seedData);
+              }
+            } catch {
+              if (seedData) setter(seedData);
+            }
+          } else if (seedData) {
+            setter(seedData);
+          }
+        }
+      };
+
+      if (db.whiteLabel) await loadEntity('proclean_whitelabel', 'whitelabel', setWhiteLabel, db.whiteLabel, true);
+      if (db.contracts) await loadEntity('proclean_contracts', 'contracts', setContracts, db.contracts);
+      if (db.shifts) await loadEntity('proclean_shifts', 'shifts', setShifts, db.shifts);
+      if (db.contingencies) await loadEntity('proclean_contingencies', 'contingencies', setContingencies, db.contingencies);
+      if (db.plantAreas) await loadEntity('proclean_plant_areas', 'plant_areas', setPlantAreas, db.plantAreas);
+      if (db.sectors) await loadEntity('proclean_sectors', 'sectors', setSectors, db.sectors);
+      if (db.equipments) await loadEntity('proclean_equipments', 'equipments', setEquipments, db.equipments);
+      if (db.subSectors) await loadEntity('proclean_sub_sectors', 'sub_sectors', setSubSectors, db.subSectors);
+      if (db.machines) await loadEntity('proclean_machines', 'machines', setMachines, db.machines);
+      if (db.workers) await loadEntity('proclean_workers', 'workers', setWorkers, db.workers);
+      if (db.auditLogs) await loadEntity('proclean_audit_logs', 'audit_logs', setAuditLogs, db.auditLogs);
+
       setDbConnected(true);
     };
 
@@ -343,14 +394,21 @@ export function App() {
       diffSummary
     };
 
-    setAuditLogs(prev => [ { ...entry, id: `log-${Date.now()}` }, ...prev ]);
+    setAuditLogs(prev => {
+      const next = [ { ...entry, id: `log-${Date.now()}` }, ...prev ];
+      try { localStorage.setItem('proclean_audit_logs', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('audit_logs', next);
+      return next;
+    });
     apiCreateAuditLog(entry);
   };
 
-  // Update Wrappers
+  // Update Wrappers (All ERP Entities -> Cloud Firebase + LocalStorage Persistence)
   const updateWhiteLabel = (val: React.SetStateAction<WhiteLabelConfig>) => {
     setWhiteLabel(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_whitelabel', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncSingleDocToFirebase('whitelabel', 'config', next);
       apiSaveWhiteLabel(next);
       addAuditLog('EDICION', 'Configuración de Marca', 'WhiteLabel', 'Actualización de parámetros visuales');
       return next;
@@ -376,6 +434,8 @@ export function App() {
   const updateContracts = (val: React.SetStateAction<ClientContract[]>) => {
     setContracts(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_contracts', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('contracts', next);
       apiSaveContracts(next);
       addAuditLog('EDICION', 'Contratos', 'MultiContract', 'Actualización de clientes y contratos mineros');
       return next;
@@ -385,6 +445,8 @@ export function App() {
   const updateShifts = (val: React.SetStateAction<ShiftType[]>) => {
     setShifts(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_shifts', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('shifts', next);
       apiSaveShifts(next);
       addAuditLog('EDICION', 'Turnos', 'Shifts', 'Parametrización de turnos operacionales');
       return next;
@@ -394,6 +456,8 @@ export function App() {
   const updateContingencies = (val: React.SetStateAction<ContingencyReasonConfig[]>) => {
     setContingencies(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_contingencies', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('contingencies', next);
       apiSaveContingencies(next);
       addAuditLog('EDICION', 'Contingencias', 'Contingency', 'Actualización de motivos de detención');
       return next;
@@ -403,6 +467,8 @@ export function App() {
   const updatePlantAreas = (val: React.SetStateAction<PlantArea[]>) => {
     setPlantAreas(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_plant_areas', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('plant_areas', next);
       apiSavePlantAreas(next);
       return next;
     });
@@ -411,6 +477,8 @@ export function App() {
   const updateSectors = (val: React.SetStateAction<Sector[]>) => {
     setSectors(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_sectors', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('sectors', next);
       apiSaveSectors(next);
       return next;
     });
@@ -419,7 +487,18 @@ export function App() {
   const updateSubSectors = (val: React.SetStateAction<SubSector[]>) => {
     setSubSectors(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_sub_sectors', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('sub_sectors', next);
       apiSaveSubSectors(next);
+      return next;
+    });
+  };
+
+  const updateEquipments = (val: React.SetStateAction<PlantEquipment[]>) => {
+    setEquipments(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_equipments', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('equipments', next);
       return next;
     });
   };
@@ -427,6 +506,8 @@ export function App() {
   const updateMachines = (val: React.SetStateAction<Machine[]>) => {
     setMachines(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_machines', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('machines', next);
       apiSaveMachines(next);
       return next;
     });
@@ -435,6 +516,8 @@ export function App() {
   const updateWorkers = (val: React.SetStateAction<Worker[]>) => {
     setWorkers(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('proclean_workers', JSON.stringify(next)); } catch (e) {}
+      if (isFirebaseConfigured) syncArrayToFirebase('workers', next);
       apiSaveWorkers(next);
       return next;
     });
