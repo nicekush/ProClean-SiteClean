@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole, Machine, ContingencyReasonConfig, PlantArea, Sector, SubSector, TaskType, PlantEquipment } from '../types';
-import { Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface WorkOrdersGridProps {
@@ -45,6 +45,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterAreaId, setFilterAreaId] = useState<string>('ALL');
   const [filterTaskType, setFilterTaskType] = useState<string>('ALL');
+  const [filterDatePreset, setFilterDatePreset] = useState<string>('ALL');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentAddStep, setCurrentAddStep] = useState<number>(1);
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
@@ -348,7 +351,30 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       (filterStatus === 'APROBADO' && order.status === 'APROBADO_MANDANTE') ||
       (filterStatus === 'CONTINGENCIA' && (order.status === 'RECHAZADO_CONTINGENCIA' || order.status === 'CONTINGENCIA'));
 
-    return matchesSearch && matchesShift && matchesStatus && matchesArea && matchesTaskType;
+    let matchesDate = true;
+    if (filterDatePreset !== 'ALL') {
+      const orderDateStr = order.executionDate || '';
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      if (filterDatePreset === 'TODAY') {
+        matchesDate = orderDateStr === todayStr;
+      } else if (filterDatePreset === 'THIS_WEEK') {
+        const now = new Date();
+        const dayOfWeek = now.getDay() || 7;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - dayOfWeek + 1);
+        const mondayStr = monday.toISOString().split('T')[0];
+        matchesDate = orderDateStr >= mondayStr && orderDateStr <= todayStr;
+      } else if (filterDatePreset === 'THIS_MONTH') {
+        const monthPrefix = new Date().toISOString().slice(0, 7);
+        matchesDate = orderDateStr.startsWith(monthPrefix);
+      } else if (filterDatePreset === 'CUSTOM') {
+        if (filterStartDate && orderDateStr < filterStartDate) matchesDate = false;
+        if (filterEndDate && orderDateStr > filterEndDate) matchesDate = false;
+      }
+    }
+
+    return matchesSearch && matchesShift && matchesStatus && matchesArea && matchesTaskType && matchesDate;
   });
 
   const handleCreateSubmit = (e: React.FormEvent) => {
@@ -1430,20 +1456,20 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           <button
             type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className={`btn ${showFilters || (filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL') ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn ${showFilters || (filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || filterDatePreset !== 'ALL') ? 'btn-primary' : 'btn-secondary'}`}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 800 }}
           >
             <Filter size={15} />
             <span>{showFilters ? 'Ocultar Filtros' : 'Filtros Avanzados'}</span>
-            {(filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL') && (
+            {(filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || filterDatePreset !== 'ALL') && (
               <span style={{ backgroundColor: '#FFF', color: 'var(--orange)', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 900 }}>
-                { (filterTaskType !== 'ALL' ? 1 : 0) + (filterAreaId !== 'ALL' ? 1 : 0) + (filterStatus !== 'ALL' ? 1 : 0) + (filterShiftId !== 'ALL' ? 1 : 0) }
+                { (filterTaskType !== 'ALL' ? 1 : 0) + (filterAreaId !== 'ALL' ? 1 : 0) + (filterStatus !== 'ALL' ? 1 : 0) + (filterShiftId !== 'ALL' ? 1 : 0) + (filterDatePreset !== 'ALL' ? 1 : 0) }
               </span>
             )}
             {showFilters ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
           </button>
 
-          {(filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || searchTerm) && (
+          {(filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || filterDatePreset !== 'ALL' || searchTerm) && (
             <button
               type="button"
               onClick={() => {
@@ -1452,6 +1478,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 setFilterAreaId('ALL');
                 setFilterStatus('ALL');
                 setFilterShiftId('ALL');
+                setFilterDatePreset('ALL');
+                setFilterStartDate('');
+                setFilterEndDate('');
               }}
               className="btn btn-secondary"
               style={{ fontSize: '11px', padding: '8px 12px', borderRadius: '10px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}
@@ -1464,6 +1493,47 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
         {/* Collapsible Filter Panel */}
         {showFilters && (
           <div className="filter-drawer-box" style={{ marginTop: '12px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+            {/* Date Preset Filter */}
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>📅 Fecha de Ejecución</label>
+              <select
+                value={filterDatePreset}
+                onChange={(e) => setFilterDatePreset(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF', fontWeight: 800 }}
+              >
+                <option value="ALL">Todas las Fechas</option>
+                <option value="TODAY">📅 Hoy ({new Date().toISOString().split('T')[0]})</option>
+                <option value="THIS_WEEK">🗓️ Esta Semana</option>
+                <option value="THIS_MONTH">📆 Este Mes</option>
+                <option value="CUSTOM">🛠️ Rango Personalizado...</option>
+              </select>
+            </div>
+
+            {/* Custom Date Range Pickers (shown only when CUSTOM is chosen) */}
+            {filterDatePreset === 'CUSTOM' && (
+              <>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>Desde (Fecha Inicio)</label>
+                  <input
+                    type="date"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>Hasta (Fecha Término)</label>
+                  <input
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF' }}
+                  />
+                </div>
+              </>
+            )}
+
             {/* Task Type Filter */}
             <div>
               <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>Tipo Tarea</label>
