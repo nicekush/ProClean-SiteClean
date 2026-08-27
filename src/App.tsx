@@ -118,10 +118,9 @@ export function App() {
 
   // 3-Level Plant Hierarchy Initial Defaults
   const [plantAreas, setPlantAreas] = useState<PlantArea[]>([
-    { id: 'pa1', name: 'Chancador Primario', code: 'CH-PRIM' },
-    { id: 'pa2', name: 'Chancador Terciario', code: 'CH-TERC' },
-    { id: 'pa3', name: 'Área Húmeda', code: 'AR-HUM' },
-    { id: 'pa4', name: 'Apilado y Remanejo', code: 'AP-REM' }
+    { id: 'pa_2', name: 'Área Seca', code: 'AR-SECA' },
+    { id: 'pa_1', name: 'Área Húmeda (LIX-SX-EW-RO)', code: 'AR-HUM' },
+    { id: 'pa_3', name: 'Sectores Complementarios / Mina', code: 'AR-COMP' }
   ]);
 
   const [sectors, setSectors] = useState<Sector[]>([

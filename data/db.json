@@ -600,6 +600,23 @@
       "executionDate": "2026-08-12"
     }
   ],
+  "plantAreas": [
+    {
+      "id": "pa_2",
+      "name": "Área Seca",
+      "code": "AR-SECA"
+    },
+    {
+      "id": "pa_1",
+      "name": "Área Húmeda (LIX-SX-EW-RO)",
+      "code": "AR-HUM"
+    },
+    {
+      "id": "pa_3",
+      "name": "Sectores Complementarios / Mina",
+      "code": "AR-COMP"
+    }
+  ],
   "sectors": [
     {
       "id": "sec_1",
