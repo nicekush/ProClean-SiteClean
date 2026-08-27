@@ -683,17 +683,18 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     }
   };
 
-  const renderStepper = (currentStep: number, totalSteps: number = 9) => {
+  const renderStepper = (currentStep: number, totalSteps: number = 10) => {
     const stepTitles = [
       '1. Clasificación Tarea',
       '2. Área de Planta',
       '3. Sector / Proceso',
-      '4. Equipo & Componentes',
-      '5. Fecha & Turno',
+      '4. Equipo Principal',
+      '5. Componentes Intervenidos',
       '6. Selección de Recursos',
       '7. Cuadrilla Manual',
       '8. Maquinaria de Flota',
-      '9. Detalle & Fotos'
+      '9. Fecha & Turno',
+      '10. Detalle & Fotos'
     ];
     const percent = Math.round((currentStep / totalSteps) * 100);
 
@@ -1908,7 +1909,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               <button onClick={handleCancelAddModal} className="btn btn-secondary" style={{ padding: '4px 8px' }}><X size={16} /></button>
             </div>
 
-            {renderStepper(currentAddStep, 9)}
+            {renderStepper(currentAddStep, 10)}
 
             <form onSubmit={handleCreateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
               
@@ -2073,17 +2074,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       }} 
                       style={{ padding: '12px 24px', fontSize: '13px' }}
                     >
-                      Siguiente: Equipo & Componentes ➔
+                      Siguiente: Equipo Principal ➔
                     </button>
                   </div>
                 </div>
               )}
-
-              {/* PASO 4: SECTOR (NIVEL 2), EQUIPO (NIVEL 3) & COMPONENTES (NIVEL 4) */}
               {currentAddStep === 4 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    ⚙️ Paso 4: Selecciona Sector (Nivel 2), Equipo Principal (Nivel 3) & Componentes (Nivel 4)
+                    ⚙️ Paso 4: Selecciona el Equipo / Correa Principal (Nivel 3)
                   </h4>
                   
                   {/* Selector de Sector Nivel 2 */}
@@ -2105,7 +2104,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
                   <div style={{ backgroundColor: '#FFF7ED', padding: '16px', borderRadius: '16px', border: '2px solid #FFEDD5' }}>
                     <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--orange)', display: 'block', marginBottom: '6px' }}>
-                      Equipo / Correa Principal (Nivel 3)
+                      Equipo / Correa Principal (Nivel 3) * (Obligatorio)
                     </label>
                     <select
                       value={selectedEquipmentId}
@@ -2119,46 +2118,6 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       ))}
                     </select>
                   </div>
-
-                  {availableSubSectors.length > 0 && (
-                    <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: selectedSubSectorNames.length === 0 ? '2px solid #EF4444' : '1px solid var(--slate-200)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block' }}>
-                          Componentes Intervenidos (Nivel 4 Badges Multiseleccionables) <span style={{ color: '#EF4444' }}>* (Obligatorio)</span>
-                        </label>
-                        {selectedSubSectorNames.length === 0 && (
-                          <span style={{ fontSize: '11px', fontWeight: 800, color: '#EF4444', backgroundColor: '#FEF2F2', padding: '2px 8px', borderRadius: '8px' }}>
-                            ⚠️ Selecciona al menos 1
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {availableSubSectors.map(sub => {
-                          const isSelected = selectedSubSectorNames.includes(sub.name);
-                          return (
-                            <button
-                              key={sub.id}
-                              type="button"
-                              className="badge-select-btn"
-                              onClick={() => toggleSubSectorSelection(sub.name)}
-                              style={{
-                                padding: '8px 14px',
-                                borderRadius: '20px',
-                                fontSize: '12px',
-                                fontWeight: 800,
-                                border: isSelected ? '2px solid var(--orange)' : '1px solid var(--slate-300)',
-                                backgroundColor: isSelected ? 'var(--orange)' : '#FFFFFF',
-                                color: isSelected ? '#FFFFFF' : 'var(--slate-700)',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {isSelected ? '✓ ' : '+ '} {sub.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
 
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>N° OT (Correlativo)</label>
@@ -2179,50 +2138,59 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       className="btn btn-primary" 
                       onClick={() => {
                         if (!selectedEquipmentId) { alert('Selecciona el Equipo antes de continuar.'); return; }
-                        if (selectedSubSectorNames.length === 0) {
-                          const fallbackName = availableSubSectors && availableSubSectors.length > 0 ? availableSubSectors[0].name : 'General / Equipo';
-                          setSelectedSubSectorNames([fallbackName]);
-                        }
+                        setSelectedSubSectorNames([]); // Guarantees NO badge is pre-selected
                         setCurrentAddStep(5);
                       }} 
                       style={{ padding: '12px 24px', fontSize: '13px' }}
                     >
-                      Siguiente: Fecha & Turno ➔
+                      Siguiente: Componentes (Badges) ➔
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* PASO 5: FECHA & TURNO */}
+              {/* PASO 5: SELECCIÓN DE COMPONENTES INTERVENIDOS (NIVEL 4 BADGES - POR DEFECTO NINGUNO SELECCIONADO) */}
               {currentAddStep === 5 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    ⏱️ Paso 5: ¿Cuándo y en qué Turno se ejecutó?
+                    🏷️ Paso 5: Selecciona los Componentes Intervenidos (Nivel 4)
                   </h4>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>📅 Fecha de Ejecución</label>
-                      <input
-                        type="date"
-                        value={newOrder.executionDate || new Date().toISOString().split('T')[0]}
-                        onChange={e => setNewOrder({ ...newOrder, executionDate: e.target.value })}
-                        style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid var(--slate-300)', fontWeight: 800, fontSize: '14px' }}
-                        required
-                      />
+                  <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: selectedSubSectorNames.length === 0 ? '2px solid #EF4444' : '1px solid var(--slate-200)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block' }}>
+                        Componentes Intervenidos (Badges Multiseleccionables) <span style={{ color: '#EF4444' }}>* (Obligatorio)</span>
+                      </label>
+                      {selectedSubSectorNames.length === 0 && (
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#EF4444', backgroundColor: '#FEF2F2', padding: '2px 8px', borderRadius: '8px' }}>
+                          ⚠️ Ningún componente seleccionado
+                        </span>
+                      )}
                     </div>
-
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>Turno Asignado</label>
-                      <select
-                        value={newOrder.shiftId}
-                        onChange={e => setNewOrder({ ...newOrder, shiftId: e.target.value })}
-                        style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid var(--slate-300)', fontWeight: 800, fontSize: '14px', backgroundColor: '#FFF' }}
-                      >
-                        {shifts.map(s => (
-                          <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                        ))}
-                      </select>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {availableSubSectors.map(sub => {
+                        const isSelected = selectedSubSectorNames.includes(sub.name);
+                        return (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            className="badge-select-btn"
+                            onClick={() => toggleSubSectorSelection(sub.name)}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: '20px',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              border: isSelected ? '2px solid var(--orange)' : '1px solid var(--slate-300)',
+                              backgroundColor: isSelected ? 'var(--orange)' : '#FFFFFF',
+                              color: isSelected ? '#FFFFFF' : 'var(--slate-700)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {isSelected ? '✓ ' : '+ '} {sub.name}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -2235,22 +2203,41 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                         ✖ Cancelar
                       </button>
                     </div>
-                    <button type="button" className="btn btn-primary" onClick={() => setCurrentAddStep(6)} style={{ padding: '12px 24px', fontSize: '13px' }}>
-                      Siguiente: Recursos & m³ ➔
+                    <button 
+                      type="button" 
+                      className="btn btn-primary" 
+                      onClick={() => {
+                        if (selectedSubSectorNames.length === 0) {
+                          alert('⚠️ Por favor selecciona al menos 1 Componente Intervenido (Nivel 4) para continuar.');
+                          return;
+                        }
+                        setCurrentAddStep(6);
+                      }} 
+                      style={{ padding: '12px 24px', fontSize: '13px' }}
+                    >
+                      Siguiente: Recursos Utilizados ➔
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* PASO 6: SELECCIÓN DE RECURSOS */}
+              {/* PASO 6: SELECCIÓN DE RECURSOS (POR DEFECTO NINGUNO SELECCIONADO) */}
               {currentAddStep === 6 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
                     🚜👷 Paso 6: Selecciona los Recursos Utilizados
                   </h4>
+                  <p style={{ fontSize: '12px', color: 'var(--slate-600)', margin: 0 }}>
+                    Haz clic en la(s) opción(es) que requieres para esta Orden de Trabajo:
+                  </p>
 
-                  <div className="responsive-option-grid" style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
-                    <label 
+                  <div className="responsive-option-grid" style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: (!newOrder.hasManualLabor && !newOrder.hasEquipment) ? '2px solid #EF4444' : '1px solid var(--slate-200)' }}>
+                    <div 
+                      onClick={() => {
+                        const hasManual = !newOrder.hasManualLabor;
+                        const calcM3 = computeCombinedM3(hasManual, newOrder.headcount || 0, newOrder.realHours || 0, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3);
+                        setNewOrder({ ...newOrder, hasManualLabor: hasManual, cubicMetersRemoved: calcM3 });
+                      }}
                       style={{ 
                         display: 'flex', 
                         flexDirection: 'column',
@@ -2259,28 +2246,25 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                         gap: '12px', 
                         padding: '24px 16px',
                         borderRadius: '16px',
-                        border: newOrder.hasManualLabor ? '2px solid var(--orange)' : '1px solid var(--slate-300)',
+                        border: newOrder.hasManualLabor ? '3px solid var(--orange)' : '2px dashed var(--slate-300)',
                         backgroundColor: newOrder.hasManualLabor ? '#FFF7ED' : '#FFFFFF',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        boxShadow: newOrder.hasManualLabor ? '0 4px 12px rgba(247,122,6,0.15)' : 'none'
                       }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={newOrder.hasManualLabor}
-                        onChange={e => {
-                          const hasManual = e.target.checked;
-                          const calcM3 = computeCombinedM3(hasManual, newOrder.headcount || 0, newOrder.realHours || 0, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3);
-                          setNewOrder({ ...newOrder, hasManualLabor: hasManual, cubicMetersRemoved: calcM3 });
-                        }}
-                        style={{ width: '22px', height: '22px', accentColor: 'var(--orange)' }}
-                      />
-                      <span style={{ fontSize: '15px', fontWeight: 900, color: newOrder.hasManualLabor ? 'var(--orange)' : 'var(--slate-800)', textAlign: 'center' }}>
-                        👷 Trabajo Manual
+                      <span style={{ fontSize: '28px' }}>👷‍♂️</span>
+                      <span style={{ fontSize: '15px', fontWeight: 900, color: newOrder.hasManualLabor ? 'var(--orange)' : 'var(--slate-700)', textAlign: 'center' }}>
+                        {newOrder.hasManualLabor ? '✓ Trabajo Manual (Cuadrilla)' : '+ Agregar Trabajo Manual'}
                       </span>
-                    </label>
+                    </div>
 
-                    <label 
+                    <div 
+                      onClick={() => {
+                        const hasEquip = !newOrder.hasEquipment;
+                        const calcM3 = computeCombinedM3(newOrder.hasManualLabor, newOrder.headcount || 0, newOrder.realHours || 0, hasEquip, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3);
+                        setNewOrder({ ...newOrder, hasEquipment: hasEquip, cubicMetersRemoved: calcM3 });
+                      }}
                       style={{ 
                         display: 'flex', 
                         flexDirection: 'column',
@@ -2289,26 +2273,18 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                         gap: '12px', 
                         padding: '24px 16px',
                         borderRadius: '16px',
-                        border: newOrder.hasEquipment ? '2px solid #0369A1' : '1px solid var(--slate-300)',
+                        border: newOrder.hasEquipment ? '3px solid #0369A1' : '2px dashed var(--slate-300)',
                         backgroundColor: newOrder.hasEquipment ? '#F0F9FF' : '#FFFFFF',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        boxShadow: newOrder.hasEquipment ? '0 4px 12px rgba(3,105,161,0.15)' : 'none'
                       }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={newOrder.hasEquipment}
-                        onChange={e => {
-                          const hasEquip = e.target.checked;
-                          const calcM3 = computeCombinedM3(newOrder.hasManualLabor, newOrder.headcount || 0, newOrder.realHours || 0, hasEquip, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3);
-                          setNewOrder({ ...newOrder, hasEquipment: hasEquip, cubicMetersRemoved: calcM3 });
-                        }}
-                        style={{ width: '22px', height: '22px', accentColor: '#0369A1' }}
-                      />
-                      <span style={{ fontSize: '15px', fontWeight: 900, color: newOrder.hasEquipment ? '#0369A1' : 'var(--slate-800)', textAlign: 'center' }}>
-                        🚜 Maquinaria (Equipos)
+                      <span style={{ fontSize: '28px' }}>🚜</span>
+                      <span style={{ fontSize: '15px', fontWeight: 900, color: newOrder.hasEquipment ? '#0369A1' : 'var(--slate-700)', textAlign: 'center' }}>
+                        {newOrder.hasEquipment ? '✓ Maquinaria (Equipos)' : '+ Agregar Maquinaria'}
                       </span>
-                    </label>
+                    </div>
                   </div>
 
                   <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
@@ -2324,6 +2300,10 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       type="button" 
                       className="btn btn-primary" 
                       onClick={() => {
+                        if (!newOrder.hasManualLabor && !newOrder.hasEquipment) {
+                          alert('⚠️ Por favor selecciona al menos 1 tipo de recurso (Trabajo Manual o Maquinaria de Flota) para continuar.');
+                          return;
+                        }
                         if (newOrder.hasManualLabor) {
                           setCurrentAddStep(7);
                         } else if (newOrder.hasEquipment) {
@@ -2466,17 +2446,78 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       </button>
                     </div>
                     <button type="button" className="btn btn-primary" onClick={() => setCurrentAddStep(9)} style={{ padding: '12px 24px', fontSize: '13px' }}>
+                      Siguiente: Fecha & Turno ➔
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* PASO 9: FECHA & TURNO */}
+              {currentAddStep === 9 && (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
+                    ⏱️ Paso 9: ¿Cuándo y en qué Turno se ejecutó?
+                  </h4>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>📅 Fecha de Ejecución</label>
+                      <input
+                        type="date"
+                        value={newOrder.executionDate || new Date().toISOString().split('T')[0]}
+                        onChange={e => setNewOrder({ ...newOrder, executionDate: e.target.value })}
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid var(--slate-300)', fontWeight: 800, fontSize: '14px' }}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>Turno Asignado</label>
+                      <select
+                        value={newOrder.shiftId}
+                        onChange={e => setNewOrder({ ...newOrder, shiftId: e.target.value })}
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid var(--slate-300)', fontWeight: 800, fontSize: '14px', backgroundColor: '#FFF' }}
+                      >
+                        {shifts.map(s => (
+                          <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        onClick={() => {
+                          if (newOrder.hasEquipment) {
+                            setCurrentAddStep(8);
+                          } else if (newOrder.hasManualLabor) {
+                            setCurrentAddStep(7);
+                          } else {
+                            setCurrentAddStep(6);
+                          }
+                        }}
+                      >
+                        ◄ Atrás
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                        ✖ Cancelar
+                      </button>
+                    </div>
+                    <button type="button" className="btn btn-primary" onClick={() => setCurrentAddStep(10)} style={{ padding: '12px 24px', fontSize: '13px' }}>
                       Siguiente: Detalle & Fotos ➔
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* PASO 9: DETALLE & FOTOS */}
-              {currentAddStep === 9 && (
+              {/* PASO 10: DETALLE & FOTOS */}
+              {currentAddStep === 10 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    📸 Paso 9: Descripción de la Operación & Evidencias Fotográficas
+                    📸 Paso 10: Descripción de la Operación & Evidencias Fotográficas
                   </h4>
 
                   <div>
@@ -2509,15 +2550,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <button 
                         type="button" 
                         className="btn btn-secondary" 
-                        onClick={() => {
-                          if (newOrder.hasEquipment) {
-                            setCurrentAddStep(8);
-                          } else if (newOrder.hasManualLabor) {
-                            setCurrentAddStep(7);
-                          } else {
-                            setCurrentAddStep(6);
-                          }
-                        }}
+                        onClick={() => setCurrentAddStep(9)}
                       >
                         ◄ Atrás
                       </button>
