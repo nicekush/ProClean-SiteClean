@@ -985,12 +985,38 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               </div>
             )}
 
-            {/* PASO 4: EQUIPO (NIVEL 3) & COMPONENTES (NIVEL 4) */}
+            {/* PASO 4: SECTOR (NIVEL 2), EQUIPO (NIVEL 3) & COMPONENTES (NIVEL 4) */}
             {currentEditStep === 4 && (
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                  ⚙️ Paso 4: Selecciona Equipo Principal (Nivel 3) & Componentes (Nivel 4)
+                  ⚙️ Paso 4: Selecciona Sector (Nivel 2), Equipo Principal (Nivel 3) & Componentes (Nivel 4)
                 </h4>
+
+                {/* Selector de Sector Nivel 2 */}
+                <div style={{ backgroundColor: '#F8FAFC', padding: '14px 16px', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-700)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    📍 Sector / Proceso Operativo (Nivel 2)
+                  </label>
+                  <select
+                    value={editSelectedSectorId}
+                    onChange={e => {
+                      const secId = e.target.value;
+                      setEditSelectedSectorId(secId);
+                      setEditSelectedEquipmentId('');
+                      setEditSelectedSubSectorNames([]);
+                      const secObj = sectors.find(s => s.id === secId);
+                      if (editingOrder) {
+                        setEditingOrder({ ...editingOrder, sectorId: secId, sectorName: secObj ? secObj.name : '' });
+                      }
+                    }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--slate-300)', fontWeight: 800, fontSize: '13px', backgroundColor: '#FFF' }}
+                  >
+                    <option value="">Todos los Sectores...</option>
+                    {editAvailableSectors.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
                 
                 <div style={{ backgroundColor: '#FFF7ED', padding: '16px', borderRadius: '16px', border: '2px solid #FFEDD5' }}>
                   <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--orange)', display: 'block', marginBottom: '6px' }}>
@@ -1970,13 +1996,30 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 </div>
               )}
 
-              {/* PASO 4: EQUIPO (NIVEL 3) & COMPONENTES (NIVEL 4) */}
+              {/* PASO 4: SECTOR (NIVEL 2), EQUIPO (NIVEL 3) & COMPONENTES (NIVEL 4) */}
               {currentAddStep === 4 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    ⚙️ Paso 4: Selecciona Equipo Principal (Nivel 3) & Componentes (Nivel 4)
+                    ⚙️ Paso 4: Selecciona Sector (Nivel 2), Equipo Principal (Nivel 3) & Componentes (Nivel 4)
                   </h4>
                   
+                  {/* Selector de Sector Nivel 2 */}
+                  <div style={{ backgroundColor: '#F8FAFC', padding: '14px 16px', borderRadius: '16px', border: '1px solid var(--slate-200)' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-700)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      📍 Sector / Proceso Operativo (Nivel 2)
+                    </label>
+                    <select
+                      value={selectedSectorId}
+                      onChange={e => handleSectorChange(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--slate-300)', fontWeight: 800, fontSize: '13px', backgroundColor: '#FFF' }}
+                    >
+                      <option value="">Todos los Sectores...</option>
+                      {availableSectors.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div style={{ backgroundColor: '#FFF7ED', padding: '16px', borderRadius: '16px', border: '2px solid #FFEDD5' }}>
                     <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--orange)', display: 'block', marginBottom: '6px' }}>
                       Equipo / Correa Principal (Nivel 3)
