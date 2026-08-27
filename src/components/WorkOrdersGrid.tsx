@@ -154,7 +154,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const editAvailableSectors = (sectors || []).filter(s => !editSelectedAreaId || s.areaId === editSelectedAreaId);
   const editAvailableEquipments = (equipments || []).filter(e => !editSelectedSectorId || e.sectorId === editSelectedSectorId);
 
-  // Helper to query Component Badges directly from DB (without generating artificial catalogs)
+  // Helper to query Component Badges directly from DB (with strict name deduplication)
   const getSubSectorsFromDb = (equipId: string, sectorId: string) => {
     const equipObj = (equipments || []).find(e => e.id === equipId);
     const sectorObj = (sectors || []).find(s => s.id === sectorId);
@@ -172,12 +172,20 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       });
     }
 
-    // 3. Fallback to official DB subSectors list if specific sub-association is unassigned
+    // 3. Fallback to official DB subSectors if no specific association is set
     if (matched.length === 0) {
-      return (subSectors || []);
+      matched = (subSectors || []);
     }
 
-    return matched;
+    // Strict deduplication by component name to eliminate repeated badges
+    const uniqueMap = new Map<string, SubSector>();
+    matched.forEach(item => {
+      if (item && item.name && !uniqueMap.has(item.name.trim())) {
+        uniqueMap.set(item.name.trim(), item);
+      }
+    });
+
+    return Array.from(uniqueMap.values());
   };
 
   const availableSubSectors = getSubSectorsFromDb(selectedEquipmentId, selectedSectorId);
