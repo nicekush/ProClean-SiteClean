@@ -1196,8 +1196,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     <input 
                       type="number" 
                       min="1" 
-                      value={editingOrder.headcount} 
-                      onChange={e => { const c = Number(e.target.value); setEditingOrder({ ...editingOrder, headcount: c, cubicMetersRemoved: computeCombinedM3(true, c, editingOrder.realHours || 0, editingOrder.hasEquipment !== false, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3) }); }} 
+                      value={editingOrder.headcount || ''} 
+                      onChange={e => { const val = e.target.value; const c = val === '' ? 0 : Number(val); setEditingOrder({ ...editingOrder, headcount: c, cubicMetersRemoved: computeCombinedM3(true, c, editingOrder.realHours || 0, editingOrder.hasEquipment !== false, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3) }); }} 
                       style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #6EE7B7', fontWeight: 900, fontSize: '15px' }} 
                     />
                   </div>
@@ -1209,8 +1209,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     <input 
                       type="number" 
                       min="1" 
-                      value={editingOrder.realHours} 
-                      onChange={e => { const h = Number(e.target.value); setEditingOrder({ ...editingOrder, realHours: h, estimatedHours: h, cubicMetersRemoved: computeCombinedM3(true, editingOrder.headcount || 0, h, editingOrder.hasEquipment !== false, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3) }); }} 
+                      value={editingOrder.realHours || ''} 
+                      onChange={e => { const val = e.target.value; const h = val === '' ? 0 : Number(val); setEditingOrder({ ...editingOrder, realHours: h, estimatedHours: h, cubicMetersRemoved: computeCombinedM3(true, editingOrder.headcount || 0, h, editingOrder.hasEquipment !== false, editingOrder.vehiclePatent, editingOrder.fleetTripsCount || 0, editingOrder.bucketCapacityM3) }); }} 
                       style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #6EE7B7', fontWeight: 900, fontSize: '15px' }} 
                     />
                   </div>
@@ -1263,8 +1263,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     <input 
                       type="number" 
                       min="0" 
-                      value={editingOrder.fleetTripsCount || 0} 
-                      onChange={e => { const t = Number(e.target.value); setEditingOrder({ ...editingOrder, fleetTripsCount: t, cubicMetersRemoved: computeCombinedM3(editingOrder.hasManualLabor !== false, editingOrder.headcount || 0, editingOrder.realHours || 0, true, editingOrder.vehiclePatent, t, editingOrder.bucketCapacityM3) }); }} 
+                      value={editingOrder.fleetTripsCount || ''} 
+                      onChange={e => { const val = e.target.value; const t = val === '' ? 0 : Number(val); setEditingOrder({ ...editingOrder, fleetTripsCount: t, cubicMetersRemoved: computeCombinedM3(editingOrder.hasManualLabor !== false, editingOrder.headcount || 0, editingOrder.realHours || 0, true, editingOrder.vehiclePatent, t, editingOrder.bucketCapacityM3) }); }} 
                       style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '15px' }} 
                     />
                   </div>
@@ -1277,8 +1277,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       type="number" 
                       min="0" 
                       step="0.5"
-                      value={editingOrder.machineHours || 0} 
-                      onChange={e => setEditingOrder({ ...editingOrder, machineHours: Number(e.target.value) })} 
+                      value={editingOrder.machineHours || ''} 
+                      onChange={e => { const val = e.target.value; const hm = val === '' ? 0 : Number(val); setEditingOrder({ ...editingOrder, machineHours: hm }); }} 
                       style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '15px' }} 
                     />
                   </div>
@@ -2049,8 +2049,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <input 
                         type="number" 
                         min="1" 
-                        value={newOrder.headcount} 
-                        onChange={e => { const c = Number(e.target.value); setNewOrder({ ...newOrder, headcount: c, cubicMetersRemoved: computeCombinedM3(true, c, newOrder.realHours || 0, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3) }); }} 
+                        value={newOrder.headcount || ''} 
+                        onChange={e => { const val = e.target.value; const c = val === '' ? 0 : Number(val); setNewOrder({ ...newOrder, headcount: c, cubicMetersRemoved: computeCombinedM3(true, c, newOrder.realHours || 0, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3) }); }} 
                         style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #6EE7B7', fontWeight: 900, fontSize: '15px' }} 
                       />
                     </div>
@@ -2062,8 +2062,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <input 
                         type="number" 
                         min="1" 
-                        value={newOrder.realHours} 
-                        onChange={e => { const h = Number(e.target.value); setNewOrder({ ...newOrder, realHours: h, estimatedHours: h, cubicMetersRemoved: computeCombinedM3(true, newOrder.headcount || 0, h, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3) }); }} 
+                        value={newOrder.realHours || ''} 
+                        onChange={e => { const val = e.target.value; const h = val === '' ? 0 : Number(val); setNewOrder({ ...newOrder, realHours: h, estimatedHours: h, cubicMetersRemoved: computeCombinedM3(true, newOrder.headcount || 0, h, newOrder.hasEquipment, newOrder.vehiclePatent, newOrder.fleetTripsCount || 0, newOrder.bucketCapacityM3) }); }} 
                         style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #6EE7B7', fontWeight: 900, fontSize: '15px' }} 
                       />
                     </div>
@@ -2116,8 +2116,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <input 
                         type="number" 
                         min="0" 
-                        value={newOrder.fleetTripsCount || 0} 
-                        onChange={e => { const t = Number(e.target.value); setNewOrder({ ...newOrder, fleetTripsCount: t, cubicMetersRemoved: computeCombinedM3(newOrder.hasManualLabor, newOrder.headcount || 0, newOrder.realHours || 0, true, newOrder.vehiclePatent, t, newOrder.bucketCapacityM3) }); }} 
+                        value={newOrder.fleetTripsCount || ''} 
+                        onChange={e => { const val = e.target.value; const t = val === '' ? 0 : Number(val); setNewOrder({ ...newOrder, fleetTripsCount: t, cubicMetersRemoved: computeCombinedM3(newOrder.hasManualLabor, newOrder.headcount || 0, newOrder.realHours || 0, true, newOrder.vehiclePatent, t, newOrder.bucketCapacityM3) }); }} 
                         style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '15px' }} 
                       />
                     </div>
@@ -2130,8 +2130,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                         type="number" 
                         min="0" 
                         step="0.5"
-                        value={newOrder.machineHours || 0} 
-                        onChange={e => setNewOrder({ ...newOrder, machineHours: Number(e.target.value) })} 
+                        value={newOrder.machineHours || ''} 
+                        onChange={e => { const val = e.target.value; const hm = val === '' ? 0 : Number(val); setNewOrder({ ...newOrder, machineHours: hm }); }} 
                         style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #7DD3FC', fontWeight: 900, fontSize: '15px' }} 
                       />
                     </div>
