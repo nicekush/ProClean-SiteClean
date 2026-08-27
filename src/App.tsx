@@ -24,6 +24,7 @@ import type {
   PlantEquipment
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
+import { fetchFirebaseWorkOrders, isFirebaseConfigured } from './api/firebase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
@@ -190,9 +191,11 @@ export function App() {
       if (db.shifts) setShifts(db.shifts);
       if (db.contingencies) setContingencies(db.contingencies);
 
-      // 1. Check Supabase Cloud DB first if configured
+      // 1. Check Cloud DB (Firebase or Supabase) first if configured
       let cloudOrders: WorkOrder[] | null = null;
-      if (isSupabaseConfigured) {
+      if (isFirebaseConfigured) {
+        cloudOrders = await fetchFirebaseWorkOrders();
+      } else if (isSupabaseConfigured) {
         cloudOrders = await fetchSupabaseWorkOrders();
       }
 

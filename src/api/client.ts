@@ -235,6 +235,7 @@ export async function saveContingencies(data: ContingencyReasonConfig[]): Promis
 }
 
 import { syncAllWorkOrdersToSupabase, fetchSupabaseWorkOrders, isSupabaseConfigured } from './supabase';
+import { syncAllWorkOrdersToFirebase, fetchFirebaseWorkOrders, isFirebaseConfigured } from './firebase';
 
 // Work Orders API
 export async function saveWorkOrders(data: WorkOrder[]): Promise<WorkOrder[]> {
@@ -247,6 +248,11 @@ export async function saveWorkOrders(data: WorkOrder[]): Promise<WorkOrder[]> {
   // Sync with Supabase cloud database if configured
   if (isSupabaseConfigured) {
     syncAllWorkOrdersToSupabase(data);
+  }
+
+  // Sync with Firebase cloud database if configured
+  if (isFirebaseConfigured) {
+    syncAllWorkOrdersToFirebase(data);
   }
 
   try {
