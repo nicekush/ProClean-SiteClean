@@ -148,11 +148,23 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   }, [targetEditOrder]);
 
   // Filtered Options for 4-Level Cascading Dropdowns (New OT & Edit OT)
-  const availableSectors = (sectors || []).filter(s => !selectedAreaId || s.areaId === selectedAreaId);
-  const availableEquipments = (equipments || []).filter(e => !selectedSectorId || e.sectorId === selectedSectorId);
+  const getSectorsForArea = (areaId: string) => {
+    const matched = (sectors || []).filter(s => !areaId || s.areaId === areaId);
+    if (matched.length === 0 && sectors && sectors.length > 0) return sectors;
+    return matched;
+  };
 
-  const editAvailableSectors = (sectors || []).filter(s => !editSelectedAreaId || s.areaId === editSelectedAreaId);
-  const editAvailableEquipments = (equipments || []).filter(e => !editSelectedSectorId || e.sectorId === editSelectedSectorId);
+  const getEquipmentsForSector = (sectorId: string) => {
+    const matched = (equipments || []).filter(e => !sectorId || e.sectorId === sectorId);
+    if (matched.length === 0 && equipments && equipments.length > 0) return equipments;
+    return matched;
+  };
+
+  const availableSectors = getSectorsForArea(selectedAreaId);
+  const availableEquipments = getEquipmentsForSector(selectedSectorId);
+
+  const editAvailableSectors = getSectorsForArea(editSelectedAreaId);
+  const editAvailableEquipments = getEquipmentsForSector(editSelectedSectorId);
 
   // Helper to ensure ALL equipments in ALL sectors always show valid component badges
   const getSubSectorsForSelection = (equipId: string, sectorId: string) => {
