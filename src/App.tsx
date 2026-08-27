@@ -124,10 +124,20 @@ export function App() {
   ]);
 
   const [sectors, setSectors] = useState<Sector[]>([
-    { id: 'sec1', areaId: 'pa2', areaName: 'Chancador Terciario', name: 'Correa 133', code: 'CV-133' },
-    { id: 'sec2', areaId: 'pa2', areaName: 'Chancador Terciario', name: 'Planta HPGR', code: 'SEC-HPGR' },
-    { id: 'sec3', areaId: 'pa1', areaName: 'Chancador Primario', name: 'Buzón de Recepción', code: 'SEC-BUZ' },
-    { id: 'sec4', areaId: 'pa3', areaName: 'Área Húmeda', name: 'Molienda SAG', code: 'SEC-SAG' }
+    { id: 'sec_7', areaId: 'pa_2', areaName: 'Área Seca', name: 'Apilado', code: 'APILADO' },
+    { id: 'sec_8', areaId: 'pa_2', areaName: 'Área Seca', name: 'Chancado Primario', code: 'CHANCADO' },
+    { id: 'sec_9', areaId: 'pa_2', areaName: 'Área Seca', name: 'Chancador Terciario', code: 'CHANCADO' },
+    { id: 'sec_10', areaId: 'pa_2', areaName: 'Área Seca', name: 'Planta Concentradora & Relaves', code: 'PLANTAC' },
+    { id: 'sec_11', areaId: 'pa_2', areaName: 'Área Seca', name: 'Planta de Salmuera', code: 'PLANTAD' },
+    { id: 'sec_12', areaId: 'pa_2', areaName: 'Área Seca', name: 'Remanejo', code: 'REMANEJO' },
+    { id: 'sec_1', areaId: 'pa_1', areaName: 'Área Húmeda (LIX-SX-EW-RO)', name: 'Descarga de Ácido Sulfúrico', code: 'DESCARGA' },
+    { id: 'sec_2', areaId: 'pa_1', areaName: 'Área Húmeda (LIX-SX-EW-RO)', name: 'Electrowinning (EW)', code: 'ELECTROW' },
+    { id: 'sec_3', areaId: 'pa_1', areaName: 'Área Húmeda (LIX-SX-EW-RO)', name: 'Extracción por Solventes (SX)', code: 'EXTRACCI' },
+    { id: 'sec_4', areaId: 'pa_1', areaName: 'Área Húmeda (LIX-SX-EW-RO)', name: 'Lixiviación (LIX)', code: 'LIXIVIAC' },
+    { id: 'sec_5', areaId: 'pa_1', areaName: 'Área Húmeda (LIX-SX-EW-RO)', name: 'Patio de Embarque', code: 'PATIODE' },
+    { id: 'sec_6', areaId: 'pa_1', areaName: 'Área Húmeda (LIX-SX-EW-RO)', name: 'Planta de Ósmosis (RO)', code: 'PLANTAD' },
+    { id: 'sec_13', areaId: 'pa_3', areaName: 'Sectores Complementarios / Mina', name: 'Calzadas & Estacionamiento', code: 'CALZADAS' },
+    { id: 'sec_14', areaId: 'pa_3', areaName: 'Sectores Complementarios / Mina', name: 'Talleres Faena', code: 'TALLERES' }
   ]);
 
   const [subSectors, setSubSectors] = useState<SubSector[]>([

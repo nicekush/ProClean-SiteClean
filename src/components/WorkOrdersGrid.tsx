@@ -150,11 +150,33 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   }, [targetEditOrder]);
 
   // Filtered Options for 4-Level Cascading Dropdowns strictly sourced from Database
-  const availableSectors = (sectors || []).filter(s => !selectedAreaId || s.areaId === selectedAreaId);
-  const availableEquipments = (equipments || []).filter(e => !selectedSectorId || e.sectorId === selectedSectorId);
+  const getSectorsForArea = (areaId: string) => {
+    if (!areaId) return sectors || [];
+    const areaObj = (plantAreas || []).find(a => a.id === areaId);
+    const matched = (sectors || []).filter(s => {
+      if (s.areaId === areaId) return true;
+      if (areaObj && (s.areaName === areaObj.name || s.areaId === areaObj.id.replace('_', ''))) return true;
+      return false;
+    });
+    return matched.length > 0 ? matched : (sectors || []);
+  };
 
-  const editAvailableSectors = (sectors || []).filter(s => !editSelectedAreaId || s.areaId === editSelectedAreaId);
-  const editAvailableEquipments = (equipments || []).filter(e => !editSelectedSectorId || e.sectorId === editSelectedSectorId);
+  const getEquipmentsForSector = (sectorId: string) => {
+    if (!sectorId) return equipments || [];
+    const sectorObj = (sectors || []).find(s => s.id === sectorId);
+    const matched = (equipments || []).filter(e => {
+      if (e.sectorId === sectorId) return true;
+      if (sectorObj && (e.sectorName === sectorObj.name || e.sectorId === sectorObj.id.replace('_', ''))) return true;
+      return false;
+    });
+    return matched.length > 0 ? matched : (equipments || []);
+  };
+
+  const availableSectors = getSectorsForArea(selectedAreaId);
+  const availableEquipments = getEquipmentsForSector(selectedSectorId);
+
+  const editAvailableSectors = getSectorsForArea(editSelectedAreaId);
+  const editAvailableEquipments = getEquipmentsForSector(editSelectedSectorId);
 
   // Helper to query Component Badges directly from DB (with strict name deduplication)
   const getSubSectorsFromDb = (equipId: string, sectorId: string) => {
