@@ -496,6 +496,8 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
     border-bottom: 1px solid var(--slate-100);
     padding-bottom: 10px;
   }

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole, Machine, ContingencyReasonConfig, PlantArea, Sector, SubSector, TaskType, PlantEquipment } from '../types';
-import { Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu } from 'lucide-react';
+import { Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface WorkOrdersGridProps {
@@ -53,6 +53,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const [reportingContingencyOrder, setReportingContingencyOrder] = useState<WorkOrder | null>(null);
   const [selectedContingencyReason, setSelectedContingencyReason] = useState<string>('');
   const [contingencyComments, setContingencyComments] = useState<string>('');
+  const [showFilters, setShowFilters] = useState<boolean>(false);
 
   // ITO Sign-off modal & Canvas Signature state
   const [itoApprovingOrder, setItoApprovingOrder] = useState<WorkOrder | null>(null);
@@ -1370,81 +1371,120 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       </div>
     )}
 
-      {/* Filter and Search Bar */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, position: 'relative', minWidth: '220px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--slate-400)' }} />
-          <input
-            type="text"
-            placeholder="Buscar por N° OT / SAP, Área, Equipo / Correa, Detalle..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: '12px', border: '1px solid var(--slate-200)', fontSize: '13px' }}
-          />
+      {/* Search and Collapsible Filter Controls */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Quick Search Input */}
+          <div style={{ flex: 1, position: 'relative', minWidth: '220px' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--slate-400)' }} />
+            <input
+              type="text"
+              placeholder="Buscar por N° OT / SAP, Área, Equipo / Correa, Detalle..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: '12px', border: '1px solid var(--slate-200)', fontSize: '13px' }}
+            />
+          </div>
+
+          {/* Toggle Filter Menu Button */}
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`btn ${showFilters || (filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL') ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 800 }}
+          >
+            <Filter size={15} />
+            <span>{showFilters ? 'Ocultar Filtros' : 'Filtros Avanzados'}</span>
+            {(filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL') && (
+              <span style={{ backgroundColor: '#FFF', color: 'var(--orange)', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 900 }}>
+                { (filterTaskType !== 'ALL' ? 1 : 0) + (filterAreaId !== 'ALL' ? 1 : 0) + (filterStatus !== 'ALL' ? 1 : 0) + (filterShiftId !== 'ALL' ? 1 : 0) }
+              </span>
+            )}
+            {showFilters ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+          </button>
+
+          {(filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || searchTerm) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('');
+                setFilterTaskType('ALL');
+                setFilterAreaId('ALL');
+                setFilterStatus('ALL');
+                setFilterShiftId('ALL');
+              }}
+              className="btn btn-secondary"
+              style={{ fontSize: '11px', padding: '8px 12px', borderRadius: '10px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}
+            >
+              Restablecer
+            </button>
+          )}
         </div>
 
-        {/* Task Type Filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Tag size={16} style={{ color: 'var(--slate-400)' }} />
-          <span style={{ fontSize: '12px', fontWeight: 800 }}>Tipo Tarea:</span>
-          <select
-            value={filterTaskType}
-            onChange={(e) => setFilterTaskType(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF', fontWeight: 800 }}
-          >
-            <option value="ALL">Todos los Tipos</option>
-            <option value="PLANIFICADO">📌 Planificado</option>
-            <option value="MANTENIMIENTO_PROGRAMADO">🔧 Mantenimiento Programado</option>
-            <option value="EMERGENTE">🚨 Emergente</option>
-          </select>
-        </div>
+        {/* Collapsible Filter Panel */}
+        {showFilters && (
+          <div className="filter-drawer-box" style={{ marginTop: '12px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+            {/* Task Type Filter */}
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>Tipo Tarea</label>
+              <select
+                value={filterTaskType}
+                onChange={(e) => setFilterTaskType(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF', fontWeight: 800 }}
+              >
+                <option value="ALL">Todos los Tipos</option>
+                <option value="PLANIFICADO">📌 Planificado</option>
+                <option value="MANTENIMIENTO_PROGRAMADO">🔧 Mantenimiento Programado</option>
+                <option value="EMERGENTE">🚨 Emergente</option>
+              </select>
+            </div>
 
-        {/* Plant Area Filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Layers size={16} style={{ color: 'var(--slate-400)' }} />
-          <span style={{ fontSize: '12px', fontWeight: 800 }}>Área:</span>
-          <select
-            value={filterAreaId}
-            onChange={(e) => setFilterAreaId(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF', fontWeight: 800 }}
-          >
-            <option value="ALL">Todas las Áreas</option>
-            {(plantAreas || []).map(a => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-        </div>
+            {/* Plant Area Filter */}
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>Área de Planta</label>
+              <select
+                value={filterAreaId}
+                onChange={(e) => setFilterAreaId(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF', fontWeight: 800 }}
+              >
+                <option value="ALL">Todas las Áreas</option>
+                {(plantAreas || []).map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
 
-        {/* Status Filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Filter size={16} style={{ color: 'var(--slate-400)' }} />
-          <span style={{ fontSize: '12px', fontWeight: 800 }}>Estado:</span>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF', fontWeight: 800 }}
-          >
-            <option value="ALL">Todos los Estados</option>
-            <option value="PENDIENTE">⏳ Pendientes de Firma ITO</option>
-            <option value="APROBADO">✓ Aprobados Mandante</option>
-            <option value="CONTINGENCIA">⚠️ En Contingencia / Rechazados</option>
-          </select>
-        </div>
+            {/* Status Filter */}
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>Estado Conformidad</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF', fontWeight: 800 }}
+              >
+                <option value="ALL">Todos los Estados</option>
+                <option value="PENDIENTE">⏳ Pendientes ITO</option>
+                <option value="APROBADO">✓ Aprobados Mandante</option>
+                <option value="CONTINGENCIA">⚠️ Contingencia / Rechazados</option>
+              </select>
+            </div>
 
-        {/* Shift Filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 800 }}>Turno:</span>
-          <select
-            value={filterShiftId}
-            onChange={(e) => setFilterShiftId(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF' }}
-          >
-            <option value="ALL">Todos los Turnos</option>
-            {shifts.map(s => (
-              <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-            ))}
-          </select>
-        </div>
+            {/* Shift Filter */}
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>Turno Operativo</label>
+              <select
+                value={filterShiftId}
+                onChange={(e) => setFilterShiftId(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF' }}
+              >
+                <option value="ALL">Todos los Turnos</option>
+                {shifts.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* DESKTOP TABLE VIEW (> 768px) */}
