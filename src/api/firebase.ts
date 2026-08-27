@@ -61,8 +61,8 @@ export function subscribeFirebaseWorkOrders(onUpdate: (orders: WorkOrder[]) => v
   try {
     const colRef = collection(db, COLLECTION_WORK_ORDERS);
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const orders: WorkOrder[] = [];
       if (!snapshot.empty) {
-        const orders: WorkOrder[] = [];
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
           if (data.payload) {
@@ -72,8 +72,8 @@ export function subscribeFirebaseWorkOrders(onUpdate: (orders: WorkOrder[]) => v
           }
         });
         orders.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
-        onUpdate(orders);
       }
+      onUpdate(orders);
     }, (err) => {
       console.warn('Error in Firestore real-time listener:', err);
     });

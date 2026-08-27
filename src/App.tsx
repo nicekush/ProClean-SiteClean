@@ -24,7 +24,7 @@ import type {
   PlantEquipment
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
-import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase } from './api/firebase';
+import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder } from './api/firebase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
@@ -435,6 +435,9 @@ export function App() {
     const target = workOrders.find(o => o.id === id);
     const updated = workOrders.filter(o => o.id !== id);
     setWorkOrders(updated);
+    if (isFirebaseConfigured) {
+      deleteFirebaseWorkOrder(id);
+    }
     apiSaveWorkOrders(updated);
     addAuditLog('ELIMINACION', 'Orden de Trabajo', target?.sapCode || id, `Eliminación de la OT por ${authenticatedUser?.name}`);
   };
