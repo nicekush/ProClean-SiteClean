@@ -512,9 +512,9 @@ export function App() {
             </div>
 
             {/* DB Status Badge */}
-            <div className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, color: dbConnected ? '#025951' : '#92400E', backgroundColor: dbConnected ? '#E6F4F1' : '#FEF3C7', padding: '4px 10px', borderRadius: '16px' }}>
+            <div className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, color: isFirebaseConfigured ? '#0369A1' : isSupabaseConfigured ? '#047857' : dbConnected ? '#025951' : '#92400E', backgroundColor: isFirebaseConfigured ? '#F0F9FF' : isSupabaseConfigured ? '#ECFDF5' : dbConnected ? '#E6F4F1' : '#FEF3C7', padding: '4px 10px', borderRadius: '16px' }}>
               <Database size={14} />
-              {dbConnected ? 'BD LOCAL (3001)' : 'BD Local...'}
+              {isFirebaseConfigured ? 'BD FIREBASE CLOUD' : isSupabaseConfigured ? 'BD SUPABASE CLOUD' : dbConnected ? 'BD LOCAL (3001)' : 'BD Local...'}
             </div>
 
             {/* Active Contract Badge */}
