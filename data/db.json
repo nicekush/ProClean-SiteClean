@@ -72,6 +72,44 @@
   ],
   "workOrders": [
     {
+      "executionDate": "2026-08-27",
+      "semana": 33,
+      "dia": "Lunes 15/08",
+      "sapCode": "OT-1014",
+      "equipoCorrea": "CT-03 (Carro Tensor)",
+      "operationDetail": "asa",
+      "headcount": 4,
+      "estimatedHours": 8,
+      "realHours": 8,
+      "shiftId": "s1",
+      "shiftName": "Turno Día",
+      "vehiclePatent": "",
+      "status": "PENDIENTE_APROBACION_ITO",
+      "contingencyReason": "",
+      "beforePhotoUrl": "",
+      "afterPhotoUrl": "",
+      "areaId": "pa_2",
+      "areaName": "Área Seca",
+      "sectorId": "sec_8",
+      "sectorName": "Chancado Primario",
+      "equipmentId": "eq_20",
+      "equipmentName": "CT-03",
+      "subSectorId": "",
+      "subSectorName": "",
+      "hasManualLabor": true,
+      "hasEquipment": false,
+      "taskType": "PLANIFICADO",
+      "cubicMetersRemoved": 25.6,
+      "fleetTripsCount": 0,
+      "bucketCapacityM3": 0,
+      "machineHours": 0,
+      "selectedSubSectorNames": [
+        "Carro Tensor"
+      ],
+      "id": "1787837711675",
+      "tenantId": "tenant_cmz"
+    },
+    {
       "executionDate": "2026-08-17",
       "semana": 33,
       "dia": "Lunes 15/08",
@@ -684,6 +722,18 @@
   ],
   "workers": [],
   "auditLogs": [
+    {
+      "tenantId": "tenant_cmz",
+      "timestamp": "27-08-2026, 9:35:11 a. m.",
+      "userName": "Sebastián Cortés (SUPER_ADMIN)",
+      "userRole": "SUPER_ADMIN",
+      "action": "CREACION",
+      "entityName": "Orden de Trabajo",
+      "entityId": "OT-1014",
+      "details": "Creación de OT en CT-03 (Carro Tensor) (Área Seca) por Sebastián Cortés",
+      "diffSummary": "HH Est: 8h | Real: 8h",
+      "id": "log-1787837711693"
+    },
     {
       "tenantId": "tenant_cmz",
       "timestamp": "26-08-2026, 7:00:43 p. m.",

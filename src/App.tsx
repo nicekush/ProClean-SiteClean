@@ -24,7 +24,7 @@ import type {
   PlantEquipment
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
-import { fetchFirebaseWorkOrders, isFirebaseConfigured } from './api/firebase';
+import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase } from './api/firebase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
@@ -183,8 +183,10 @@ export function App() {
 
   const [equipments, setEquipments] = useState<PlantEquipment[]>([]);
 
-  // Load from Local REST DB on mount with Vercel production fallback & LocalStorage Persistence
+  // Load from Local REST DB on mount with Vercel production fallback & Real-time Firebase Sync
   useEffect(() => {
+    let firebaseUnsub: (() => void) | null = null;
+
     const processDbData = async (db: any) => {
       if (db.whiteLabel) setWhiteLabel(db.whiteLabel);
       if (db.contracts) setContracts(db.contracts);
@@ -195,6 +197,23 @@ export function App() {
       let cloudOrders: WorkOrder[] | null = null;
       if (isFirebaseConfigured) {
         cloudOrders = await fetchFirebaseWorkOrders();
+        // If Firestore is empty, seed initial work orders to cloud DB
+        if ((!cloudOrders || cloudOrders.length === 0) && db.workOrders && db.workOrders.length > 0) {
+          syncAllWorkOrdersToFirebase(db.workOrders);
+          cloudOrders = db.workOrders;
+        }
+
+        // Subscribe to real-time changes from Firestore on ALL devices
+        firebaseUnsub = subscribeFirebaseWorkOrders((liveOrders) => {
+          if (liveOrders && liveOrders.length > 0) {
+            setWorkOrders(liveOrders);
+            try {
+              localStorage.setItem('proclean_work_orders', JSON.stringify(liveOrders));
+            } catch (e) {
+              console.warn('LocalStorage error:', e);
+            }
+          }
+        });
       } else if (isSupabaseConfigured) {
         cloudOrders = await fetchSupabaseWorkOrders();
       }
@@ -240,6 +259,10 @@ export function App() {
         console.warn('Servidor de Base de Datos local no detectado en 3001. Cargando datos de respaldo para producción Vercel.', err);
         processDbData(initialDbData as any);
       });
+
+    return () => {
+      if (firebaseUnsub) firebaseUnsub();
+    };
   }, []);
 
   // Login & Logout Handlers

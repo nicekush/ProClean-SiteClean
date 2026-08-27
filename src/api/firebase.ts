@@ -5,9 +5,8 @@ import {
   getDocs, 
   doc, 
   setDoc, 
-  deleteDoc, 
-  query, 
-  orderBy 
+  deleteDoc,
+  onSnapshot
 } from 'firebase/firestore';
 import type { WorkOrder } from '../types';
 
@@ -35,8 +34,7 @@ export async function fetchFirebaseWorkOrders(): Promise<WorkOrder[] | null> {
   if (!db) return null;
   try {
     const colRef = collection(db, COLLECTION_WORK_ORDERS);
-    const q = query(colRef, orderBy('executionDate', 'desc'));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(colRef);
 
     if (!snapshot.empty) {
       const orders: WorkOrder[] = [];
@@ -44,15 +42,44 @@ export async function fetchFirebaseWorkOrders(): Promise<WorkOrder[] | null> {
         const data = docSnap.data();
         if (data.payload) {
           orders.push({ ...data.payload, id: docSnap.id });
-        } else {
+        } else if (data.status || data.equipoCorrea) {
           orders.push({ ...data, id: docSnap.id } as WorkOrder);
         }
       });
+      orders.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
       return orders;
     }
     return [];
   } catch (err) {
     console.warn('Error fetching from Firebase Firestore:', err);
+    return null;
+  }
+}
+
+export function subscribeFirebaseWorkOrders(onUpdate: (orders: WorkOrder[]) => void): (() => void) | null {
+  if (!db) return null;
+  try {
+    const colRef = collection(db, COLLECTION_WORK_ORDERS);
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      if (!snapshot.empty) {
+        const orders: WorkOrder[] = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.payload) {
+            orders.push({ ...data.payload, id: docSnap.id });
+          } else if (data.status || data.equipoCorrea) {
+            orders.push({ ...data, id: docSnap.id } as WorkOrder);
+          }
+        });
+        orders.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+        onUpdate(orders);
+      }
+    }, (err) => {
+      console.warn('Error in Firestore real-time listener:', err);
+    });
+    return unsubscribe;
+  } catch (err) {
+    console.warn('Failed to setup Firestore listener:', err);
     return null;
   }
 }
