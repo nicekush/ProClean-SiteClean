@@ -198,25 +198,21 @@ export function App() {
       if (isFirebaseConfigured) {
         cloudOrders = await fetchFirebaseWorkOrders();
         
-        // Ensure all initial seed work orders from db.json exist in Firebase
-        if (db.workOrders && db.workOrders.length > 0) {
-          const existingIds = new Set((cloudOrders || []).map(o => o.id));
-          const missingSeedOrders = db.workOrders.filter((seed: WorkOrder) => !existingIds.has(seed.id));
-          if (missingSeedOrders.length > 0) {
-            await syncAllWorkOrdersToFirebase(db.workOrders);
-            cloudOrders = await fetchFirebaseWorkOrders();
-          }
+        // Seed initial work orders to Firebase ONLY if cloud DB is completely empty (first time)
+        const isSeeded = localStorage.getItem('proclean_seeded_firebase');
+        if ((!cloudOrders || cloudOrders.length === 0) && !isSeeded && db.workOrders && db.workOrders.length > 0) {
+          await syncAllWorkOrdersToFirebase(db.workOrders);
+          localStorage.setItem('proclean_seeded_firebase', 'true');
+          cloudOrders = await fetchFirebaseWorkOrders();
         }
 
         // Subscribe to real-time changes from Firestore on ALL devices
         firebaseUnsub = subscribeFirebaseWorkOrders((liveOrders) => {
-          if (liveOrders && liveOrders.length > 0) {
-            setWorkOrders(liveOrders);
-            try {
-              localStorage.setItem('proclean_work_orders', JSON.stringify(liveOrders));
-            } catch (e) {
-              console.warn('LocalStorage error:', e);
-            }
+          setWorkOrders(liveOrders);
+          try {
+            localStorage.setItem('proclean_work_orders', JSON.stringify(liveOrders));
+          } catch (e) {
+            console.warn('LocalStorage error:', e);
           }
         });
       } else if (isSupabaseConfigured) {
