@@ -147,23 +147,53 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     }
   }, [targetEditOrder]);
 
-  // Filtered Options for 4-Level Cascading Dropdowns (New OT)
+  // Filtered Options for 4-Level Cascading Dropdowns (New OT & Edit OT)
   const availableSectors = (sectors || []).filter(s => !selectedAreaId || s.areaId === selectedAreaId);
   const availableEquipments = (equipments || []).filter(e => !selectedSectorId || e.sectorId === selectedSectorId);
-  const availableSubSectors = (subSectors || []).filter(sub => {
-    if (selectedEquipmentId) return sub.equipmentId === selectedEquipmentId;
-    if (selectedSectorId) return sub.sectorId === selectedSectorId;
-    return true;
-  });
 
-  // Filtered Options for 4-Level Cascading Dropdowns (Edit OT)
   const editAvailableSectors = (sectors || []).filter(s => !editSelectedAreaId || s.areaId === editSelectedAreaId);
   const editAvailableEquipments = (equipments || []).filter(e => !editSelectedSectorId || e.sectorId === editSelectedSectorId);
-  const editAvailableSubSectors = (subSectors || []).filter(sub => {
-    if (editSelectedEquipmentId) return sub.equipmentId === editSelectedEquipmentId;
-    if (editSelectedSectorId) return sub.sectorId === editSelectedSectorId;
-    return true;
-  });
+
+  // Helper to ensure ALL equipments in ALL sectors always show valid component badges
+  const getSubSectorsForSelection = (equipId: string, sectorId: string) => {
+    const equipObj = (equipments || []).find(e => e.id === equipId);
+    const sectorObj = (sectors || []).find(s => s.id === sectorId);
+
+    // 1. Direct match by equipmentId or equipmentName
+    let matched = (subSectors || []).filter(sub => {
+      if (equipId && (sub.equipmentId === equipId || (equipObj && sub.equipmentName === equipObj.name))) return true;
+      return false;
+    });
+
+    // 2. If no direct equipment match, match by sectorId or sectorName
+    if (matched.length === 0 && sectorId) {
+      matched = (subSectors || []).filter(sub => {
+        return sub.sectorId === sectorId || (sectorObj && sub.sectorName === sectorObj.name);
+      });
+    }
+
+    // 3. Universal Fallback Components if no specific sub-sectors exist in DB
+    if (matched.length === 0) {
+      return [
+        { id: 'def_1', name: 'Pasillo Lateral Izquierdo' },
+        { id: 'def_2', name: 'Pasillo Lateral Derecho' },
+        { id: 'def_3', name: 'Chute de Carga' },
+        { id: 'def_4', name: 'Chute de Descarga' },
+        { id: 'def_5', name: 'Polines de Carga' },
+        { id: 'def_6', name: 'Polines de Retorno' },
+        { id: 'def_7', name: 'Polea Motriz' },
+        { id: 'def_8', name: 'Polea Retorno' },
+        { id: 'def_9', name: 'Carro Tensor' },
+        { id: 'def_10', name: 'Estructura Principal' },
+        { id: 'def_11', name: 'Piso / Zócalo' }
+      ] as SubSector[];
+    }
+
+    return matched;
+  };
+
+  const availableSubSectors = getSubSectorsForSelection(selectedEquipmentId, selectedSectorId);
+  const editAvailableSubSectors = getSubSectorsForSelection(editSelectedEquipmentId, editSelectedSectorId);
 
   const handleOpenEditModal = (order: WorkOrder) => {
     setEditingOrder({ ...order });
