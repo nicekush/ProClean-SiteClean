@@ -531,7 +531,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newOrder.sapCode) return;
+    const finalSapCode = newOrder.sapCode || getNextOtCode();
 
     if (!newOrder.hasManualLabor && !newOrder.hasEquipment) {
       alert('Debes seleccionar al menos una modalidad de recurso (Trabajo Manual o Maquinaria / Equipos).');
@@ -546,6 +546,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
     onAddWorkOrder({
       ...newOrder,
+      sapCode: finalSapCode,
       headcount: newOrder.hasManualLabor ? newOrder.headcount : 0,
       vehiclePatent: newOrder.hasEquipment ? newOrder.vehiclePatent : '',
       equipoCorrea: finalEquipo,
@@ -555,6 +556,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     });
 
     setShowAddModal(false);
+    setCurrentAddStep(1);
     setSelectedAreaId('');
     setSelectedSectorId('');
     setSelectedEquipmentId('');
@@ -584,8 +586,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       equipmentName: '',
       subSectorId: '',
       subSectorName: '',
-      hasManualLabor: true,
-      hasEquipment: true,
+      hasManualLabor: false,
+      hasEquipment: false,
       taskType: 'PLANIFICADO',
       cubicMetersRemoved: 0,
       fleetTripsCount: 0,
