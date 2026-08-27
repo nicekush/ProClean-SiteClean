@@ -772,10 +772,10 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--slate-900)' }}>
-            Layout Operativo & Workflow de Aprobación ITO Mandante
+            📋 Órdenes de Trabajo (OT)
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--slate-600)', marginTop: '2px' }}>
-            Matriz de Planta Zaldívar en 4 Niveles (Área ➔ Sector ➔ Equipo ➔ Sub-Sectores Badges), recursos y firma digital
+            Registro diario de operaciones y firmas de terreno — Planta Zaldívar
           </p>
         </div>
 
