@@ -884,10 +884,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </select>
                 </div>
 
-                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(1)}>
-                    ◄ Atrás
-                  </button>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(1)}>
+                      ◄ Atrás
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingOrder(null)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      ✖ Cancelar
+                    </button>
+                  </div>
                   <button 
                     type="button" 
                     className="btn btn-primary" 
@@ -930,10 +935,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </select>
                 </div>
 
-                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(2)}>
-                    ◄ Atrás
-                  </button>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(2)}>
+                      ◄ Atrás
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingOrder(null)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      ✖ Cancelar
+                    </button>
+                  </div>
                   <button 
                     type="button" 
                     className="btn btn-primary" 
@@ -1027,10 +1037,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   <input type="text" value={editingOrder.sapCode} readOnly disabled style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--slate-300)', backgroundColor: '#E2E8F0', fontWeight: 900, color: '#475569' }} />
                 </div>
 
-                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(3)}>
-                    ◄ Atrás
-                  </button>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(3)}>
+                      ◄ Atrás
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingOrder(null)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      ✖ Cancelar
+                    </button>
+                  </div>
                   <button 
                     type="button" 
                     className="btn btn-primary" 
@@ -1080,10 +1095,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
                 </div>
 
-                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(4)}>
-                    ◄ Atrás
-                  </button>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(4)}>
+                      ◄ Atrás
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingOrder(null)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      ✖ Cancelar
+                    </button>
+                  </div>
                   <button type="button" className="btn btn-primary" onClick={() => setCurrentEditStep(6)} style={{ padding: '12px 24px', fontSize: '13px' }}>
                     Siguiente: Recursos & m³ ➔
                   </button>
@@ -1160,10 +1180,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </label>
                 </div>
 
-                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(5)}>
-                    ◄ Atrás
-                  </button>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(5)}>
+                      ◄ Atrás
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingOrder(null)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      ✖ Cancelar
+                    </button>
+                  </div>
                   <button 
                     type="button" 
                     className="btn btn-primary" 
@@ -1217,10 +1242,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
                 </div>
 
-                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(6)}>
-                    ◄ Atrás
-                  </button>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentEditStep(6)}>
+                      ◄ Atrás
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingOrder(null)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      ✖ Cancelar
+                    </button>
+                  </div>
                   <button 
                     type="button" 
                     className="btn btn-primary" 
@@ -1285,20 +1315,25 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
                 </div>
 
-                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={() => {
-                      if (editingOrder.hasManualLabor !== false) {
-                        setCurrentEditStep(7);
-                      } else {
-                        setCurrentEditStep(6);
-                      }
-                    }}
-                  >
-                    ◄ Atrás
-                  </button>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => {
+                        if (editingOrder.hasManualLabor !== false) {
+                          setCurrentEditStep(7);
+                        } else {
+                          setCurrentEditStep(6);
+                        }
+                      }}
+                    >
+                      ◄ Atrás
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingOrder(null)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      ✖ Cancelar
+                    </button>
+                  </div>
                   <button type="button" className="btn btn-primary" onClick={() => setCurrentEditStep(9)} style={{ padding: '12px 24px', fontSize: '13px' }}>
                     Siguiente: Detalle & Fotos ➔
                   </button>
@@ -1344,22 +1379,27 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
                 </div>
 
-                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={() => {
-                      if (editingOrder.hasEquipment !== false) {
-                        setCurrentEditStep(8);
-                      } else if (editingOrder.hasManualLabor !== false) {
-                        setCurrentEditStep(7);
-                      } else {
-                        setCurrentEditStep(6);
-                      }
-                    }}
-                  >
-                    ◄ Atrás
-                  </button>
+                <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => {
+                        if (editingOrder.hasEquipment !== false) {
+                          setCurrentEditStep(8);
+                        } else if (editingOrder.hasManualLabor !== false) {
+                          setCurrentEditStep(7);
+                        } else {
+                          setCurrentEditStep(6);
+                        }
+                      }}
+                    >
+                      ◄ Atrás
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingOrder(null)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                      ✖ Cancelar
+                    </button>
+                  </div>
                   <button type="submit" className="btn btn-primary" style={{ padding: '12px 28px', fontSize: '13px', backgroundColor: '#047857', borderColor: '#047857' }}>
                     <Save size={16} /> Guardar Todos los Cambios en la OT
                   </button>
@@ -1789,10 +1829,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </select>
                   </div>
 
-                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(1)}>
-                      ◄ Atrás
-                    </button>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(1)}>
+                        ◄ Atrás
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                        ✖ Cancelar
+                      </button>
+                    </div>
                     <button 
                       type="button" 
                       className="btn btn-primary" 
@@ -1831,10 +1876,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </select>
                   </div>
 
-                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(2)}>
-                      ◄ Atrás
-                    </button>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(2)}>
+                        ◄ Atrás
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                        ✖ Cancelar
+                      </button>
+                    </div>
                     <button 
                       type="button" 
                       className="btn btn-primary" 
@@ -1919,10 +1969,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     <input type="text" value={newOrder.sapCode || getNextOtCode()} readOnly disabled style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--slate-300)', backgroundColor: '#E2E8F0', fontWeight: 900, color: '#475569' }} />
                   </div>
 
-                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(3)}>
-                      ◄ Atrás
-                    </button>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(3)}>
+                        ◄ Atrás
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                        ✖ Cancelar
+                      </button>
+                    </div>
                     <button 
                       type="button" 
                       className="btn btn-primary" 
@@ -1972,10 +2027,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </div>
                   </div>
 
-                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(4)}>
-                      ◄ Atrás
-                    </button>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(4)}>
+                        ◄ Atrás
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                        ✖ Cancelar
+                      </button>
+                    </div>
                     <button type="button" className="btn btn-primary" onClick={() => setCurrentAddStep(6)} style={{ padding: '12px 24px', fontSize: '13px' }}>
                       Siguiente: Recursos & m³ ➔
                     </button>
@@ -2052,10 +2112,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </label>
                   </div>
 
-                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(5)}>
-                      ◄ Atrás
-                    </button>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(5)}>
+                        ◄ Atrás
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                        ✖ Cancelar
+                      </button>
+                    </div>
                     <button 
                       type="button" 
                       className="btn btn-primary" 
@@ -2109,10 +2174,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </div>
                   </div>
 
-                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(6)}>
-                      ◄ Atrás
-                    </button>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(6)}>
+                        ◄ Atrás
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                        ✖ Cancelar
+                      </button>
+                    </div>
                     <button 
                       type="button" 
                       className="btn btn-primary" 
@@ -2177,20 +2247,25 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </div>
                   </div>
 
-                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button 
-                      type="button" 
-                      className="btn btn-secondary" 
-                      onClick={() => {
-                        if (newOrder.hasManualLabor) {
-                          setCurrentAddStep(7);
-                        } else {
-                          setCurrentAddStep(6);
-                        }
-                      }}
-                    >
-                      ◄ Atrás
-                    </button>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        onClick={() => {
+                          if (newOrder.hasManualLabor) {
+                            setCurrentAddStep(7);
+                          } else {
+                            setCurrentAddStep(6);
+                          }
+                        }}
+                      >
+                        ◄ Atrás
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                        ✖ Cancelar
+                      </button>
+                    </div>
                     <button type="button" className="btn btn-primary" onClick={() => setCurrentAddStep(9)} style={{ padding: '12px 24px', fontSize: '13px' }}>
                       Siguiente: Detalle & Fotos ➔
                     </button>
@@ -2230,22 +2305,27 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </label>
                   </div>
 
-                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button 
-                      type="button" 
-                      className="btn btn-secondary" 
-                      onClick={() => {
-                        if (newOrder.hasEquipment) {
-                          setCurrentAddStep(8);
-                        } else if (newOrder.hasManualLabor) {
-                          setCurrentAddStep(7);
-                        } else {
-                          setCurrentAddStep(6);
-                        }
-                      }}
-                    >
-                      ◄ Atrás
-                    </button>
+                  <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        onClick={() => {
+                          if (newOrder.hasEquipment) {
+                            setCurrentAddStep(8);
+                          } else if (newOrder.hasManualLabor) {
+                            setCurrentAddStep(7);
+                          } else {
+                            setCurrentAddStep(6);
+                          }
+                        }}
+                      >
+                        ◄ Atrás
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)} style={{ color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+                        ✖ Cancelar
+                      </button>
+                    </div>
                     <button type="submit" className="btn btn-primary" style={{ padding: '12px 28px', fontSize: '13px', backgroundColor: '#047857', borderColor: '#047857' }}>
                       <CheckCircle2 size={16} /> Guardar Orden de Trabajo
                     </button>
