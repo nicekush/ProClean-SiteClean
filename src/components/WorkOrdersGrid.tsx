@@ -317,8 +317,10 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
   const handleEquipmentChange = (equipmentId: string) => {
     setSelectedEquipmentId(equipmentId);
-    setSelectedSubSectorNames([]);
     const equip = (equipments || []).find(e => e.id === equipmentId);
+    const subs = getSubSectorsForSelection(equipmentId, selectedSectorId);
+    const defaultSubName = subs && subs.length > 0 ? [subs[0].name] : ['General / Equipo'];
+    setSelectedSubSectorNames(defaultSubName);
     setNewOrder(prev => ({
       ...prev,
       equipmentId,
@@ -1133,7 +1135,10 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     className="btn btn-primary" 
                     onClick={() => {
                       if (!editSelectedEquipmentId) { alert('Selecciona el Equipo antes de continuar.'); return; }
-                      if (editSelectedSubSectorNames.length === 0) { alert('Debes seleccionar al menos un Componente Intervenido (Nivel 4) para continuar.'); return; }
+                      if (editSelectedSubSectorNames.length === 0) {
+                        const fallbackName = editAvailableSubSectors && editAvailableSubSectors.length > 0 ? editAvailableSubSectors[0].name : 'General / Equipo';
+                        setEditSelectedSubSectorNames([fallbackName]);
+                      }
                       setCurrentEditStep(5);
                     }} 
                     style={{ padding: '12px 24px', fontSize: '13px' }}
@@ -2126,7 +2131,10 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       className="btn btn-primary" 
                       onClick={() => {
                         if (!selectedEquipmentId) { alert('Selecciona el Equipo antes de continuar.'); return; }
-                        if (selectedSubSectorNames.length === 0) { alert('Debes seleccionar al menos un Componente Intervenido (Nivel 4) para continuar.'); return; }
+                        if (selectedSubSectorNames.length === 0) {
+                          const fallbackName = availableSubSectors && availableSubSectors.length > 0 ? availableSubSectors[0].name : 'General / Equipo';
+                          setSelectedSubSectorNames([fallbackName]);
+                        }
                         setCurrentAddStep(5);
                       }} 
                       style={{ padding: '12px 24px', fontSize: '13px' }}
