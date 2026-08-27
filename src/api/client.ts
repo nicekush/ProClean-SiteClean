@@ -234,12 +234,19 @@ export async function saveContingencies(data: ContingencyReasonConfig[]): Promis
   }
 }
 
+import { syncAllWorkOrdersToSupabase, fetchSupabaseWorkOrders, isSupabaseConfigured } from './supabase';
+
 // Work Orders API
 export async function saveWorkOrders(data: WorkOrder[]): Promise<WorkOrder[]> {
   try {
     localStorage.setItem('proclean_work_orders', JSON.stringify(data));
   } catch (err) {
     console.warn('Error guardando en localStorage', err);
+  }
+
+  // Sync with Supabase cloud database if configured
+  if (isSupabaseConfigured) {
+    syncAllWorkOrdersToSupabase(data);
   }
 
   try {

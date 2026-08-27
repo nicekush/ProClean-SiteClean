@@ -23,6 +23,7 @@ import type {
   AuditLogEntry,
   PlantEquipment
 } from './types';
+import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
@@ -183,27 +184,38 @@ export function App() {
 
   // Load from Local REST DB on mount with Vercel production fallback & LocalStorage Persistence
   useEffect(() => {
-    const processDbData = (db: any) => {
+    const processDbData = async (db: any) => {
       if (db.whiteLabel) setWhiteLabel(db.whiteLabel);
       if (db.contracts) setContracts(db.contracts);
       if (db.shifts) setShifts(db.shifts);
       if (db.contingencies) setContingencies(db.contingencies);
 
-      // Prioritize saved workOrders in localStorage for permanent persistence on Vercel
-      const localOrders = localStorage.getItem('proclean_work_orders');
-      if (localOrders) {
-        try {
-          const parsed = JSON.parse(localOrders);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setWorkOrders(parsed);
-          } else if (db.workOrders) {
-            setWorkOrders(db.workOrders);
+      // 1. Check Supabase Cloud DB first if configured
+      let cloudOrders: WorkOrder[] | null = null;
+      if (isSupabaseConfigured) {
+        cloudOrders = await fetchSupabaseWorkOrders();
+      }
+
+      if (cloudOrders && Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+        setWorkOrders(cloudOrders);
+        localStorage.setItem('proclean_work_orders', JSON.stringify(cloudOrders));
+      } else {
+        // 2. Fallback to localStorage
+        const localOrders = localStorage.getItem('proclean_work_orders');
+        if (localOrders) {
+          try {
+            const parsed = JSON.parse(localOrders);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setWorkOrders(parsed);
+            } else if (db.workOrders) {
+              setWorkOrders(db.workOrders);
+            }
+          } catch {
+            if (db.workOrders) setWorkOrders(db.workOrders);
           }
-        } catch {
-          if (db.workOrders) setWorkOrders(db.workOrders);
+        } else if (db.workOrders) {
+          setWorkOrders(db.workOrders);
         }
-      } else if (db.workOrders) {
-        setWorkOrders(db.workOrders);
       }
 
       if (db.plantAreas && db.plantAreas.length > 0) setPlantAreas(db.plantAreas);
