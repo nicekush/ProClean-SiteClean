@@ -24,7 +24,7 @@ import type {
   PlantEquipment
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
-import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder } from './api/firebase';
+import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser } from './api/firebase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
@@ -248,7 +248,54 @@ export function App() {
       if (db.machines) setMachines(db.machines);
       if (db.workers) setWorkers(db.workers);
       if (db.auditLogs) setAuditLogs(db.auditLogs);
-      if (db.users) setUsers(db.users);
+
+      // Load Users: Cloud Firebase -> LocalStorage -> Seed JSON
+      let cloudUsers: UserAccount[] | null = null;
+      if (isFirebaseConfigured) {
+        cloudUsers = await fetchFirebaseUsers();
+        
+        // Seed initial users to Firebase ONLY if cloud DB has no users (first time)
+        const isUsersSeeded = localStorage.getItem('proclean_seeded_users_firebase');
+        if ((!cloudUsers || cloudUsers.length === 0) && !isUsersSeeded && db.users && db.users.length > 0) {
+          await syncAllUsersToFirebase(db.users);
+          localStorage.setItem('proclean_seeded_users_firebase', 'true');
+          cloudUsers = await fetchFirebaseUsers();
+        }
+
+        // Subscribe to real-time users sync on ALL devices
+        subscribeFirebaseUsers((liveUsers) => {
+          if (liveUsers && liveUsers.length > 0) {
+            setUsers(liveUsers);
+            try {
+              localStorage.setItem('proclean_users', JSON.stringify(liveUsers));
+            } catch (e) {
+              console.warn('LocalStorage error:', e);
+            }
+          }
+        });
+      }
+
+      if (cloudUsers && Array.isArray(cloudUsers) && cloudUsers.length > 0) {
+        setUsers(cloudUsers);
+        localStorage.setItem('proclean_users', JSON.stringify(cloudUsers));
+      } else {
+        const localUsers = localStorage.getItem('proclean_users');
+        if (localUsers) {
+          try {
+            const parsed = JSON.parse(localUsers);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setUsers(parsed);
+            } else if (db.users) {
+              setUsers(db.users);
+            }
+          } catch {
+            if (db.users) setUsers(db.users);
+          }
+        } else if (db.users) {
+          setUsers(db.users);
+        }
+      }
+
       setDbConnected(true);
     };
 
@@ -313,6 +360,14 @@ export function App() {
   const updateUsers = (val: React.SetStateAction<UserAccount[]>) => {
     setUsers(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
+      try {
+        localStorage.setItem('proclean_users', JSON.stringify(next));
+      } catch (e) {
+        console.warn('LocalStorage error:', e);
+      }
+      if (isFirebaseConfigured) {
+        syncAllUsersToFirebase(next);
+      }
       addAuditLog('EDICION', 'Cuentas de Usuario', 'Users', 'Actualización de usuarios y roles fijos asignados');
       return next;
     });

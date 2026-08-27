@@ -114,7 +114,16 @@ export async function loginUser(email: string, password?: string): Promise<{ suc
       throw e;
     }
     // Fallback for static production deployment (Vercel)
-    const localUsers = (initialDbData as any).users || [];
+    let localUsers: UserAccount[] = [];
+    try {
+      const stored = localStorage.getItem('proclean_users');
+      if (stored) localUsers = JSON.parse(stored);
+    } catch (err) { console.warn(err); }
+
+    if (!localUsers || localUsers.length === 0) {
+      localUsers = (initialDbData as any).users || [];
+    }
+
     const matchedUser = localUsers.find((u: any) => u.email.toLowerCase() === email.trim().toLowerCase());
     if (matchedUser) {
       if (password && matchedUser.password && matchedUser.password !== password) {

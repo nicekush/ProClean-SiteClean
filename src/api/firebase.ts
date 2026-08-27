@@ -8,7 +8,7 @@ import {
   deleteDoc,
   onSnapshot
 } from 'firebase/firestore';
-import type { WorkOrder } from '../types';
+import type { WorkOrder, UserAccount } from '../types';
 
 // Official Firebase Config for proclean-siteclean Cloud DB
 const firebaseConfig = {
@@ -29,6 +29,7 @@ const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
 export const db = app ? getFirestore(app) : null;
 
 const COLLECTION_WORK_ORDERS = 'work_orders';
+const COLLECTION_USERS = 'users';
 
 export async function fetchFirebaseWorkOrders(): Promise<WorkOrder[] | null> {
   if (!db) return null;
@@ -123,6 +124,113 @@ export async function deleteFirebaseWorkOrder(id: string): Promise<boolean> {
     return true;
   } catch (err) {
     console.error('Failed to delete from Firebase:', err);
+    return false;
+  }
+}
+
+// USERS CLOUD FIREBASE SYNC & PERSISTENCE
+export async function fetchFirebaseUsers(): Promise<UserAccount[] | null> {
+  if (!db) return null;
+  try {
+    const colRef = collection(db, COLLECTION_USERS);
+    const snapshot = await getDocs(colRef);
+    if (!snapshot.empty) {
+      const users: UserAccount[] = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.payload) {
+          users.push({ ...data.payload, id: docSnap.id });
+        } else if (data.email) {
+          users.push({ ...data, id: docSnap.id } as UserAccount);
+        }
+      });
+      return users;
+    }
+    return [];
+  } catch (err) {
+    console.warn('Error fetching users from Firebase Firestore:', err);
+    return null;
+  }
+}
+
+export function subscribeFirebaseUsers(onUpdate: (users: UserAccount[]) => void): (() => void) | null {
+  if (!db) return null;
+  try {
+    const colRef = collection(db, COLLECTION_USERS);
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const users: UserAccount[] = [];
+      if (!snapshot.empty) {
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.payload) {
+            users.push({ ...data.payload, id: docSnap.id });
+          } else if (data.email) {
+            users.push({ ...data, id: docSnap.id } as UserAccount);
+          }
+        });
+      }
+      onUpdate(users);
+    }, (err) => {
+      console.warn('Error in Firestore users real-time listener:', err);
+    });
+    return unsubscribe;
+  } catch (err) {
+    console.warn('Failed to setup Firestore users listener:', err);
+    return null;
+  }
+}
+
+export async function syncUserToFirebase(user: UserAccount): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const docRef = doc(db, COLLECTION_USERS, user.id);
+    await setDoc(docRef, {
+      payload: user,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error('Failed to sync user to Firebase:', err);
+    return false;
+  }
+}
+
+export async function syncAllUsersToFirebase(users: UserAccount[]): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const colRef = collection(db, COLLECTION_USERS);
+    const snapshot = await getDocs(colRef);
+    const localIds = new Set(users.map(u => u.id));
+
+    if (!snapshot.empty) {
+      for (const docSnap of snapshot.docs) {
+        if (!localIds.has(docSnap.id)) {
+          await deleteDoc(doc(db, COLLECTION_USERS, docSnap.id));
+        }
+      }
+    }
+
+    for (const user of users) {
+      await syncUserToFirebase(user);
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed bulk users sync to Firebase:', err);
+    return false;
+  }
+}
+
+export async function deleteFirebaseUser(id: string): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const docRef = doc(db, COLLECTION_USERS, id);
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error('Failed to delete user from Firebase:', err);
     return false;
   }
 }
