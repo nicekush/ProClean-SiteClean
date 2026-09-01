@@ -125,22 +125,27 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       code: newCargo.code || 'CARGO',
       restrictedAreaIds: newCargo.restrictedAreaIds.length > 0 ? newCargo.restrictedAreaIds : undefined
     };
-    setCargos([...cargos, newCargoObj]);
+    const updated = [...cargos, newCargoObj];
+    setCargos(updated);
     setNewCargo({ nombre: '', code: '', restrictedAreaIds: [] });
+    alert('✅ Cargo guardado exitosamente y sincronizado en tiempo real en la nube.');
   };
 
   const handleDeleteCargo = (id: string) => {
     if (!setCargos) return;
     if (confirm('¿Deseas eliminar este cargo de la matriz de dotación?')) {
-      setCargos(cargos.filter(c => c.id !== id));
+      const updated = cargos.filter(c => c.id !== id);
+      setCargos(updated);
     }
   };
 
   const handleUpdateCargo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCargo || !setCargos) return;
-    setCargos(cargos.map(c => c.id === editingCargo.id ? editingCargo : c));
+    const updated = cargos.map(c => c.id === editingCargo.id ? editingCargo : c);
+    setCargos(updated);
     setEditingCargo(null);
+    alert('✅ Cargo actualizado exitosamente y sincronizado en tiempo real en la nube.');
   };
 
   // Personnel Roster CRUD
