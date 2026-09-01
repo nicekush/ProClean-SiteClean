@@ -320,28 +320,69 @@ export function App() {
     }
   }, []);
 
-  // Save changes to localStorage
+  // Real-time Cloud Firebase Firestore Listener for Dotación & Cobertura (Sync PC & Mobile)
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+
+    const unsubAreas = subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', (items) => {
+      if (items && items.length > 0) setCoverageAreas(items);
+    });
+
+    const unsubCargos = subscribeFirebaseCollection<CargoConfig>('proclean_cargos', (items) => {
+      if (items && items.length > 0) {
+        const defaultRestrictedIds = ['c_robot', 'c_acd', 'c_jefe_prev', 'c_planif', 'c_rrhh', 'c_jefe_taller'];
+        const merged = items.map((c: any) => {
+          if (defaultRestrictedIds.includes(c.id) && (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0)) {
+            return { ...c, restrictedAreaIds: ['a_personal_4x3'] };
+          }
+          return c;
+        });
+        setCargos(merged);
+      }
+    });
+
+    const unsubPersonnel = subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', (items) => {
+      if (items && items.length > 0) setPersonnel(items);
+    });
+
+    const unsubAsgs = subscribeFirebaseCollection<DailyPersonnelAssignment>('proclean_dailyAssignments', (items) => {
+      if (items) setDailyAssignments(items);
+    });
+
+    return () => {
+      unsubAreas?.();
+      unsubCargos?.();
+      unsubPersonnel?.();
+      unsubAsgs?.();
+    };
+  }, []);
+
+  // Save changes to localStorage & Cloud Firebase Firestore
   useEffect(() => {
     try {
       localStorage.setItem('proclean_coverageAreas', JSON.stringify(coverageAreas));
+      if (isFirebaseConfigured) syncArrayToFirebase('proclean_coverageAreas', coverageAreas);
     } catch(e) {}
   }, [coverageAreas]);
 
   useEffect(() => {
     try {
       localStorage.setItem('proclean_cargos', JSON.stringify(cargos));
+      if (isFirebaseConfigured) syncArrayToFirebase('proclean_cargos', cargos);
     } catch(e) {}
   }, [cargos]);
 
   useEffect(() => {
     try {
       localStorage.setItem('proclean_personnel', JSON.stringify(personnel));
+      if (isFirebaseConfigured) syncArrayToFirebase('proclean_personnel', personnel);
     } catch(e) {}
   }, [personnel]);
 
   useEffect(() => {
     try {
       localStorage.setItem('proclean_dailyAssignments', JSON.stringify(dailyAssignments));
+      if (isFirebaseConfigured) syncArrayToFirebase('proclean_dailyAssignments', dailyAssignments);
     } catch(e) {}
   }, [dailyAssignments]);
 
