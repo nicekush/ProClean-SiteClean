@@ -29,7 +29,7 @@ import type {
   CoverageArea
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
-import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection, subscribeFirebaseCargos, syncCargoToFirebase, deleteCargoFromFirebase, seedOfficialDatabaseToFirebase } from './api/firebase';
+import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, syncWorkOrderToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection, subscribeFirebaseCargos, syncCargoToFirebase, deleteCargoFromFirebase, seedOfficialDatabaseToFirebase } from './api/firebase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
@@ -643,14 +643,17 @@ export function App() {
     };
     const updated = [order, ...workOrders];
     setWorkOrders(updated);
+    if (isFirebaseConfigured) syncWorkOrderToFirebase(order);
     apiSaveWorkOrders(updated);
     addAuditLog('CREACION', 'Orden de Trabajo', order.sapCode, `Creación de OT en ${order.equipoCorrea} (${order.areaName || 'General'}) por ${authenticatedUser?.name}`, `HH Est: ${order.estimatedHours}h | Real: ${order.realHours}h`);
   };
 
   const handleUpdateWorkOrder = (id: string, updatedFields: Partial<WorkOrder>) => {
     const target = workOrders.find(o => o.id === id);
+    const updatedObj = target ? { ...target, ...updatedFields } : null;
     const updated = workOrders.map(o => o.id === id ? { ...o, ...updatedFields } : o);
     setWorkOrders(updated);
+    if (isFirebaseConfigured && updatedObj) syncWorkOrderToFirebase(updatedObj);
     apiSaveWorkOrders(updated);
     
     let diffStr = undefined;
@@ -664,16 +667,19 @@ export function App() {
   const handleItoApproveWorkOrder = (id: string, approverName: string, comments?: string, signatureDataUrl?: string) => {
     const target = workOrders.find(o => o.id === id);
     const approvalDate = new Date().toLocaleString('es-CL');
-    const updated = workOrders.map(o => o.id === id ? { 
-      ...o, 
+    const updatedObj = target ? { 
+      ...target, 
       status: 'APROBADO_MANDANTE' as const,
       itoApprovalDate: approvalDate,
       itoApproverName: approverName || authenticatedUser?.name,
       itoComments: comments,
       itoSignatureDataUrl: signatureDataUrl
-    } : o);
+    } : null;
+
+    const updated = workOrders.map(o => o.id === id ? (updatedObj || o) : o);
 
     setWorkOrders(updated);
+    if (isFirebaseConfigured && updatedObj) syncWorkOrderToFirebase(updatedObj);
     apiSaveWorkOrders(updated);
     addAuditLog('APROBACION_ITO', 'Orden de Trabajo', target?.sapCode || id, `Conformidad ITO otorgada por ${approverName || authenticatedUser?.name}`, `Estado: PENDIENTE ➔ APROBADO_MANDANTE ${signatureDataUrl ? '(Firma Digital Estampada)' : ''}`);
   };
