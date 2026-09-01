@@ -15,7 +15,8 @@ import {
   Printer, 
   X, 
   Building2,
-  CheckCircle
+  CheckCircle,
+  Trash2
 } from 'lucide-react';
 
 interface PersonnelCoverageModuleProps {
@@ -316,6 +317,13 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
     setShowWizardModal(false);
   };
 
+  const handleClearDailyCoverage = () => {
+    if (confirm('🧹 ¿Estás seguro de que deseas limpiar todas las asignaciones del día para iniciar el turno desde cero?')) {
+      onSaveAssignments([]);
+      alert('✨ Cobertura del día limpiada exitosamente. Las tarjetas han quedado listas para reportar desde cero con el Wizard.');
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
@@ -331,7 +339,15 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button 
+              onClick={handleClearDailyCoverage}
+              className="btn btn-secondary" 
+              style={{ fontSize: '13px', padding: '10px 16px', backgroundColor: '#FEF2F2', color: '#DC2626', border: '1px solid #FCA5A5', fontWeight: 800, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}
+              title="Limpiar todas las asignaciones del día para comenzar el turno desde cero"
+            >
+              <Trash2 size={16} /> Limpiar Cobertura del Día
+            </button>
             <button 
               onClick={() => window.print()} 
               className="btn btn-secondary" 
