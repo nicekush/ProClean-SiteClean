@@ -203,15 +203,21 @@ export function App() {
     if (!isFirebaseConfigured) return;
 
     const unsubAreas = subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', (items) => {
-      if (items) setCoverageAreas(items);
+      if (items && items.length > 0) {
+        setCoverageAreas(items);
+      }
     });
 
     const unsubCargos = subscribeFirebaseCargos((items) => {
-      if (items) setCargos(items);
+      if (items && items.length > 0) {
+        setCargos(items);
+      }
     });
 
     const unsubPersonnel = subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', (items) => {
-      if (items) setPersonnel(items);
+      if (items && items.length > 0) {
+        setPersonnel(items);
+      }
     });
 
     const unsubAsgs = subscribeFirebaseCollection<DailyPersonnelAssignment>('proclean_dailyAssignments', (items) => {
