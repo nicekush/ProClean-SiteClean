@@ -25,7 +25,8 @@ import type {
   PlantEquipment,
   PersonnelMember,
   CargoConfig,
-  DailyPersonnelAssignment
+  DailyPersonnelAssignment,
+  CoverageArea
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
 import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection } from './api/firebase';
@@ -156,6 +157,20 @@ export function App() {
 
   const [machines, setMachines] = useState<Machine[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
+
+  // 10 Official Personnel Coverage Areas (Independent from OTs)
+  const [coverageAreas, setCoverageAreas] = useState<CoverageArea[]>([
+    { id: 'a_sup_dia', name: 'Supervisión Día', code: 'SUP-DIA', turnoId: 't_dia', orden: 1 },
+    { id: 'a_ch_prim', name: 'Chancado Primario', code: 'CH-PRIM', turnoId: 't_dia', orden: 2 },
+    { id: 'a_ch_terc', name: 'Chancado Terciario', code: 'CH-TERC', turnoId: 't_dia', orden: 3 },
+    { id: 'a_apilado', name: 'Apilado', code: 'APILADO', turnoId: 't_dia', orden: 4 },
+    { id: 'a_remanejo', name: 'Remanejo', code: 'REMANEJO', turnoId: 't_dia', orden: 5 },
+    { id: 'a_humeda', name: 'Área Húmeda', code: 'AR-HUM', turnoId: 't_dia', orden: 6 },
+    { id: 'a_apoyo_dia', name: 'Staff / Apoyo Día', code: 'STAFF-DIA', turnoId: 't_dia', orden: 7 },
+    { id: 'a_sup_noche', name: 'Supervisión Noche', code: 'SUP-NCH', turnoId: 't_noche', orden: 8 },
+    { id: 'a_planta_noche', name: 'Dotación Planta Noche', code: 'PLT-NCH', turnoId: 't_noche', orden: 9 },
+    { id: 'a_personal_4x3', name: 'Personal Staff 4x3', code: 'STAFF-4X3', turnoId: 't_4x3', orden: 10 }
+  ]);
 
   // 86 Official Personnel Members Roster (Turno A & Turno B)
   const [personnel, setPersonnel] = useState<PersonnelMember[]>([
@@ -851,7 +866,7 @@ export function App() {
             <PersonnelCoverageModule
               personnel={personnel}
               cargos={cargos}
-              plantAreas={plantAreas}
+              coverageAreas={coverageAreas}
               assignments={dailyAssignments}
               onSaveAssignments={(newAsgs) => setDailyAssignments(newAsgs)}
               shifts={shifts}
@@ -891,6 +906,12 @@ export function App() {
               shifts={shifts}
               whiteLabel={whiteLabel}
               setWhiteLabel={updateWhiteLabel}
+              coverageAreas={coverageAreas}
+              setCoverageAreas={setCoverageAreas}
+              personnel={personnel}
+              setPersonnel={setPersonnel}
+              cargos={cargos}
+              setCargos={setCargos}
             />
           )}
 

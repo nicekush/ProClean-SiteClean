@@ -241,6 +241,14 @@ export interface AreaCargoTarget {
   equipoId?: string;
 }
 
+export interface CoverageArea {
+  id: string;
+  name: string;
+  code: string;
+  turnoId: 't_dia' | 't_noche' | 't_4x3';
+  orden: number;
+}
+
 export interface DailyPersonnelAssignment {
   id: string;
   areaId: string;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { PlantArea, Sector, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig } from '../types';
+import type { PlantArea, Sector, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
 import { 
   Plus, 
   Trash2, 
@@ -31,6 +31,12 @@ interface OperationalParametersProps {
   shifts: ShiftType[];
   whiteLabel?: WhiteLabelConfig;
   setWhiteLabel?: (updater: (prev: WhiteLabelConfig) => WhiteLabelConfig) => void;
+  coverageAreas?: CoverageArea[];
+  setCoverageAreas?: React.Dispatch<React.SetStateAction<CoverageArea[]>>;
+  personnel?: PersonnelMember[];
+  setPersonnel?: React.Dispatch<React.SetStateAction<PersonnelMember[]>>;
+  cargos?: CargoConfig[];
+  setCargos?: React.Dispatch<React.SetStateAction<CargoConfig[]>>;
 }
 
 export const OperationalParameters: React.FC<OperationalParametersProps> = ({
@@ -45,9 +51,15 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   workers,
   setWorkers,
   whiteLabel,
-  setWhiteLabel
+  setWhiteLabel,
+  coverageAreas = [],
+  setCoverageAreas,
+  personnel = [],
+  setPersonnel,
+  cargos = [],
+  setCargos
 }) => {
-  const [activeTab, setActiveTab] = useState<'areas' | 'sectors' | 'subsectors' | 'machines' | 'workers' | 'manual_matrix'>('areas');
+  const [activeTab, setActiveTab] = useState<'areas' | 'sectors' | 'subsectors' | 'machines' | 'workers' | 'manual_matrix' | 'coverage_config'>('areas');
 
   // Search Filters
   const [searchMachine, setSearchMachine] = useState('');
@@ -286,6 +298,20 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           }}
         >
           🧹 Rendimiento Manual
+        </button>
+
+        <button
+          className={`btn ${activeTab === 'coverage_config' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('coverage_config')}
+          style={{ 
+            flexShrink: 0, 
+            whiteSpace: 'nowrap',
+            backgroundColor: activeTab === 'coverage_config' ? 'var(--orange)' : 'transparent', 
+            color: activeTab === 'coverage_config' ? '#FFF' : 'var(--slate-600)',
+            fontWeight: 900
+          }}
+        >
+          👥 Configuración de Dotación
         </button>
       </div>
 
@@ -911,6 +937,73 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               </div>
             );
           })()}
+        </div>
+      )}
+
+      {/* TAB 7: COVERAGE CONFIG (INDEPENDENT FROM OTS) */}
+      {activeTab === 'coverage_config' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="card" style={{ padding: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 8px 0' }}>
+              👥 Configuración Independiente de Dotación y Cobertura
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--slate-600)', margin: 0 }}>
+              Administra las Áreas de Dotación, Cargos y la Nómina Oficial de Colaboradores (Turno A / Turno B) de forma 100% independiente de las Áreas de Planta de las OTs.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '20px' }}>
+              
+              {/* Box 1: Áreas de Dotación (10 Ubicaciones) */}
+              <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', marginTop: 0, marginBottom: '10px' }}>
+                  📍 Ubicaciones de Dotación ({coverageAreas.length})
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
+                  {coverageAreas.map(ca => (
+                    <div key={ca.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: '#FFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800 }}>
+                      <span>{ca.name} ({ca.code})</span>
+                      <span style={{ color: 'var(--orange)' }}>{ca.turnoId === 't_dia' ? '☀️ Día' : ca.turnoId === 't_noche' ? '🌙 Noche' : '👔 4x3'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Box 2: Cargos Operacionales */}
+              <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', marginTop: 0, marginBottom: '10px' }}>
+                  💼 Cargos Operacionales ({cargos.length})
+                </h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
+                  {cargos.map(c => (
+                    <span key={c.id} style={{ padding: '6px 10px', backgroundColor: c.restrictedAreaIds?.length ? '#FFEDD5' : '#E2E8F0', borderRadius: '12px', fontSize: '11px', fontWeight: 800, color: c.restrictedAreaIds?.length ? '#C2410C' : '#334155' }}>
+                      {c.nombre} {c.restrictedAreaIds?.length ? '🔒 Restringido 4x3' : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Box 3: Nómina de Personal */}
+              <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', marginTop: 0, marginBottom: '10px' }}>
+                  👥 Nómina de Personal ({personnel.length})
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
+                  {personnel.slice(0, 10).map(p => (
+                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', backgroundColor: '#FFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800 }}>
+                      <span>👤 {p.nombre}</span>
+                      <span style={{ color: p.grupo === 'A' ? '#15803D' : '#0284C7' }}>Turno {p.grupo}</span>
+                    </div>
+                  ))}
+                  {personnel.length > 10 && (
+                    <span style={{ fontSize: '11px', color: 'var(--slate-500)', fontStyle: 'italic', textAlign: 'center' }}>
+                      + {personnel.length - 10} colaboradores más cargados en el sistema
+                    </span>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
         </div>
       )}
     </div>

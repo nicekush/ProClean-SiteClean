@@ -5,7 +5,9 @@ import type {
   PlantArea, 
   DailyPersonnelAssignment, 
   UserRole,
-  ShiftType 
+  ShiftType,
+  CoverageArea,
+  AreaCargoTarget 
 } from '../types';
 import { 
   Users, 
@@ -17,8 +19,8 @@ import {
 
 interface PersonnelCoverageModuleProps {
   personnel: PersonnelMember[];
-  cargos: CargoConfig[];
-  plantAreas: PlantArea[];
+  cargos?: CargoConfig[];
+  coverageAreas?: CoverageArea[];
   assignments: DailyPersonnelAssignment[];
   onSaveAssignments: (newAssignments: DailyPersonnelAssignment[]) => void;
   onAddPersonnelMember?: (member: Omit<PersonnelMember, 'id'>) => void;
@@ -28,6 +30,20 @@ interface PersonnelCoverageModuleProps {
   currentRole: UserRole;
   userEmail?: string;
 }
+
+// 10 Official Independent Personnel Coverage Areas (ProControl Zaldívar)
+const DEFAULT_COVERAGE_AREAS: CoverageArea[] = [
+  { id: 'a_sup_dia', name: 'Supervisión Día', code: 'SUP-DIA', turnoId: 't_dia', orden: 1 },
+  { id: 'a_ch_prim', name: 'Chancado Primario', code: 'CH-PRIM', turnoId: 't_dia', orden: 2 },
+  { id: 'a_ch_terc', name: 'Chancado Terciario', code: 'CH-TERC', turnoId: 't_dia', orden: 3 },
+  { id: 'a_apilado', name: 'Apilado', code: 'APILADO', turnoId: 't_dia', orden: 4 },
+  { id: 'a_remanejo', name: 'Remanejo', code: 'REMANEJO', turnoId: 't_dia', orden: 5 },
+  { id: 'a_humeda', name: 'Área Húmeda', code: 'AR-HUM', turnoId: 't_dia', orden: 6 },
+  { id: 'a_apoyo_dia', name: 'Staff / Apoyo Día', code: 'STAFF-DIA', turnoId: 't_dia', orden: 7 },
+  { id: 'a_sup_noche', name: 'Supervisión Noche', code: 'SUP-NCH', turnoId: 't_noche', orden: 8 },
+  { id: 'a_planta_noche', name: 'Dotación Planta Noche', code: 'PLT-NCH', turnoId: 't_noche', orden: 9 },
+  { id: 'a_personal_4x3', name: 'Personal Staff 4x3', code: 'STAFF-4X3', turnoId: 't_4x3', orden: 10 }
+];
 
 // Initial Default Cargos if empty
 const DEFAULT_CARGOS: CargoConfig[] = [
@@ -41,18 +57,56 @@ const DEFAULT_CARGOS: CargoConfig[] = [
   { id: 'c_bod', nombre: 'Bodeguero', code: 'BOD' },
   { id: 'c_mec', nombre: 'Mecánico', code: 'MEC' },
   { id: 'c_prev', nombre: 'Asesor de Prevención (APR)', code: 'PREV' },
-  { id: 'c_robot', nombre: 'Aseo Robotizado', code: 'ROBOT', restrictedAreaIds: ['pa_3', 'a_personal_4x3'] },
-  { id: 'c_acd', nombre: 'ACD', code: 'ACD', restrictedAreaIds: ['pa_3', 'a_personal_4x3'] },
-  { id: 'c_jefe_prev', nombre: 'Jefe de Prevención', code: 'JEF-PREV', restrictedAreaIds: ['pa_3', 'a_personal_4x3'] },
-  { id: 'c_planif', nombre: 'Planificador', code: 'PLANIF', restrictedAreaIds: ['pa_3', 'a_personal_4x3'] },
-  { id: 'c_rrhh', nombre: 'RRHH', code: 'RRHH', restrictedAreaIds: ['pa_3', 'a_personal_4x3'] },
-  { id: 'c_jefe_taller', nombre: 'Jefe de Taller', code: 'JEF-TALLER', restrictedAreaIds: ['pa_3', 'a_personal_4x3'] }
+  { id: 'c_robot', nombre: 'Aseo Robotizado', code: 'ROBOT', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_acd', nombre: 'ACD', code: 'ACD', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_jefe_prev', nombre: 'Jefe de Prevención', code: 'JEF-PREV', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_planif', nombre: 'Planificador', code: 'PLANIF', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_rrhh', nombre: 'RRHH', code: 'RRHH', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_jefe_taller', nombre: 'Jefe de Taller', code: 'JEF-TALLER', restrictedAreaIds: ['a_personal_4x3'] }
+];
+
+// Pre-configured Default Required Slots (50 HH Total)
+const DEFAULT_AREA_CARGO_TARGETS: AreaCargoTarget[] = [
+  { id: 'ac1', areaId: 'a_sup_dia', cargoId: 'c_sup', cantidad: 2 },
+  { id: 'ac2', areaId: 'a_ch_prim', cargoId: 'c_cond', cantidad: 1 },
+  { id: 'ac3', areaId: 'a_ch_prim', cargoId: 'c_ayu', cantidad: 1 },
+  { id: 'ac4', areaId: 'a_ch_prim', cargoId: 'c_op_aseo', cantidad: 3 },
+  { id: 'ac5', areaId: 'a_ch_terc', cargoId: 'c_cond', cantidad: 1 },
+  { id: 'ac6', areaId: 'a_ch_terc', cargoId: 'c_ayu', cantidad: 1 },
+  { id: 'ac7', areaId: 'a_ch_terc', cargoId: 'c_op_aseo', cantidad: 3 },
+  { id: 'ac8', areaId: 'a_apilado', cargoId: 'c_ayu', cantidad: 2 },
+  { id: 'ac9', areaId: 'a_apilado', cargoId: 'c_op_eq', cantidad: 1 },
+  { id: 'ac10', areaId: 'a_apilado', cargoId: 'c_op_aseo', cantidad: 2 },
+  { id: 'ac11', areaId: 'a_remanejo', cargoId: 'c_op_bomba', cantidad: 1 },
+  { id: 'ac12', areaId: 'a_remanejo', cargoId: 'c_op_jet', cantidad: 2 },
+  { id: 'ac13', areaId: 'a_remanejo', cargoId: 'c_cond', cantidad: 1 },
+  { id: 'ac14', areaId: 'a_remanejo', cargoId: 'c_op_aseo', cantidad: 3 },
+  { id: 'ac15', areaId: 'a_humeda', cargoId: 'c_cond', cantidad: 1 },
+  { id: 'ac16', areaId: 'a_humeda', cargoId: 'c_ayu', cantidad: 1 },
+  { id: 'ac17', areaId: 'a_humeda', cargoId: 'c_op_aseo', cantidad: 2 },
+  { id: 'ac18', areaId: 'a_apoyo_dia', cargoId: 'c_cond', cantidad: 1 },
+  { id: 'ac19', areaId: 'a_apoyo_dia', cargoId: 'c_bod', cantidad: 1 },
+  { id: 'ac20', areaId: 'a_apoyo_dia', cargoId: 'c_mec', cantidad: 1 },
+  { id: 'ac21', areaId: 'a_apoyo_dia', cargoId: 'c_prev', cantidad: 1 },
+  { id: 'ac22', areaId: 'a_sup_noche', cargoId: 'c_sup', cantidad: 1 },
+  { id: 'ac23', areaId: 'a_planta_noche', cargoId: 'c_cond', cantidad: 4 },
+  { id: 'ac24', areaId: 'a_planta_noche', cargoId: 'c_ayu', cantidad: 2 },
+  { id: 'ac25', areaId: 'a_planta_noche', cargoId: 'c_op_aseo', cantidad: 3 },
+  { id: 'ac26', areaId: 'a_planta_noche', cargoId: 'c_op_bomba', cantidad: 1 },
+  { id: 'ac27', areaId: 'a_planta_noche', cargoId: 'c_op_jet', cantidad: 2 },
+  { id: 'ac28', areaId: 'a_planta_noche', cargoId: 'c_op_eq', cantidad: 2 },
+  { id: 'ac31', areaId: 'a_personal_4x3', cargoId: 'c_robot', cantidad: 1 },
+  { id: 'ac32', areaId: 'a_personal_4x3', cargoId: 'c_acd', cantidad: 1 },
+  { id: 'ac33', areaId: 'a_personal_4x3', cargoId: 'c_jefe_prev', cantidad: 1 },
+  { id: 'ac34', areaId: 'a_personal_4x3', cargoId: 'c_planif', cantidad: 1 },
+  { id: 'ac35', areaId: 'a_personal_4x3', cargoId: 'c_rrhh', cantidad: 1 },
+  { id: 'ac36', areaId: 'a_personal_4x3', cargoId: 'c_jefe_taller', cantidad: 1 }
 ];
 
 export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = ({
   personnel = [],
   cargos = DEFAULT_CARGOS,
-  plantAreas = [],
+  coverageAreas = DEFAULT_COVERAGE_AREAS,
   assignments = [],
   onSaveAssignments,
   userEmail = 'supervisor@procleanmg.cl'
@@ -75,15 +129,18 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   // Active Date string
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Effective Areas List with Default Pre-sets if empty
+  // Effective Coverage Areas List
   const effectiveAreas = useMemo(() => {
-    if (plantAreas && plantAreas.length > 0) return plantAreas;
-    return [
-      { id: 'pa_2', name: 'Área Seca', code: 'AR-SECA' },
-      { id: 'pa_1', name: 'Área Húmeda (LIX-SX-EW-RO)', code: 'AR-HUM' },
-      { id: 'pa_3', name: 'Sectores Complementarios / Staff 4x3', code: 'AR-COMP' }
-    ];
-  }, [plantAreas]);
+    return (coverageAreas && coverageAreas.length > 0) ? coverageAreas : DEFAULT_COVERAGE_AREAS;
+  }, [coverageAreas]);
+
+  // Filtered Effective Areas based on Shift Filter
+  const filteredAreas = useMemo(() => {
+    if (activeShiftFilter === 'DAY') return effectiveAreas.filter(a => a.turnoId === 't_dia');
+    if (activeShiftFilter === 'NIGHT') return effectiveAreas.filter(a => a.turnoId === 't_noche');
+    if (activeShiftFilter === 'STAFF') return effectiveAreas.filter(a => a.turnoId === 't_4x3');
+    return effectiveAreas;
+  }, [effectiveAreas, activeShiftFilter]);
 
   // Effective Cargos List
   const effectiveCargos = useMemo(() => {
@@ -498,8 +555,33 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
 
       {/* 3. AREA CARDS GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-        {effectiveAreas.map(area => {
-          const areaAssignments = assignments.filter(a => a.areaId === area.id);
+        {filteredAreas.map(area => {
+          let areaAssignments = assignments.filter(a => a.areaId === area.id);
+
+          // Fallback to default area cargo targets if no custom assignment has been saved yet
+          if (areaAssignments.length === 0) {
+            const targets = DEFAULT_AREA_CARGO_TARGETS.filter(t => t.areaId === area.id);
+            const defaultAsgs: DailyPersonnelAssignment[] = [];
+            targets.forEach(t => {
+              const cargoObj = effectiveCargos.find(c => c.id === t.cargoId);
+              for (let i = 0; i < t.cantidad; i++) {
+                defaultAsgs.push({
+                  id: `asg_${area.id}_${t.cargoId}_${i}`,
+                  areaId: area.id,
+                  cargoId: t.cargoId,
+                  cargoName: cargoObj ? cargoObj.nombre : 'Cargo',
+                  slotIndex: i,
+                  fecha: todayStr,
+                  grupo: activeGrupoFilter === 'ALL' ? 'A' : activeGrupoFilter,
+                  shiftId: area.turnoId,
+                  personId: '',
+                  personName: ''
+                });
+              }
+            });
+            areaAssignments = defaultAsgs;
+          }
+
           const reqCount = areaAssignments.length;
           const coveredCount = areaAssignments.filter(a => a.personId).length;
           const isComplete = reqCount > 0 && coveredCount === reqCount;
