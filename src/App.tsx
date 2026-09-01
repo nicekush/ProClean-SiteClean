@@ -286,7 +286,14 @@ export function App() {
   useEffect(() => {
     try {
       const savedCovAreas = localStorage.getItem('proclean_coverageAreas');
-      if (savedCovAreas) setCoverageAreas(JSON.parse(savedCovAreas));
+      if (savedCovAreas) {
+        const parsed = JSON.parse(savedCovAreas);
+        if (Array.isArray(parsed) && parsed.some((a: any) => a.id === 'a_sup_dia')) {
+          localStorage.removeItem('proclean_coverageAreas');
+        } else {
+          setCoverageAreas(parsed);
+        }
+      }
 
       const savedCargos = localStorage.getItem('proclean_cargos');
       if (savedCargos) setCargos(JSON.parse(savedCargos));
