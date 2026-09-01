@@ -117,9 +117,10 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   const [activeShiftFilter, setActiveShiftFilter] = useState<'ALL' | 'DAY' | 'NIGHT' | 'STAFF'>('ALL');
   const [activeGrupoFilter, setActiveGrupoFilter] = useState<'A' | 'B' | 'ALL'>('A');
 
-  // 4-Step Wizard Modal State
+  // 4-Step Wizard Modal State (with Guided Tour Steps 5 & 6)
   const [showWizardModal, setShowWizardModal] = useState(false);
-  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
+  const [isGuidedTour, setIsGuidedTour] = useState(false);
   const [wizardAreaId, setWizardAreaId] = useState<string>('');
   const [wizardSelectedCargoIds, setWizardSelectedCargoIds] = useState<string[]>([]);
   const [wizardCargoCounts, setWizardCargoCounts] = useState<Record<string, number>>({});
@@ -200,18 +201,27 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
     return { totalRequired, totalCovered, pct, gap, cargoBreakdown };
   }, [assignments]);
 
-  // Open Wizard for an Area
-  const handleOpenWizardForArea = (areaId?: string) => {
-    setWizardStep(1);
-    setWizardAreaId(areaId || '');
+  // Open Wizard for an Area (or launch Guided Continuous Tour)
+  const handleOpenWizardForArea = (areaId?: string, forceTour: boolean = false) => {
+    const isTourMode = forceTour || !areaId;
+    setIsGuidedTour(isTourMode);
+
     setWizardSelectedCargoIds([]);
     setWizardCargoCounts({});
     setWizardSlotAssignments({});
     setSlotSearchQuery({});
 
-    if (areaId) {
-      // Pre-fill existing assignments for this area if any
-      const existing = assignments.filter(a => a.areaId === areaId);
+    // Target area: if areaId specified, use it. If Tour mode, pick first unreported area or fallback to first area
+    let targetAreaId = areaId || '';
+    if (isTourMode && !targetAreaId) {
+      const unreported = effectiveAreas.find(a => !assignments.some(asg => asg.areaId === a.id));
+      targetAreaId = unreported ? unreported.id : (effectiveAreas[0]?.id || '');
+    }
+
+    setWizardAreaId(targetAreaId);
+
+    if (targetAreaId) {
+      const existing = assignments.filter(a => a.areaId === targetAreaId);
       if (existing.length > 0) {
         const cargoIds = Array.from(new Set(existing.map(a => a.cargoId)));
         const counts: Record<string, number> = {};
@@ -226,10 +236,10 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
         setWizardSelectedCargoIds(cargoIds);
         setWizardCargoCounts(counts);
         setWizardSlotAssignments(slots);
-        setWizardStep(2);
-      } else {
-        setWizardStep(2);
       }
+      setWizardStep(2);
+    } else {
+      setWizardStep(1);
     }
 
     setShowWizardModal(true);
@@ -313,8 +323,19 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
       }
     });
 
-    onSaveAssignments([...otherAssignments, ...newAreaAssignments]);
-    setShowWizardModal(false);
+    const updatedAssignments = [...otherAssignments, ...newAreaAssignments];
+    onSaveAssignments(updatedAssignments);
+
+    if (isGuidedTour) {
+      const remaining = effectiveAreas.filter(a => !updatedAssignments.some(asg => asg.areaId === a.id));
+      if (remaining.length > 0) {
+        setWizardStep(5);
+      } else {
+        setWizardStep(6);
+      }
+    } else {
+      setShowWizardModal(false);
+    }
   };
 
   const handleClearDailyCoverage = () => {
@@ -1108,6 +1129,131 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                     🎉 ¡FINALIZAR Y GUARDAR REPORTE!
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* STEP 5: GUIDED TOUR CONTINUOUS TRANSITION */}
+            {wizardStep === 5 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'center', padding: '10px 0' }}>
+                <div style={{ fontSize: '52px', margin: '0 0 -10px 0' }}>🎉</div>
+                
+                <div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 6px 0' }}>
+                    ¡{effectiveAreas.find(a => a.id === wizardAreaId)?.name} Guardada Exitosamente!
+                  </h3>
+                  <p style={{ fontSize: '13px', fontWeight: 800, color: '#059669', backgroundColor: '#DCFCE7', padding: '6px 14px', borderRadius: '20px', display: 'inline-block', margin: 0 }}>
+                    📊 Avance Planta: {effectiveAreas.length - effectiveAreas.filter(a => !assignments.some(asg => asg.areaId === a.id)).length} de {effectiveAreas.length} Áreas Completadas
+                  </p>
+                </div>
+
+                {(() => {
+                  const remainingAreas = effectiveAreas.filter(a => a.id !== wizardAreaId && !assignments.some(asg => asg.areaId === a.id));
+                  const nextArea = remainingAreas[0];
+                  if (!nextArea) return null;
+
+                  return (
+                    <div style={{ backgroundColor: '#FFF7ED', border: '2px solid #FFEDD5', borderRadius: '20px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 900, color: '#C2410C', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        👉 Siguiente Ubicación Pendiente por Reportar
+                      </span>
+                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--slate-900)' }}>
+                        📍 {nextArea.name} ({nextArea.code})
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWizardAreaId(nextArea.id);
+                          setWizardSelectedCargoIds([]);
+                          setWizardCargoCounts({});
+                          setWizardSlotAssignments({});
+                          setWizardStep(2);
+                        }}
+                        style={{
+                          width: '100%',
+                          background: 'linear-gradient(135deg, var(--orange), #EA580C)',
+                          color: '#FFF',
+                          fontWeight: 900,
+                          padding: '16px 24px',
+                          borderRadius: '16px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '15px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          boxShadow: '0 6px 20px rgba(255,122,0,0.4)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        ➡️ CONTINUAR CON {nextArea.name.toUpperCase()} ➔
+                      </button>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setWizardStep(1)} 
+                    style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 900, padding: '12px 20px', borderRadius: '14px', border: '2px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    📋 Elegir otra área de la lista
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setShowWizardModal(false)} 
+                    style={{ backgroundColor: '#FFF', color: '#64748B', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    ✖ Salir al Panel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 6: MASTER TOUR COMPLETION SCREEN */}
+            {wizardStep === 6 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'center', padding: '20px 10px' }}>
+                <div style={{ fontSize: '64px', margin: '0 0 -10px 0' }}>🎊</div>
+                
+                <div>
+                  <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 8px 0' }}>
+                    ¡FELICITACIONES! REPORTABILIDAD COMPLETA DE PLANTA
+                  </h2>
+                  <p style={{ fontSize: '14px', fontWeight: 900, color: '#15803D', backgroundColor: '#DCFCE7', padding: '8px 18px', borderRadius: '20px', display: 'inline-block', margin: 0 }}>
+                    🏆 100% de las Ubicaciones Declaradas para el Turno de Hoy
+                  </p>
+                </div>
+
+                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--slate-600)', margin: 0 }}>
+                  Has completado de forma guiada el reporte de dotación para todas las áreas operacionales de la planta.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setShowWizardModal(false)}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #22C55E, #15803D)',
+                    color: '#FFF',
+                    fontWeight: 900,
+                    padding: '16px 28px',
+                    borderRadius: '18px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    boxShadow: '0 8px 24px rgba(34,197,94,0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px'
+                  }}
+                >
+                  🏆 VER REPORTE COMPLETO EN PANTALLA
+                </button>
               </div>
             )}
 
