@@ -359,7 +359,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
       
       {/* 1. EXECUTIVE HEADER & KPI METRICS */}
       <div className="card" style={{ padding: '20px' }}>
@@ -646,8 +646,8 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
         }
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
               {declaredAreas.map(area => {
                 const areaAssignments = assignments.filter(a => a.areaId === area.id);
 
@@ -665,11 +665,15 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      gap: '14px'
+                      gap: '14px',
+                      width: '100%',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      overflowX: 'hidden'
                     }}
                   >
                     <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '8px' }}>
                         <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           📍 {area.code || 'UBICACION'}
                         </span>
@@ -680,7 +684,8 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                             padding: '4px 10px', 
                             borderRadius: '12px',
                             backgroundColor: isComplete ? '#DCFCE7' : '#FEF3C7',
-                            color: isComplete ? '#15803D' : '#B45309'
+                            color: isComplete ? '#15803D' : '#B45309',
+                            whiteSpace: 'nowrap'
                           }}
                         >
                           {reqCount === 0 ? 'Sin Dotación Configurada' : isComplete ? '✅ 100% Cubierto' : `🚨 ${reqCount - coveredCount} Vacantes`}
@@ -692,7 +697,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                       </h3>
 
                       {/* Slots Breakdown inside Card */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                         {areaAssignments.map(asg => (
                           <div 
                             key={asg.id}
@@ -700,17 +705,45 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                               display: 'flex', 
                               justifyContent: 'space-between', 
                               alignItems: 'center', 
-                              padding: '10px 14px', 
+                              gap: '6px',
+                              padding: '8px 12px', 
                               backgroundColor: asg.personId ? '#F0FDF4' : '#FEF2F2',
-                              borderRadius: '14px',
-                              border: `1.5px solid ${asg.personId ? '#86EFAC' : '#FCA5A5'}`
+                              borderRadius: '12px',
+                              border: `1.5px solid ${asg.personId ? '#86EFAC' : '#FCA5A5'}`,
+                              width: '100%',
+                              maxWidth: '100%',
+                              boxSizing: 'border-box',
+                              overflow: 'hidden'
                             }}
                           >
-                            <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--slate-800)' }}>
+                            <span 
+                              title={asg.cargoName}
+                              style={{ 
+                                fontSize: '12px', 
+                                fontWeight: 800, 
+                                color: 'var(--slate-800)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                flex: '1 1 auto',
+                                minWidth: 0
+                              }}
+                            >
                               {asg.cargoName}:
                             </span>
-                            <span style={{ fontSize: '13px', fontWeight: 900, color: asg.personId ? '#15803D' : '#DC2626' }}>
-                              {asg.personId ? `✅ ${asg.personName}` : '❌ Vacante (Sin Asignar)'}
+                            <span 
+                              style={{ 
+                                fontSize: '11px', 
+                                fontWeight: 900, 
+                                color: asg.personId ? '#15803D' : '#DC2626',
+                                backgroundColor: asg.personId ? '#DCFCE7' : '#FEE2E2',
+                                padding: '3px 8px',
+                                borderRadius: '8px',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0
+                              }}
+                            >
+                              {asg.personId ? `✅ ${asg.personName}` : '❌ Vacante'}
                             </span>
                           </div>
                         ))}
