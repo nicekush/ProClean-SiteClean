@@ -78,7 +78,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   // Coverage Config Forms & Handlers
   const [newCovArea, setNewCovArea] = useState<{ name: string; code: string; turnoId: 't_dia' | 't_noche' | 't_4x3' }>({ name: '', code: '', turnoId: 't_dia' });
-  const [newCargo, setNewCargo] = useState<{ nombre: string; code: string; isRestricted: boolean }>({ nombre: '', code: '', isRestricted: false });
+  const [newCargo, setNewCargo] = useState<{ nombre: string; code: string; restrictedAreaIds: string[] }>({ nombre: '', code: '', restrictedAreaIds: [] });
   const [newPersonnel, setNewPersonnel] = useState<{ nombre: string; rut: string; grupo: 'A' | 'B' | 'AMBOS'; tipo: 'PLANTA' | 'SPOT' }>({ nombre: '', rut: '', grupo: 'A', tipo: 'PLANTA' });
   const [searchPersonnelCov, setSearchPersonnelCov] = useState('');
 
@@ -123,10 +123,10 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       id: `c_${Date.now()}`,
       nombre: newCargo.nombre,
       code: newCargo.code || 'CARGO',
-      restrictedAreaIds: newCargo.isRestricted ? ['a_personal_4x3'] : undefined
+      restrictedAreaIds: newCargo.restrictedAreaIds.length > 0 ? newCargo.restrictedAreaIds : undefined
     };
     setCargos([...cargos, newCargoObj]);
-    setNewCargo({ nombre: '', code: '', isRestricted: false });
+    setNewCargo({ nombre: '', code: '', restrictedAreaIds: [] });
   };
 
   const handleDeleteCargo = (id: string) => {
@@ -1184,14 +1184,40 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                   onChange={e => setNewCargo({ ...newCargo, code: e.target.value })}
                   style={{ fontSize: '12px', padding: '8px 10px' }}
                 />
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 700, color: 'var(--slate-700)', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox"
-                    checked={newCargo.isRestricted}
-                    onChange={e => setNewCargo({ ...newCargo, isRestricted: e.target.checked })}
-                  />
-                  🔒 Restringido solo a Staff 4x3 (Planificador, SSO, etc.)
-                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-700)' }}>
+                    📍 Habilitar solo en Ubicaciones específicas (opcional):
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '100px', overflowY: 'auto' }}>
+                    {coverageAreas.map(area => {
+                      const isSelected = newCargo.restrictedAreaIds.includes(area.id);
+                      return (
+                        <button
+                          key={area.id}
+                          type="button"
+                          onClick={() => {
+                            const current = newCargo.restrictedAreaIds;
+                            const updated = isSelected ? current.filter(id => id !== area.id) : [...current, area.id];
+                            setNewCargo({ ...newCargo, restrictedAreaIds: updated });
+                          }}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '10px',
+                            border: `1.5px solid ${isSelected ? 'var(--orange)' : '#CBD5E1'}`,
+                            backgroundColor: isSelected ? '#FFEDD5' : '#FFF',
+                            color: isSelected ? '#C2410C' : '#475569',
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {isSelected ? '✅ ' : '+ '} {area.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <button type="submit" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '12px', marginTop: '4px' }}>
                   <Plus size={14} /> Guardar Cargo
                 </button>
@@ -1204,10 +1230,12 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                     <div>
                       <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--slate-900)' }}>{c.nombre}</div>
                       <div style={{ fontSize: '11px', color: 'var(--slate-500)', marginTop: '2px' }}>
-                        {c.restrictedAreaIds?.length ? (
-                          <span style={{ color: '#C2410C', fontWeight: 800 }}>🔒 Exclusivo Ubicación Staff 4x3</span>
+                        {!c.restrictedAreaIds || c.restrictedAreaIds.length === 0 ? (
+                          <span style={{ color: '#047857', fontWeight: 800 }}>🌐 Disponible en todas las Ubicaciones</span>
                         ) : (
-                          <span>Disponible para todas las Ubicaciones</span>
+                          <span style={{ color: '#C2410C', fontWeight: 800 }}>
+                            🔒 Habilitado en: {c.restrictedAreaIds.map(id => coverageAreas.find(a => a.id === id)?.name || id).join(', ')}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -1486,17 +1514,50 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       onChange={e => setEditingCargo({ ...editingCargo, code: e.target.value })}
                     />
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', backgroundColor: '#FFF7ED', borderRadius: '14px', border: '1px solid #FFEDD5', cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox"
-                      checked={Boolean(editingCargo.restrictedAreaIds?.length)}
-                      onChange={e => setEditingCargo({
-                        ...editingCargo,
-                        restrictedAreaIds: e.target.checked ? ['a_personal_4x3'] : undefined
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
+                      📍 Ubicaciones donde se puede seleccionar este Cargo
+                    </label>
+                    <p style={{ fontSize: '11px', color: 'var(--slate-500)', margin: '0 0 10px 0' }}>
+                      Toca las tarjetas de las ubicaciones donde este cargo podrá asignarse. Si no seleccionas ninguna, estará <strong>Disponible en Todas las Ubicaciones</strong>.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                      {coverageAreas.map(area => {
+                        const currentList = editingCargo.restrictedAreaIds || [];
+                        const isSelected = currentList.includes(area.id);
+
+                        return (
+                          <button
+                            key={area.id}
+                            type="button"
+                            onClick={() => {
+                              const updated = isSelected ? currentList.filter(id => id !== area.id) : [...currentList, area.id];
+                              setEditingCargo({ ...editingCargo, restrictedAreaIds: updated.length > 0 ? updated : undefined });
+                            }}
+                            style={{
+                              padding: '10px 12px',
+                              borderRadius: '14px',
+                              border: `2px solid ${isSelected ? 'var(--orange)' : '#E2E8F0'}`,
+                              backgroundColor: isSelected ? '#FFEDD5' : '#F8FAFC',
+                              color: isSelected ? '#C2410C' : '#334155',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              boxShadow: isSelected ? '0 4px 12px rgba(255,122,0,0.15)' : 'none',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            <span>{isSelected ? '✅' : '📍'}</span>
+                            <span style={{ fontWeight: 800 }}>{area.name}</span>
+                          </button>
+                        );
                       })}
-                    />
-                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#C2410C' }}>🔒 Restringir solo a Ubicación Staff 4x3</span>
-                  </label>
+                    </div>
+                  </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
                     <button type="button" onClick={() => setEditingCargo(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
