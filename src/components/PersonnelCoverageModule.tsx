@@ -766,8 +766,13 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
             {/* STEP 2: SELECT CARGOS */}
             {wizardStep === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '14px', padding: '10px 14px', fontSize: '12px', color: '#0369A1', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>💡</span>
+                  <span>Toca un cargo marcado <strong>(✅)</strong> para <u>ELIMINARLO</u> de esta área, o toca un cargo con <strong>(+)</strong> para <u>AGREGARLO</u>.</span>
+                </div>
+
                 <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--slate-600)', margin: 0 }}>
-                  Toca los cargos que operarán hoy en <strong style={{ color: 'var(--slate-900)' }}>{effectiveAreas.find(a => a.id === wizardAreaId)?.name}</strong>:
+                  Cargos operacionales asignados hoy a <strong style={{ color: 'var(--slate-900)' }}>{effectiveAreas.find(a => a.id === wizardAreaId)?.name}</strong>:
                 </p>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', maxHeight: '300px', overflowY: 'auto', padding: '6px' }}>
@@ -819,7 +824,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                       boxShadow: wizardSelectedCargoIds.length > 0 ? '0 4px 14px rgba(255,122,0,0.3)' : 'none'
                     }}
                   >
-                    Siguiente: Cantidad de Personas ➔
+                    Siguiente: Modificar Cantidades ➔
                   </button>
                 </div>
               </div>
@@ -828,8 +833,13 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
             {/* STEP 3: DEFINE CARGO HEADCOUNT */}
             {wizardStep === 3 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '14px', padding: '10px 14px', fontSize: '12px', color: '#C2410C', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>🔢</span>
+                  <span>Usa los botones <strong>[-]</strong> y <strong>[+]</strong> para aumentar o disminuir la cantidad exacta de vacantes/cupos requeridos.</span>
+                </div>
+
                 <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--slate-600)', margin: 0 }}>
-                  Define cuántas personas se requieren para cada cargo seleccionado:
+                  Ajusta la cantidad de personas requeridas por cargo:
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '320px', overflowY: 'auto' }}>
