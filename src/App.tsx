@@ -282,54 +282,25 @@ export function App() {
   ]);
   const [dailyAssignments, setDailyAssignments] = useState<DailyPersonnelAssignment[]>([]);
 
-  // Load Dotación & Cobertura saved state from localStorage if available (with master auto-merge)
+  // Load Dotación & Cobertura saved state from localStorage if available
   useEffect(() => {
     try {
-      const defaultAreas: CoverageArea[] = [
-        { id: 'a_sup', name: 'Supervisión', code: 'SUP', turnoId: 't_ambos', orden: 1 },
-        { id: 'a_ch_prim', name: 'Chancado Primario', code: 'CH-PRIM', turnoId: 't_ambos', orden: 2 },
-        { id: 'a_ch_terc', name: 'Chancado Terciario', code: 'CH-TERC', turnoId: 't_ambos', orden: 3 },
-        { id: 'a_remanejo', name: 'Apilado y Remanejo', code: 'REM', turnoId: 't_ambos', orden: 4 },
-        { id: 'a_humeda', name: 'Área Húmeda', code: 'AR-HUM', turnoId: 't_ambos', orden: 5 },
-        { id: 'a_apoyo', name: 'Staff / Apoyo Planta', code: 'STAFF', turnoId: 't_ambos', orden: 6 },
-        { id: 'a_personal_4x3', name: 'Personal Staff 4x3', code: 'STAFF-4X3', turnoId: 't_4x3', orden: 7 }
-      ];
-
       const savedCovAreas = localStorage.getItem('proclean_coverageAreas');
       if (savedCovAreas) {
         const parsed = JSON.parse(savedCovAreas);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const parsedIds = new Set(parsed.map((a: any) => a.id));
-          const missing = defaultAreas.filter(d => !parsedIds.has(d.id));
-          if (parsed.some((a: any) => a.id === 'a_sup_dia')) {
-            localStorage.removeItem('proclean_coverageAreas');
-          } else {
-            setCoverageAreas([...parsed, ...missing]);
-          }
-        }
+        if (Array.isArray(parsed)) setCoverageAreas(parsed);
       }
 
       const savedCargos = localStorage.getItem('proclean_cargos');
       if (savedCargos) {
         const parsedCargos = JSON.parse(savedCargos);
-        if (Array.isArray(parsedCargos) && parsedCargos.length > 0) {
-          const defaultRestrictedIds = ['c_robot', 'c_acd', 'c_jefe_prev', 'c_planif', 'c_rrhh', 'c_jefe_taller'];
-          const merged = parsedCargos.map((c: any) => {
-            if (defaultRestrictedIds.includes(c.id) && (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0)) {
-              return { ...c, restrictedAreaIds: ['a_personal_4x3'] };
-            }
-            return c;
-          });
-          setCargos(merged);
-        }
+        if (Array.isArray(parsedCargos)) setCargos(parsedCargos);
       }
 
       const savedPersonnel = localStorage.getItem('proclean_personnel');
       if (savedPersonnel) {
         const parsedPersonnel = JSON.parse(savedPersonnel);
-        if (Array.isArray(parsedPersonnel) && parsedPersonnel.length >= 30) {
-          setPersonnel(parsedPersonnel);
-        }
+        if (Array.isArray(parsedPersonnel)) setPersonnel(parsedPersonnel);
       }
 
       const savedAsgs = localStorage.getItem('proclean_dailyAssignments');
@@ -343,53 +314,16 @@ export function App() {
   useEffect(() => {
     if (!isFirebaseConfigured) return;
 
-    // Seed master official tables to Cloud Firestore if missing or empty
-    seedOfficialDatabaseToFirebase();
-
-    const defaultAreas: CoverageArea[] = [
-      { id: 'a_sup', name: 'Supervisión', code: 'SUP', turnoId: 't_ambos', orden: 1 },
-      { id: 'a_ch_prim', name: 'Chancado Primario', code: 'CH-PRIM', turnoId: 't_ambos', orden: 2 },
-      { id: 'a_ch_terc', name: 'Chancado Terciario', code: 'CH-TERC', turnoId: 't_ambos', orden: 3 },
-      { id: 'a_remanejo', name: 'Apilado y Remanejo', code: 'REM', turnoId: 't_ambos', orden: 4 },
-      { id: 'a_humeda', name: 'Área Húmeda', code: 'AR-HUM', turnoId: 't_ambos', orden: 5 },
-      { id: 'a_apoyo', name: 'Staff / Apoyo Planta', code: 'STAFF', turnoId: 't_ambos', orden: 6 },
-      { id: 'a_personal_4x3', name: 'Personal Staff 4x3', code: 'STAFF-4X3', turnoId: 't_4x3', orden: 7 }
-    ];
-
     const unsubAreas = subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', (items) => {
-      if (items && items.length > 0) {
-        setCoverageAreas(prevAreas => {
-          const map = new Map<string, CoverageArea>();
-          defaultAreas.forEach(a => map.set(a.id, a));
-          prevAreas.forEach(a => map.set(a.id, a));
-          items.forEach(a => map.set(a.id, a));
-          return Array.from(map.values());
-        });
-      }
+      if (items) setCoverageAreas(items);
     });
 
     const unsubCargos = subscribeFirebaseCargos((items) => {
-      if (items && items.length > 0) {
-        const defaultRestrictedIds = ['c_robot', 'c_acd', 'c_jefe_prev', 'c_planif', 'c_rrhh', 'c_jefe_taller'];
-        const formatted = items.map((c: any) => {
-          if (defaultRestrictedIds.includes(c.id) && (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0)) {
-            return { ...c, restrictedAreaIds: ['a_personal_4x3'] };
-          }
-          return c;
-        });
-        setCargos(formatted);
-      }
+      if (items) setCargos(items);
     });
 
     const unsubPersonnel = subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', (items) => {
-      if (items && items.length > 0) {
-        setPersonnel(prevPersonnel => {
-          const map = new Map<string, PersonnelMember>();
-          prevPersonnel.forEach(p => map.set(p.id, p));
-          items.forEach(p => map.set(p.id, p));
-          return Array.from(map.values());
-        });
-      }
+      if (items) setPersonnel(items);
     });
 
     const unsubAsgs = subscribeFirebaseCollection<DailyPersonnelAssignment>('proclean_dailyAssignments', (items) => {
