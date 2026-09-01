@@ -1111,14 +1111,24 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         </span>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => handleDeleteCovArea(ca.id)}
-                      className="btn btn-secondary"
-                      style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
-                      title="Eliminar Ubicación"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button 
+                        onClick={() => setEditingCovArea(ca)}
+                        className="btn btn-secondary"
+                        style={{ padding: '4px 8px', color: 'var(--color-primary-dark)', border: '1px solid var(--color-border-light)' }}
+                        title="Editar Ubicación"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteCovArea(ca.id)}
+                        className="btn btn-secondary"
+                        style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
+                        title="Eliminar Ubicación"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1165,7 +1175,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 </button>
               </form>
 
-              {/* List of Cargos with Delete */}
+              {/* List of Cargos with Edit/Delete */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '340px', overflowY: 'auto' }}>
                 {cargos.map(c => (
                   <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#FFF', borderRadius: '10px', border: '1px solid #CBD5E1' }}>
@@ -1179,14 +1189,24 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         )}
                       </div>
                     </div>
-                    <button 
-                      onClick={() => handleDeleteCargo(c.id)}
-                      className="btn btn-secondary"
-                      style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
-                      title="Eliminar Cargo"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button 
+                        onClick={() => setEditingCargo(c)}
+                        className="btn btn-secondary"
+                        style={{ padding: '4px 8px', color: 'var(--color-primary-dark)', border: '1px solid var(--color-border-light)' }}
+                        title="Editar Cargo"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteCargo(c.id)}
+                        className="btn btn-secondary"
+                        style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
+                        title="Eliminar Cargo"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1250,7 +1270,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 />
               </div>
 
-              {/* List of Personnel with Delete */}
+              {/* List of Personnel with Edit/Delete */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '280px', overflowY: 'auto' }}>
                 {personnel
                   .filter(p => p.nombre.toLowerCase().includes(searchPersonnelCov.toLowerCase()))
@@ -1262,20 +1282,180 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                           <span style={{ color: p.grupo === 'A' ? '#15803D' : '#0284C7', fontWeight: 800 }}>Turno {p.grupo}</span> • {p.tipo}
                         </div>
                       </div>
-                      <button 
-                        onClick={() => handleDeletePersonnel(p.id)}
-                        className="btn btn-secondary"
-                        style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
-                        title="Eliminar de Nómina"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button 
+                          onClick={() => setEditingPersonnel(p)}
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 8px', color: 'var(--color-primary-dark)', border: '1px solid var(--color-border-light)' }}
+                          title="Editar Colaborador"
+                        >
+                          <Edit size={12} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeletePersonnel(p.id)}
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
+                          title="Eliminar de Nómina"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
                   ))}
               </div>
             </div>
 
           </div>
+
+          {/* EDIT MODAL UBICACION */}
+          {editingCovArea && (
+            <div className="modal-backdrop">
+              <div className="modal-content" style={{ maxWidth: '420px', width: '90%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900 }}>✏️ Editar Ubicación de Dotación</h3>
+                  <button className="btn btn-secondary" onClick={() => setEditingCovArea(null)} style={{ padding: '4px 8px' }}>
+                    <X size={16} />
+                  </button>
+                </div>
+                <form onSubmit={handleUpdateCovArea} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Nombre de Ubicación</label>
+                    <input 
+                      type="text"
+                      className="input-field"
+                      value={editingCovArea.name}
+                      onChange={e => setEditingCovArea({ ...editingCovArea, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Código Corto</label>
+                    <input 
+                      type="text"
+                      className="input-field"
+                      value={editingCovArea.code}
+                      onChange={e => setEditingCovArea({ ...editingCovArea, code: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Jornada / Turno</label>
+                    <select
+                      className="input-field"
+                      value={editingCovArea.turnoId}
+                      onChange={e => setEditingCovArea({ ...editingCovArea, turnoId: e.target.value as any })}
+                    >
+                      <option value="t_dia">☀️ Turno Día (29 HH)</option>
+                      <option value="t_noche">🌙 Turno Noche (15 HH)</option>
+                      <option value="t_4x3">👔 Staff 4x3 (6 HH)</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingCovArea(null)}>Cancelar</button>
+                    <button type="submit" className="btn btn-primary"><Save size={14} /> Guardar Cambios</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* EDIT MODAL CARGO */}
+          {editingCargo && (
+            <div className="modal-backdrop">
+              <div className="modal-content" style={{ maxWidth: '420px', width: '90%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900 }}>✏️ Editar Cargo Operacional</h3>
+                  <button className="btn btn-secondary" onClick={() => setEditingCargo(null)} style={{ padding: '4px 8px' }}>
+                    <X size={16} />
+                  </button>
+                </div>
+                <form onSubmit={handleUpdateCargo} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Nombre del Cargo</label>
+                    <input 
+                      type="text"
+                      className="input-field"
+                      value={editingCargo.nombre}
+                      onChange={e => setEditingCargo({ ...editingCargo, nombre: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Código Corto</label>
+                    <input 
+                      type="text"
+                      className="input-field"
+                      value={editingCargo.code || ''}
+                      onChange={e => setEditingCargo({ ...editingCargo, code: e.target.value })}
+                    />
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox"
+                      checked={Boolean(editingCargo.restrictedAreaIds?.length)}
+                      onChange={e => setEditingCargo({
+                        ...editingCargo,
+                        restrictedAreaIds: e.target.checked ? ['a_personal_4x3'] : undefined
+                      })}
+                    />
+                    🔒 Restringir solo a Ubicación Staff 4x3
+                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingCargo(null)}>Cancelar</button>
+                    <button type="submit" className="btn btn-primary"><Save size={14} /> Guardar Cambios</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* EDIT MODAL COLABORADOR */}
+          {editingPersonnel && (
+            <div className="modal-backdrop">
+              <div className="modal-content" style={{ maxWidth: '420px', width: '90%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900 }}>✏️ Editar Colaborador de Nómina</h3>
+                  <button className="btn btn-secondary" onClick={() => setEditingPersonnel(null)} style={{ padding: '4px 8px' }}>
+                    <X size={16} />
+                  </button>
+                </div>
+                <form onSubmit={handleUpdatePersonnel} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Nombre Completo</label>
+                    <input 
+                      type="text"
+                      className="input-field"
+                      value={editingPersonnel.nombre}
+                      onChange={e => setEditingPersonnel({ ...editingPersonnel, nombre: e.target.value.toUpperCase() })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>RUT</label>
+                    <input 
+                      type="text"
+                      className="input-field"
+                      value={editingPersonnel.rut || ''}
+                      onChange={e => setEditingPersonnel({ ...editingPersonnel, rut: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Grupo de Turno (7x7)</label>
+                    <select
+                      className="input-field"
+                      value={editingPersonnel.grupo}
+                      onChange={e => setEditingPersonnel({ ...editingPersonnel, grupo: e.target.value as any })}
+                    >
+                      <option value="A">Turno A</option>
+                      <option value="B">Turno B</option>
+                      <option value="AMBOS">Ambos Turnos</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingPersonnel(null)}>Cancelar</button>
+                    <button type="submit" className="btn btn-primary"><Save size={14} /> Guardar Cambios</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
     </div>

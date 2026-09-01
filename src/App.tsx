@@ -285,6 +285,50 @@ export function App() {
   ]);
   const [dailyAssignments, setDailyAssignments] = useState<DailyPersonnelAssignment[]>([]);
 
+  // Load Dotación & Cobertura saved state from localStorage if available
+  useEffect(() => {
+    try {
+      const savedCovAreas = localStorage.getItem('proclean_coverageAreas');
+      if (savedCovAreas) setCoverageAreas(JSON.parse(savedCovAreas));
+
+      const savedCargos = localStorage.getItem('proclean_cargos');
+      if (savedCargos) setCargos(JSON.parse(savedCargos));
+
+      const savedPersonnel = localStorage.getItem('proclean_personnel');
+      if (savedPersonnel) setPersonnel(JSON.parse(savedPersonnel));
+
+      const savedAsgs = localStorage.getItem('proclean_dailyAssignments');
+      if (savedAsgs) setDailyAssignments(JSON.parse(savedAsgs));
+    } catch (e) {
+      console.warn('Error restoring dotacion local storage:', e);
+    }
+  }, []);
+
+  // Save changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('proclean_coverageAreas', JSON.stringify(coverageAreas));
+    } catch(e) {}
+  }, [coverageAreas]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('proclean_cargos', JSON.stringify(cargos));
+    } catch(e) {}
+  }, [cargos]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('proclean_personnel', JSON.stringify(personnel));
+    } catch(e) {}
+  }, [personnel]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('proclean_dailyAssignments', JSON.stringify(dailyAssignments));
+    } catch(e) {}
+  }, [dailyAssignments]);
+
   // Monitor Network Online/Offline and auto-process offline queue
   useEffect(() => {
     const handleOnline = async () => {
