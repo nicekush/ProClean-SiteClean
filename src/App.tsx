@@ -344,7 +344,7 @@ export function App() {
     if (!isFirebaseConfigured) return;
 
     // Seed master official tables to Cloud Firestore if missing or empty
-    seedOfficialDatabaseToFirebase(false);
+    seedOfficialDatabaseToFirebase();
 
     const defaultAreas: CoverageArea[] = [
       { id: 'a_sup', name: 'Supervisión', code: 'SUP', turnoId: 't_ambos', orden: 1 },

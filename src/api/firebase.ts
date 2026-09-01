@@ -277,7 +277,7 @@ export async function syncCargoToFirebase(cargo: any): Promise<boolean> {
       code: cargo.code || '',
       restrictedAreaIds: cargo.restrictedAreaIds || [],
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    });
     return true;
   } catch (err) {
     console.error('Failed to sync cargo to Firebase:', err);
@@ -320,12 +320,12 @@ export function subscribeFirebaseCargos(onUpdate: (cargos: any[]) => void): (() 
   }
 }
 
-export async function seedOfficialDatabaseToFirebase(force: boolean = false): Promise<boolean> {
+export async function seedOfficialDatabaseToFirebase(): Promise<boolean> {
   if (!db) return false;
   try {
     const cargosRef = collection(db, 'proclean_cargos');
     const cargosSnap = await getDocs(cargosRef);
-    if (force || cargosSnap.empty) {
+    if (cargosSnap.empty) {
       for (const cargo of DEFAULT_OFFICIAL_CARGOS) {
         await syncCargoToFirebase(cargo);
       }
@@ -333,7 +333,7 @@ export async function seedOfficialDatabaseToFirebase(force: boolean = false): Pr
 
     const areasRef = collection(db, 'proclean_coverageAreas');
     const areasSnap = await getDocs(areasRef);
-    if (force || areasSnap.empty) {
+    if (areasSnap.empty) {
       for (const area of DEFAULT_OFFICIAL_COVERAGE_AREAS) {
         const docRef = doc(db, 'proclean_coverageAreas', area.id);
         await setDoc(docRef, { payload: area, updatedAt: new Date().toISOString() }, { merge: true });
