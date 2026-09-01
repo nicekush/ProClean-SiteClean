@@ -116,7 +116,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     setEditingCovArea(null);
   };
 
-  // Cargos CRUD (Identico al patron Work Orders OT)
+  // Cargos CRUD (Direct DB & Local Storage Sync)
   const handleAddCargo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCargo.nombre || !setCargos) return;
@@ -126,16 +126,23 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       code: newCargo.code || 'CARGO',
       restrictedAreaIds: newCargo.restrictedAreaIds.length > 0 ? newCargo.restrictedAreaIds : undefined
     };
-    setCargos(prev => [...prev, newCargoObj]);
+    setCargos(prev => {
+      const updated = [...prev, newCargoObj];
+      localStorage.setItem('proclean_cargos', JSON.stringify(updated));
+      return updated;
+    });
     syncCargoToFirebase(newCargoObj);
     setNewCargo({ nombre: '', code: '', restrictedAreaIds: [] });
-    alert('✅ Cargo guardado exitosamente y sincronizado en tiempo real en la nube.');
   };
 
   const handleDeleteCargo = (id: string) => {
     if (!setCargos) return;
     if (confirm('¿Deseas eliminar este cargo de la matriz de dotación?')) {
-      setCargos(prev => prev.filter(c => c.id !== id));
+      setCargos(prev => {
+        const updated = prev.filter(c => c.id !== id);
+        localStorage.setItem('proclean_cargos', JSON.stringify(updated));
+        return updated;
+      });
       deleteCargoFromFirebase(id);
     }
   };
@@ -143,10 +150,13 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleUpdateCargo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCargo || !setCargos) return;
-    setCargos(prev => prev.map(c => c.id === editingCargo.id ? editingCargo : c));
+    setCargos(prev => {
+      const updated = prev.map(c => c.id === editingCargo.id ? editingCargo : c);
+      localStorage.setItem('proclean_cargos', JSON.stringify(updated));
+      return updated;
+    });
     syncCargoToFirebase(editingCargo);
     setEditingCargo(null);
-    alert('✅ Cargo actualizado exitosamente y sincronizado en tiempo real en la nube.');
   };
 
   // Personnel Roster CRUD

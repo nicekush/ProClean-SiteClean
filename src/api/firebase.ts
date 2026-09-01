@@ -302,15 +302,15 @@ export function subscribeFirebaseCargos(onUpdate: (cargos: any[]) => void): (() 
   try {
     const colRef = collection(db, 'proclean_cargos');
     return onSnapshot(colRef, (snapshot) => {
+      const cargosList: any[] = [];
       if (!snapshot.empty) {
-        const cargosList: any[] = [];
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
           const item = data.payload || data;
           cargosList.push({ ...item, id: docSnap.id });
         });
-        onUpdate(cargosList);
       }
+      onUpdate(cargosList);
     }, (err) => {
       console.warn('Error in Firestore cargos listener:', err);
     });
