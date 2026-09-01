@@ -674,57 +674,60 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px'
+            padding: '12px',
+            boxSizing: 'border-box'
           }}
           onClick={() => setShowWizardModal(false)}
         >
           <div 
             className="card" 
             style={{ 
-              maxWidth: '680px', 
+              maxWidth: '640px', 
               width: '100%', 
-              maxHeight: '90vh',
+              maxHeight: '92vh',
               overflowY: 'auto',
-              padding: '28px', 
-              borderRadius: '24px',
+              overflowX: 'hidden',
+              padding: '20px', 
+              borderRadius: '20px',
               backgroundColor: '#FFFFFF',
               boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.45)',
-              border: '1px solid #E2E8F0'
+              border: '1px solid #E2E8F0',
+              boxSizing: 'border-box'
             }}
             onClick={e => e.stopPropagation()}
           >
             
             {/* WIZARD STEP HEADER */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', paddingBottom: '16px' }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(255,122,0,0.3)', flexShrink: 0 }}>
-                {wizardStep === 1 && <Building2 size={22} />}
-                {wizardStep === 2 && <Users size={22} />}
-                {wizardStep === 3 && <Plus size={22} />}
-                {wizardStep === 4 && <CheckCircle size={22} />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #E2E8F0', paddingBottom: '14px', flexWrap: 'wrap' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(255,122,0,0.3)', flexShrink: 0 }}>
+                {wizardStep === 1 && <Building2 size={20} />}
+                {wizardStep === 2 && <Users size={20} />}
+                {wizardStep === 3 && <Plus size={20} />}
+                {wizardStep === 4 && <CheckCircle size={20} />}
               </div>
-              <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '11px', fontWeight: 900, color: '#C2410C', backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', padding: '3px 10px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <div style={{ flex: '1 1 180px', minWidth: '150px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 900, color: '#C2410C', backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', padding: '2px 8px', borderRadius: '16px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Paso {wizardStep} de 4
                 </span>
-                <h3 style={{ fontSize: '19px', fontWeight: 900, color: 'var(--slate-900)', margin: '4px 0 0 0', letterSpacing: '-0.02em' }}>
-                  {wizardStep === 1 && '📍 Paso 1: Selecciona la Ubicación / Área'}
-                  {wizardStep === 2 && '💼 Paso 2: Selecciona los Cargos del Área'}
-                  {wizardStep === 3 && '🔢 Paso 3: Define la Cantidad de Personas por Cargo'}
-                  {wizardStep === 4 && '👥 Paso 4: Asigna el Personal por Cupo'}
+                <h3 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: '2px 0 0 0', letterSpacing: '-0.02em', wordBreak: 'break-word' }}>
+                  {wizardStep === 1 && '📍 Paso 1: Selecciona la Ubicación'}
+                  {wizardStep === 2 && '💼 Paso 2: Selecciona los Cargos'}
+                  {wizardStep === 3 && '🔢 Paso 3: Define la Cantidad'}
+                  {wizardStep === 4 && '👥 Paso 4: Asigna el Personal'}
                 </h3>
               </div>
-              <button onClick={() => setShowWizardModal(false)} style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={18} />
+              <button onClick={() => setShowWizardModal(false)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' }}>
+                <X size={16} />
               </button>
             </div>
 
             {/* STEP 1: SELECT AREA */}
             {wizardStep === 1 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--slate-600)', margin: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '100%', boxSizing: 'border-box' }}>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--slate-600)', margin: 0 }}>
                   Toca el área de planta que vas a reportar en este turno:
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
                   {effectiveAreas.map(area => (
                     <button
                       key={area.id}

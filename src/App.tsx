@@ -296,7 +296,19 @@ export function App() {
       }
 
       const savedCargos = localStorage.getItem('proclean_cargos');
-      if (savedCargos) setCargos(JSON.parse(savedCargos));
+      if (savedCargos) {
+        const parsedCargos = JSON.parse(savedCargos);
+        if (Array.isArray(parsedCargos)) {
+          const defaultRestrictedIds = ['c_robot', 'c_acd', 'c_jefe_prev', 'c_planif', 'c_rrhh', 'c_jefe_taller'];
+          const merged = parsedCargos.map((c: any) => {
+            if (defaultRestrictedIds.includes(c.id) && (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0)) {
+              return { ...c, restrictedAreaIds: ['a_personal_4x3'] };
+            }
+            return c;
+          });
+          setCargos(merged);
+        }
+      }
 
       const savedPersonnel = localStorage.getItem('proclean_personnel');
       if (savedPersonnel) setPersonnel(JSON.parse(savedPersonnel));
