@@ -8,6 +8,7 @@ import { PhotoEvidence } from './components/PhotoEvidence';
 import { OperationalMap } from './components/OperationalMap';
 import { AuditLogViewer } from './components/AuditLogViewer';
 import { LoginView } from './components/LoginView';
+import { PersonnelCoverageModule } from './components/PersonnelCoverageModule';
 import type { 
   WorkOrder, 
   PlantArea,
@@ -21,7 +22,10 @@ import type {
   ContingencyReasonConfig,
   UserAccount,
   AuditLogEntry,
-  PlantEquipment
+  PlantEquipment,
+  PersonnelMember,
+  CargoConfig,
+  DailyPersonnelAssignment
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
 import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection } from './api/firebase';
@@ -152,6 +156,102 @@ export function App() {
 
   const [machines, setMachines] = useState<Machine[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
+
+  // 86 Official Personnel Members Roster (Turno A & Turno B)
+  const [personnel, setPersonnel] = useState<PersonnelMember[]>([
+    // Turno A (42 Colaboradores)
+    { id: 'p_a1', nombre: 'MANUEL ALEJANDRO ESPINOSA SOTO', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a2', nombre: 'ANTONIETA PERLA CATALINA ARIAS DÍAZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a3', nombre: 'VICTOR MANUEL TORO TORO', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a4', nombre: 'SERGIO EMILIO RIVERA PALMA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a5', nombre: 'ANIBAL ANDRES RIVERA IBARRA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a6', nombre: 'VICTOR ANTONIO VALDES ROJAS', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a7', nombre: 'MARTIN ORTIZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a8', nombre: 'SANTIAGO FELIPE HUARACHI', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a9', nombre: 'EFRAIN ANDRES MAUREIRA IBACETA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a10', nombre: 'ESTER ANGELA MARCA GARCIA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a11', nombre: 'GIOVANNA LUISA CARIS BRAVO', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a12', nombre: 'GERALDINE CAROLINA CRUZ CRUZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a13', nombre: 'POUL EDUARDO VELASQUEZ TORRES', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a14', nombre: 'ALICIA ANDREA SIERRA GONZALEZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a15', nombre: 'EMILIO ANGEL ARAYA VELIZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a16', nombre: 'DEYBI ARMANDO CHIRILLA LOPEZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a17', nombre: 'KRISTOFFERSON ALEJANDRO NUÑEZ NUÑEZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a18', nombre: 'ORIEL ANTONIO LOPEZ ALFARO', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a19', nombre: 'BRYAN ALEJANDRO QUINTEROS MORALES', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a20', nombre: 'JOSE DEMETRIO VARGAS MERCADO', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a21', nombre: 'MARCIAL PEDRO CAHUANA VILLCA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a22', nombre: 'MARCELO JERONIMO FLORES VICENTE', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a23', nombre: 'MICHEL MANUEL JESUS ROJAS ROJO', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a24', nombre: 'GABRIEL ALEXANDER DIAZ VEGA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a25', nombre: 'JUAN DANIEL EDUARDO VIERA ADAOS', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a26', nombre: 'CRISTIAN ALEJANDRO TRIGO ZAPATA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a27', nombre: 'JORGE NESTOR HUGO SANHUEZA GONZALEZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a28', nombre: 'RAFAEL ROSSEL ARTEAGA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a29', nombre: 'JUAQUIN ARCE', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a30', nombre: 'LUIS IGNACIO TORRES MONJE', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a31', nombre: 'JAIRO OBED ALFARO ZAMBRANA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a32', nombre: 'DAVID HERNAN NAVARRO SEGUEL', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a33', nombre: 'JUAN GABRIEL MAMANI MAMANI', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a34', nombre: 'LUIS ROBERTO BARRAZA CORTES', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a35', nombre: 'PATRICIO ANDRES MORALES GONZALE', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a36', nombre: 'JOAQUIN LUCIANO BRAVO VELASQUEZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a37', nombre: 'SEBASTIAN ENRIQUE GOMEZ MANTEROLA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a38', nombre: 'MANUEL ENRIQUE LOPEZ ALFARO', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a39', nombre: 'YIUSTIN JOSE ARAYA LEYTON', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a40', nombre: 'IGNACIO QUIROZ', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a41', nombre: 'ALEXIS FLOREZ CORDOBA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+    { id: 'p_a42', nombre: 'LEANDRO MOLINA', tipo: 'PLANTA', grupo: 'A', estado: 'Activo' },
+
+    // Turno B (44 Colaboradores)
+    { id: 'p_b1', nombre: 'SERGIO SEPULVEDA BERTOGLIO', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b2', nombre: 'MARIA MURILLO SALAS', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b3', nombre: 'LOUIS CAQUEO SOTO', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b4', nombre: 'ELENA CORONADO VALENZUELA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b5', nombre: 'MANUEL HUERTA ESTELLE', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b6', nombre: 'JHON VILLANUEVA GUIBERT', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b7', nombre: 'DANGELO ROMO AVELLO', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b8', nombre: 'CLAUDIO JOFRE ARAYA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b9', nombre: 'JEAN PIERRE', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b10', nombre: 'DANAE GONZALEZ', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b11', nombre: 'LUIS GAMBOA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b12', nombre: 'MARCO ANDRADE', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b13', nombre: 'SEBASTIÁN CORTÉS', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b14', nombre: 'FELIPE OLIVARES', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b15', nombre: 'ALEXANDRO ESPINOZA VALLE', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b16', nombre: 'GUILLERMO SALAS LIEBCH', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b17', nombre: 'RONALDO CANAVIRI', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b18', nombre: 'JOSE ATEGA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b19', nombre: 'JAIME CERON', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b20', nombre: 'BENJAMIN RIVEROS ALBURQUENQUE', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b21', nombre: 'SEBASTIAN MAMANI CORTES', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b22', nombre: 'NICOLAS QUINTEROS', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b23', nombre: 'RODRIGO MARTINEZ', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b24', nombre: 'MISAEL ARAYA SAAVEDRA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b25', nombre: 'JOSE HORTA VIDELA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b26', nombre: 'PEDRO BORQUEZ SOTO', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b27', nombre: 'SERGIO ARGANDOÑA CERDA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b28', nombre: 'JOSE ESPINOSA SALAZAR', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b29', nombre: 'RODRIGO ORELLANA BARRAZA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b30', nombre: 'LUIS GUERRA VEGA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b31', nombre: 'JEAN VERGARA RONDAN', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b32', nombre: 'PEDRO MONTALBAN', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b33', nombre: 'CRISTIAN SCIAFARRIA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b34', nombre: 'JAIME SANDOVAL', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b35', nombre: 'JOSE CHAMBILLA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b36', nombre: 'JUAN PASMIÑO CRUZ', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b37', nombre: 'PABLO VIDAL HIDALGO', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b38', nombre: 'KEVIN RIOS QUISPE', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b39', nombre: 'ISAAC PANIRE PANIRE', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b40', nombre: 'VICTOR ROJAS YAÑEZ', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b41', nombre: 'JOSE FARIAS ARAYA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b42', nombre: 'MADDOX RAMOS PEREZ', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b43', nombre: 'RICARDO PEÑA ANTEZANA', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' },
+    { id: 'p_b44', nombre: 'JONATHAN GUERRA ESTELLE', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' }
+  ]);
+
+  const [cargos, setCargos] = useState<CargoConfig[]>([]);
+  const [dailyAssignments, setDailyAssignments] = useState<DailyPersonnelAssignment[]>([]);
 
   // Monitor Network Online/Offline and auto-process offline queue
   useEffect(() => {
@@ -744,6 +844,19 @@ export function App() {
               currentRole={currentRole}
               targetEditOrder={targetEditOrder}
               onClearTargetEditOrder={() => setTargetEditOrder(null)}
+            />
+          )}
+
+          {activeTab === 'personnel-coverage' && (
+            <PersonnelCoverageModule
+              personnel={personnel}
+              cargos={cargos}
+              plantAreas={plantAreas}
+              assignments={dailyAssignments}
+              onSaveAssignments={(newAsgs) => setDailyAssignments(newAsgs)}
+              shifts={shifts}
+              currentRole={currentRole}
+              userEmail={authenticatedUser?.email}
             />
           )}
 

@@ -214,3 +214,46 @@ export interface WhiteLabelConfig {
   };
   customColumns: CustomColumn[];
 }
+
+export interface PersonnelMember {
+  id: string;
+  nombre: string;
+  rut?: string;
+  grupo: 'A' | 'B' | 'AMBOS';
+  tipo: 'PLANTA' | 'SPOT';
+  estado: 'Activo' | 'Inactivo';
+  cargoBaseId?: string;
+  cargoBaseName?: string;
+}
+
+export interface CargoConfig {
+  id: string;
+  nombre: string;
+  code?: string;
+  restrictedAreaIds?: string[];
+}
+
+export interface AreaCargoTarget {
+  id: string;
+  areaId: string;
+  cargoId: string;
+  cantidad: number;
+  equipoId?: string;
+}
+
+export interface DailyPersonnelAssignment {
+  id: string;
+  areaId: string;
+  cargoReqId?: string;
+  cargoId: string;
+  cargoName: string;
+  slotIndex: number;
+  fecha: string;
+  grupo: 'A' | 'B';
+  shiftId: string;
+  personId: string;
+  personName: string;
+  userEmail?: string;
+  createdAt?: string;
+}
+

@@ -15,7 +15,8 @@ import {
   HardHat,
   BarChart2,
   Sliders,
-  MapPin
+  MapPin,
+  Users
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -64,6 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       allowedRoles: ['SUPERVISOR_TERRENO', 'ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'],
       items: [
         { id: 'work-orders', label: 'Órdenes de Trabajo', icon: ClipboardList, allowedRoles: ['SUPERVISOR_TERRENO', 'ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
+        { id: 'personnel-coverage', label: 'Dotación & Cobertura', icon: Users, allowedRoles: ['SUPERVISOR_TERRENO', 'ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
         { id: 'map-operational', label: 'Mapa Operacional Zaldívar', icon: MapPin, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
         { id: 'evidences', label: 'Evidencias Fotográficas', icon: Camera, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] }
       ]
