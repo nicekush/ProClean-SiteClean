@@ -76,6 +76,103 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const [newMachine, setNewMachine] = useState<{ name: string; patent: string; type: string; capacity: string; capacityM3?: number }>({ name: '', patent: '', type: '', capacity: '', capacityM3: undefined });
   const [newWorker, setNewWorker] = useState({ name: '', rut: '', role: 'OPERADOR_HIDRO' });
 
+  // Coverage Config Forms & Handlers
+  const [newCovArea, setNewCovArea] = useState<{ name: string; code: string; turnoId: 't_dia' | 't_noche' | 't_4x3' }>({ name: '', code: '', turnoId: 't_dia' });
+  const [newCargo, setNewCargo] = useState<{ nombre: string; code: string; isRestricted: boolean }>({ nombre: '', code: '', isRestricted: false });
+  const [newPersonnel, setNewPersonnel] = useState<{ nombre: string; rut: string; grupo: 'A' | 'B' | 'AMBOS'; tipo: 'PLANTA' | 'SPOT' }>({ nombre: '', rut: '', grupo: 'A', tipo: 'PLANTA' });
+  const [searchPersonnelCov, setSearchPersonnelCov] = useState('');
+
+  const [editingCovArea, setEditingCovArea] = useState<CoverageArea | null>(null);
+  const [editingCargo, setEditingCargo] = useState<CargoConfig | null>(null);
+  const [editingPersonnel, setEditingPersonnel] = useState<PersonnelMember | null>(null);
+
+  // Coverage Areas CRUD
+  const handleAddCovArea = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCovArea.name || !setCoverageAreas) return;
+    const newAreaObj: CoverageArea = {
+      id: `cov_a_${Date.now()}`,
+      name: newCovArea.name,
+      code: newCovArea.code || `AREA-${coverageAreas.length + 1}`,
+      turnoId: newCovArea.turnoId,
+      orden: coverageAreas.length + 1
+    };
+    setCoverageAreas([...coverageAreas, newAreaObj]);
+    setNewCovArea({ name: '', code: '', turnoId: 't_dia' });
+  };
+
+  const handleDeleteCovArea = (id: string) => {
+    if (!setCoverageAreas) return;
+    if (confirm('¿Deseas eliminar esta ubicación de dotación?')) {
+      setCoverageAreas(coverageAreas.filter(ca => ca.id !== id));
+    }
+  };
+
+  const handleUpdateCovArea = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCovArea || !setCoverageAreas) return;
+    setCoverageAreas(coverageAreas.map(ca => ca.id === editingCovArea.id ? editingCovArea : ca));
+    setEditingCovArea(null);
+  };
+
+  // Cargos CRUD
+  const handleAddCargo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCargo.nombre || !setCargos) return;
+    const newCargoObj: CargoConfig = {
+      id: `c_${Date.now()}`,
+      nombre: newCargo.nombre,
+      code: newCargo.code || 'CARGO',
+      restrictedAreaIds: newCargo.isRestricted ? ['a_personal_4x3'] : undefined
+    };
+    setCargos([...cargos, newCargoObj]);
+    setNewCargo({ nombre: '', code: '', isRestricted: false });
+  };
+
+  const handleDeleteCargo = (id: string) => {
+    if (!setCargos) return;
+    if (confirm('¿Deseas eliminar este cargo de la matriz de dotación?')) {
+      setCargos(cargos.filter(c => c.id !== id));
+    }
+  };
+
+  const handleUpdateCargo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCargo || !setCargos) return;
+    setCargos(cargos.map(c => c.id === editingCargo.id ? editingCargo : c));
+    setEditingCargo(null);
+  };
+
+  // Personnel Roster CRUD
+  const handleAddPersonnel = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPersonnel.nombre || !setPersonnel) return;
+    const newMember: PersonnelMember = {
+      id: `p_${Date.now()}`,
+      nombre: newPersonnel.nombre.toUpperCase(),
+      rut: newPersonnel.rut || '15.482.910-K',
+      grupo: newPersonnel.grupo,
+      tipo: newPersonnel.tipo,
+      estado: 'Activo'
+    };
+    setPersonnel([...personnel, newMember]);
+    setNewPersonnel({ nombre: '', rut: '', grupo: 'A', tipo: 'PLANTA' });
+  };
+
+  const handleDeletePersonnel = (id: string) => {
+    if (!setPersonnel) return;
+    if (confirm('¿Deseas eliminar a este colaborador de la nómina oficial?')) {
+      setPersonnel(personnel.filter(p => p.id !== id));
+    }
+  };
+
+  const handleUpdatePersonnel = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPersonnel || !setPersonnel) return;
+    setPersonnel(personnel.map(p => p.id === editingPersonnel.id ? editingPersonnel : p));
+    setEditingPersonnel(null);
+  };
+
   // Plant Areas CRUD
   const handleAddArea = (e: React.FormEvent) => {
     e.preventDefault();
@@ -940,69 +1037,244 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
         </div>
       )}
 
-      {/* TAB 7: COVERAGE CONFIG (INDEPENDENT FROM OTS) */}
+      {/* TAB 7: COVERAGE CONFIG (FULL PARAMETRIC CRUD MANAGER) */}
       {activeTab === 'coverage_config' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
           <div className="card" style={{ padding: '20px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 8px 0' }}>
-              👥 Configuración Independiente de Dotación y Cobertura
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 4px 0' }}>
+              👥 Matriz Paramétrica de Dotación & Cobertura
             </h3>
             <p style={{ fontSize: '13px', color: 'var(--slate-600)', margin: 0 }}>
-              Administra las Áreas de Dotación, Cargos y la Nómina Oficial de Colaboradores (Turno A / Turno B) de forma 100% independiente de las Áreas de Planta de las OTs.
+              Crea, edita y elimina Ubicaciones de Dotación, Cargos Operacionales y la Nómina Oficial de Colaboradores de forma 100% independiente de las OTs.
             </p>
+          </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '20px' }}>
-              
-              {/* Box 1: Áreas de Dotación (10 Ubicaciones) */}
-              <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', marginTop: 0, marginBottom: '10px' }}>
-                  📍 Ubicaciones de Dotación ({coverageAreas.length})
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
+            
+            {/* PANEL 1: UBICACIONES DE DOTACION (AREAS) */}
+            <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ borderBottom: '2px solid #E2E8F0', paddingBottom: '12px' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MapPin size={18} color="var(--orange)" /> 1. Ubicaciones de Dotación ({coverageAreas.length})
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
-                  {coverageAreas.map(ca => (
-                    <div key={ca.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: '#FFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800 }}>
-                      <span>{ca.name} ({ca.code})</span>
-                      <span style={{ color: 'var(--orange)' }}>{ca.turnoId === 't_dia' ? '☀️ Día' : ca.turnoId === 't_noche' ? '🌙 Noche' : '👔 4x3'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--slate-500)' }}>Áreas configuradas para la dotación de terreno</span>
+              </div>
+
+              {/* Form Agregar Ubicacion */}
+              <form onSubmit={handleAddCovArea} style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)' }}>➕ Nueva Ubicación</div>
+                <input 
+                  type="text" 
+                  placeholder="Nombre Ubicación (ej: Chancado Primario)"
+                  className="input-field"
+                  value={newCovArea.name}
+                  onChange={e => setNewCovArea({ ...newCovArea, name: e.target.value })}
+                  style={{ fontSize: '12px', padding: '8px 10px' }}
+                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Código (ej: CH-PRIM)"
+                    className="input-field"
+                    value={newCovArea.code}
+                    onChange={e => setNewCovArea({ ...newCovArea, code: e.target.value })}
+                    style={{ fontSize: '12px', padding: '8px 10px', flex: 1 }}
+                  />
+                  <select
+                    className="input-field"
+                    value={newCovArea.turnoId}
+                    onChange={e => setNewCovArea({ ...newCovArea, turnoId: e.target.value as any })}
+                    style={{ fontSize: '12px', padding: '8px 10px', flex: 1 }}
+                  >
+                    <option value="t_dia">☀️ Turno Día</option>
+                    <option value="t_noche">🌙 Turno Noche</option>
+                    <option value="t_4x3">👔 Staff 4x3</option>
+                  </select>
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '12px', marginTop: '4px' }}>
+                  <Plus size={14} /> Guardar Ubicación
+                </button>
+              </form>
+
+              {/* List of Coverage Areas with Edit/Delete */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '340px', overflowY: 'auto' }}>
+                {coverageAreas.map(ca => (
+                  <div key={ca.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#FFF', borderRadius: '10px', border: '1px solid #CBD5E1' }}>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--slate-900)' }}>{ca.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--slate-500)', display: 'flex', gap: '6px', marginTop: '2px' }}>
+                        <span>Código: <strong>{ca.code}</strong></span>
+                        <span>•</span>
+                        <span style={{ color: ca.turnoId === 't_dia' ? '#15803D' : ca.turnoId === 't_noche' ? '#0284C7' : '#B45309', fontWeight: 800 }}>
+                          {ca.turnoId === 't_dia' ? '☀️ Día' : ca.turnoId === 't_noche' ? '🌙 Noche' : '👔 Staff 4x3'}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <button 
+                      onClick={() => handleDeleteCovArea(ca.id)}
+                      className="btn btn-secondary"
+                      style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
+                      title="Eliminar Ubicación"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
-
-              {/* Box 2: Cargos Operacionales */}
-              <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', marginTop: 0, marginBottom: '10px' }}>
-                  💼 Cargos Operacionales ({cargos.length})
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
-                  {cargos.map(c => (
-                    <span key={c.id} style={{ padding: '6px 10px', backgroundColor: c.restrictedAreaIds?.length ? '#FFEDD5' : '#E2E8F0', borderRadius: '12px', fontSize: '11px', fontWeight: 800, color: c.restrictedAreaIds?.length ? '#C2410C' : '#334155' }}>
-                      {c.nombre} {c.restrictedAreaIds?.length ? '🔒 Restringido 4x3' : ''}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Box 3: Nómina de Personal */}
-              <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', marginTop: 0, marginBottom: '10px' }}>
-                  👥 Nómina de Personal ({personnel.length})
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '240px', overflowY: 'auto' }}>
-                  {personnel.slice(0, 10).map(p => (
-                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', backgroundColor: '#FFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800 }}>
-                      <span>👤 {p.nombre}</span>
-                      <span style={{ color: p.grupo === 'A' ? '#15803D' : '#0284C7' }}>Turno {p.grupo}</span>
-                    </div>
-                  ))}
-                  {personnel.length > 10 && (
-                    <span style={{ fontSize: '11px', color: 'var(--slate-500)', fontStyle: 'italic', textAlign: 'center' }}>
-                      + {personnel.length - 10} colaboradores más cargados en el sistema
-                    </span>
-                  )}
-                </div>
-              </div>
-
             </div>
+
+            {/* PANEL 2: CARGOS OPERACIONALES */}
+            <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ borderBottom: '2px solid #E2E8F0', paddingBottom: '12px' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Users size={18} color="var(--orange)" /> 2. Cargos Operacionales ({cargos.length})
+                </h4>
+                <span style={{ fontSize: '11px', color: 'var(--slate-500)' }}>Cargos catalogados con restricciones opcionales</span>
+              </div>
+
+              {/* Form Agregar Cargo */}
+              <form onSubmit={handleAddCargo} style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)' }}>➕ Nuevo Cargo</div>
+                <input 
+                  type="text" 
+                  placeholder="Nombre del Cargo (ej: Supervisor)"
+                  className="input-field"
+                  value={newCargo.nombre}
+                  onChange={e => setNewCargo({ ...newCargo, nombre: e.target.value })}
+                  style={{ fontSize: '12px', padding: '8px 10px' }}
+                />
+                <input 
+                  type="text" 
+                  placeholder="Código corto (ej: SUP)"
+                  className="input-field"
+                  value={newCargo.code}
+                  onChange={e => setNewCargo({ ...newCargo, code: e.target.value })}
+                  style={{ fontSize: '12px', padding: '8px 10px' }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 700, color: 'var(--slate-700)', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox"
+                    checked={newCargo.isRestricted}
+                    onChange={e => setNewCargo({ ...newCargo, isRestricted: e.target.checked })}
+                  />
+                  🔒 Restringido solo a Staff 4x3 (Planificador, SSO, etc.)
+                </label>
+                <button type="submit" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '12px', marginTop: '4px' }}>
+                  <Plus size={14} /> Guardar Cargo
+                </button>
+              </form>
+
+              {/* List of Cargos with Delete */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '340px', overflowY: 'auto' }}>
+                {cargos.map(c => (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#FFF', borderRadius: '10px', border: '1px solid #CBD5E1' }}>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--slate-900)' }}>{c.nombre}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--slate-500)', marginTop: '2px' }}>
+                        {c.restrictedAreaIds?.length ? (
+                          <span style={{ color: '#C2410C', fontWeight: 800 }}>🔒 Exclusivo Ubicación Staff 4x3</span>
+                        ) : (
+                          <span>Disponible para todas las Ubicaciones</span>
+                        )}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteCargo(c.id)}
+                      className="btn btn-secondary"
+                      style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
+                      title="Eliminar Cargo"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* PANEL 3: NOMINA DE COLABORADORES */}
+            <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ borderBottom: '2px solid #E2E8F0', paddingBottom: '12px' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Users size={18} color="var(--orange)" /> 3. Nómina Oficial ({personnel.length})
+                </h4>
+                <span style={{ fontSize: '11px', color: 'var(--slate-500)' }}>Colaboradores del Turno A y Turno B</span>
+              </div>
+
+              {/* Form Agregar Colaborador */}
+              <form onSubmit={handleAddPersonnel} style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)' }}>➕ Agregar Nuevo Colaborador</div>
+                <input 
+                  type="text" 
+                  placeholder="Nombre Completo (ej: SEBASTIÁN CORTÉS)"
+                  className="input-field"
+                  value={newPersonnel.nombre}
+                  onChange={e => setNewPersonnel({ ...newPersonnel, nombre: e.target.value })}
+                  style={{ fontSize: '12px', padding: '8px 10px' }}
+                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="RUT (opcional)"
+                    className="input-field"
+                    value={newPersonnel.rut}
+                    onChange={e => setNewPersonnel({ ...newPersonnel, rut: e.target.value })}
+                    style={{ fontSize: '12px', padding: '8px 10px', flex: 1 }}
+                  />
+                  <select
+                    className="input-field"
+                    value={newPersonnel.grupo}
+                    onChange={e => setNewPersonnel({ ...newPersonnel, grupo: e.target.value as any })}
+                    style={{ fontSize: '12px', padding: '8px 10px', flex: 1 }}
+                  >
+                    <option value="A">Turno A</option>
+                    <option value="B">Turno B</option>
+                    <option value="AMBOS">Ambos Turnos</option>
+                  </select>
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '12px', marginTop: '4px' }}>
+                  <Plus size={14} /> Registrar Colaborador
+                </button>
+              </form>
+
+              {/* Buscador inteligente */}
+              <div style={{ position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--slate-400)' }} />
+                <input 
+                  type="text"
+                  placeholder="Filtrar colaboradores por nombre..."
+                  className="input-field"
+                  value={searchPersonnelCov}
+                  onChange={e => setSearchPersonnelCov(e.target.value)}
+                  style={{ paddingLeft: '32px', fontSize: '12px' }}
+                />
+              </div>
+
+              {/* List of Personnel with Delete */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '280px', overflowY: 'auto' }}>
+                {personnel
+                  .filter(p => p.nombre.toLowerCase().includes(searchPersonnelCov.toLowerCase()))
+                  .map(p => (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: '#FFF', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-900)' }}>👤 {p.nombre}</div>
+                        <div style={{ fontSize: '10px', color: 'var(--slate-500)' }}>
+                          <span style={{ color: p.grupo === 'A' ? '#15803D' : '#0284C7', fontWeight: 800 }}>Turno {p.grupo}</span> • {p.tipo}
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDeletePersonnel(p.id)}
+                        className="btn btn-secondary"
+                        style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
+                        title="Eliminar de Nómina"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
           </div>
         </div>
       )}

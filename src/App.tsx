@@ -265,7 +265,24 @@ export function App() {
     { id: 'p_b44', nombre: 'JONATHAN GUERRA ESTELLE', tipo: 'PLANTA', grupo: 'B', estado: 'Activo' }
   ]);
 
-  const [cargos, setCargos] = useState<CargoConfig[]>([]);
+  const [cargos, setCargos] = useState<CargoConfig[]>([
+    { id: 'c_sup', nombre: 'Supervisor', code: 'SUP' },
+    { id: 'c_cond', nombre: 'Conductor Sucker / Aljibe', code: 'COND' },
+    { id: 'c_ayu', nombre: 'Ayudante Aseo Industrial', code: 'AYU' },
+    { id: 'c_op_aseo', nombre: 'Operador de Aseo', code: 'OP-ASEO' },
+    { id: 'c_op_bomba', nombre: 'Operador Bomba / Camión Hidro', code: 'OP-BOMBA' },
+    { id: 'c_op_jet', nombre: 'Operador Hidrojet', code: 'OP-JET' },
+    { id: 'c_op_eq', nombre: 'Operador de Equipo / Alza Hombre', code: 'OP-EQ' },
+    { id: 'c_bod', nombre: 'Bodeguero', code: 'BOD' },
+    { id: 'c_mec', nombre: 'Mecánico', code: 'MEC' },
+    { id: 'c_prev', nombre: 'Asesor de Prevención (APR)', code: 'PREV' },
+    { id: 'c_robot', nombre: 'Aseo Robotizado', code: 'ROBOT', restrictedAreaIds: ['a_personal_4x3'] },
+    { id: 'c_acd', nombre: 'ACD', code: 'ACD', restrictedAreaIds: ['a_personal_4x3'] },
+    { id: 'c_jefe_prev', nombre: 'Jefe de Prevención', code: 'JEF-PREV', restrictedAreaIds: ['a_personal_4x3'] },
+    { id: 'c_planif', nombre: 'Planificador', code: 'PLANIF', restrictedAreaIds: ['a_personal_4x3'] },
+    { id: 'c_rrhh', nombre: 'RRHH', code: 'RRHH', restrictedAreaIds: ['a_personal_4x3'] },
+    { id: 'c_jefe_taller', nombre: 'Jefe de Taller', code: 'JEF-TALLER', restrictedAreaIds: ['a_personal_4x3'] }
+  ]);
   const [dailyAssignments, setDailyAssignments] = useState<DailyPersonnelAssignment[]>([]);
 
   // Monitor Network Online/Offline and auto-process offline queue
