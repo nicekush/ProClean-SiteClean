@@ -137,8 +137,8 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
 
   // Filtered Effective Areas based on Shift Filter
   const filteredAreas = useMemo(() => {
-    if (activeShiftFilter === 'DAY') return effectiveAreas.filter(a => a.turnoId === 't_dia');
-    if (activeShiftFilter === 'NIGHT') return effectiveAreas.filter(a => a.turnoId === 't_noche');
+    if (activeShiftFilter === 'DAY') return effectiveAreas.filter(a => a.turnoId === 't_dia' || a.turnoId === 't_ambos');
+    if (activeShiftFilter === 'NIGHT') return effectiveAreas.filter(a => a.turnoId === 't_noche' || a.turnoId === 't_ambos');
     if (activeShiftFilter === 'STAFF') return effectiveAreas.filter(a => a.turnoId === 't_4x3');
     return effectiveAreas;
   }, [effectiveAreas, activeShiftFilter]);

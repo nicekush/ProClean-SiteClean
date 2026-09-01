@@ -1087,8 +1087,9 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                     onChange={e => setNewCovArea({ ...newCovArea, turnoId: e.target.value as any })}
                     style={{ fontSize: '12px', padding: '8px 10px', flex: 1 }}
                   >
-                    <option value="t_dia">☀️ Turno Día</option>
-                    <option value="t_noche">🌙 Turno Noche</option>
+                    <option value="t_ambos">🔄 Ambos Turnos (Día/Noche)</option>
+                    <option value="t_dia">☀️ Solo Turno Día</option>
+                    <option value="t_noche">🌙 Solo Turno Noche</option>
                     <option value="t_4x3">👔 Staff 4x3</option>
                   </select>
                 </div>
@@ -1106,8 +1107,8 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       <div style={{ fontSize: '11px', color: 'var(--slate-500)', display: 'flex', gap: '6px', marginTop: '2px' }}>
                         <span>Código: <strong>{ca.code}</strong></span>
                         <span>•</span>
-                        <span style={{ color: ca.turnoId === 't_dia' ? '#15803D' : ca.turnoId === 't_noche' ? '#0284C7' : '#B45309', fontWeight: 800 }}>
-                          {ca.turnoId === 't_dia' ? '☀️ Día' : ca.turnoId === 't_noche' ? '🌙 Noche' : '👔 Staff 4x3'}
+                        <span style={{ color: ca.turnoId === 't_ambos' ? '#047857' : ca.turnoId === 't_dia' ? '#15803D' : ca.turnoId === 't_noche' ? '#0284C7' : '#B45309', fontWeight: 800 }}>
+                          {ca.turnoId === 't_ambos' ? '🔄 Ambos Turnos (Día/Noche)' : ca.turnoId === 't_dia' ? '☀️ Día' : ca.turnoId === 't_noche' ? '🌙 Noche' : '👔 Staff 4x3'}
                         </span>
                       </div>
                     </div>
@@ -1380,9 +1381,10 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       value={editingCovArea.turnoId}
                       onChange={e => setEditingCovArea({ ...editingCovArea, turnoId: e.target.value as any })}
                     >
-                      <option value="t_dia">☀️ Turno Día (29 HH)</option>
-                      <option value="t_noche">🌙 Turno Noche (15 HH)</option>
-                      <option value="t_4x3">👔 Staff 4x3 (6 HH)</option>
+                      <option value="t_ambos">🔄 Ambos Turnos (Día y Noche)</option>
+                      <option value="t_dia">☀️ Solo Turno Día</option>
+                      <option value="t_noche">🌙 Solo Turno Noche</option>
+                      <option value="t_4x3">👔 Staff 4x3</option>
                     </select>
                   </div>
                   

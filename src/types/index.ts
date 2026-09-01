@@ -245,7 +245,7 @@ export interface CoverageArea {
   id: string;
   name: string;
   code: string;
-  turnoId: 't_dia' | 't_noche' | 't_4x3';
+  turnoId: 't_dia' | 't_noche' | 't_ambos' | 't_4x3';
   orden: number;
 }
 

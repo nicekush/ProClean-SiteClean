@@ -158,18 +158,15 @@ export function App() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
 
-  // 10 Official Personnel Coverage Areas (Independent from OTs)
+  // Official Physical Personnel Coverage Areas (Independent from OTs)
   const [coverageAreas, setCoverageAreas] = useState<CoverageArea[]>([
-    { id: 'a_sup_dia', name: 'Supervisión Día', code: 'SUP-DIA', turnoId: 't_dia', orden: 1 },
-    { id: 'a_ch_prim', name: 'Chancado Primario', code: 'CH-PRIM', turnoId: 't_dia', orden: 2 },
-    { id: 'a_ch_terc', name: 'Chancado Terciario', code: 'CH-TERC', turnoId: 't_dia', orden: 3 },
-    { id: 'a_apilado', name: 'Apilado', code: 'APILADO', turnoId: 't_dia', orden: 4 },
-    { id: 'a_remanejo', name: 'Remanejo', code: 'REMANEJO', turnoId: 't_dia', orden: 5 },
-    { id: 'a_humeda', name: 'Área Húmeda', code: 'AR-HUM', turnoId: 't_dia', orden: 6 },
-    { id: 'a_apoyo_dia', name: 'Staff / Apoyo Día', code: 'STAFF-DIA', turnoId: 't_dia', orden: 7 },
-    { id: 'a_sup_noche', name: 'Supervisión Noche', code: 'SUP-NCH', turnoId: 't_noche', orden: 8 },
-    { id: 'a_planta_noche', name: 'Dotación Planta Noche', code: 'PLT-NCH', turnoId: 't_noche', orden: 9 },
-    { id: 'a_personal_4x3', name: 'Personal Staff 4x3', code: 'STAFF-4X3', turnoId: 't_4x3', orden: 10 }
+    { id: 'a_sup', name: 'Supervisión', code: 'SUP', turnoId: 't_ambos', orden: 1 },
+    { id: 'a_ch_prim', name: 'Chancado Primario', code: 'CH-PRIM', turnoId: 't_ambos', orden: 2 },
+    { id: 'a_ch_terc', name: 'Chancado Terciario', code: 'CH-TERC', turnoId: 't_ambos', orden: 3 },
+    { id: 'a_remanejo', name: 'Apilado y Remanejo', code: 'REM', turnoId: 't_ambos', orden: 4 },
+    { id: 'a_humeda', name: 'Área Húmeda', code: 'AR-HUM', turnoId: 't_ambos', orden: 5 },
+    { id: 'a_apoyo', name: 'Staff / Apoyo Planta', code: 'STAFF', turnoId: 't_ambos', orden: 6 },
+    { id: 'a_personal_4x3', name: 'Personal Staff 4x3', code: 'STAFF-4X3', turnoId: 't_4x3', orden: 7 }
   ]);
 
   // 86 Official Personnel Members Roster (Turno A & Turno B)
