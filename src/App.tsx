@@ -29,7 +29,7 @@ import type {
   CoverageArea
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
-import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection } from './api/firebase';
+import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection, subscribeFirebaseCargos, syncCargoToFirebase, deleteCargoFromFirebase } from './api/firebase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
@@ -365,20 +365,16 @@ export function App() {
       }
     });
 
-    const unsubCargos = subscribeFirebaseCollection<CargoConfig>('proclean_cargos', (items) => {
+    const unsubCargos = subscribeFirebaseCargos((items) => {
       if (items && items.length > 0) {
         const defaultRestrictedIds = ['c_robot', 'c_acd', 'c_jefe_prev', 'c_planif', 'c_rrhh', 'c_jefe_taller'];
-        setCargos(prevCargos => {
-          const map = new Map<string, CargoConfig>();
-          prevCargos.forEach(c => map.set(c.id, c));
-          items.forEach((c: any) => {
-            const item = defaultRestrictedIds.includes(c.id) && (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0)
-              ? { ...c, restrictedAreaIds: ['a_personal_4x3'] }
-              : c;
-            map.set(c.id, item);
-          });
-          return Array.from(map.values());
+        const formatted = items.map((c: any) => {
+          if (defaultRestrictedIds.includes(c.id) && (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0)) {
+            return { ...c, restrictedAreaIds: ['a_personal_4x3'] };
+          }
+          return c;
         });
+        setCargos(formatted);
       }
     });
 

@@ -235,6 +235,61 @@ export async function deleteFirebaseUser(id: string): Promise<boolean> {
   }
 }
 
+// DEDICATED CARGOS CLOUD FIRESTORE SYNC (100% PARITY WITH WORK ORDERS OT PATTERN)
+export async function syncCargoToFirebase(cargo: any): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const docRef = doc(db, 'proclean_cargos', cargo.id);
+    await setDoc(docRef, {
+      payload: cargo,
+      id: cargo.id,
+      nombre: cargo.nombre,
+      code: cargo.code || '',
+      restrictedAreaIds: cargo.restrictedAreaIds || [],
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error('Failed to sync cargo to Firebase:', err);
+    return false;
+  }
+}
+
+export async function deleteCargoFromFirebase(cargoId: string): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const docRef = doc(db, 'proclean_cargos', cargoId);
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error('Failed to delete cargo from Firebase:', err);
+    return false;
+  }
+}
+
+export function subscribeFirebaseCargos(onUpdate: (cargos: any[]) => void): (() => void) | null {
+  if (!db) return null;
+  try {
+    const colRef = collection(db, 'proclean_cargos');
+    return onSnapshot(colRef, (snapshot) => {
+      if (!snapshot.empty) {
+        const cargosList: any[] = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          const item = data.payload || data;
+          cargosList.push({ ...item, id: docSnap.id });
+        });
+        onUpdate(cargosList);
+      }
+    }, (err) => {
+      console.warn('Error in Firestore cargos listener:', err);
+    });
+  } catch (err) {
+    console.warn('Failed setup listener for cargos:', err);
+    return null;
+  }
+}
+
 // GENERIC CLOUD FIRESTORE HELPERS FOR ALL ERP COLLECTIONS
 export async function syncSingleDocToFirebase(collectionName: string, docId: string, data: any): Promise<boolean> {
   if (!db) return false;

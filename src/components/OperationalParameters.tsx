@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { PlantArea, Sector, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
-import { syncSingleDocToFirebase, deleteSingleDocFromFirebase } from '../api/firebase';
+import { syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase } from '../api/firebase';
 import { 
   Plus, 
   Trash2, 
@@ -116,7 +116,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     setEditingCovArea(null);
   };
 
-  // Cargos CRUD
+  // Cargos CRUD (Identico al patron Work Orders OT)
   const handleAddCargo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCargo.nombre || !setCargos) return;
@@ -127,7 +127,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       restrictedAreaIds: newCargo.restrictedAreaIds.length > 0 ? newCargo.restrictedAreaIds : undefined
     };
     setCargos(prev => [...prev, newCargoObj]);
-    syncSingleDocToFirebase('proclean_cargos', newCargoObj.id, newCargoObj);
+    syncCargoToFirebase(newCargoObj);
     setNewCargo({ nombre: '', code: '', restrictedAreaIds: [] });
     alert('✅ Cargo guardado exitosamente y sincronizado en tiempo real en la nube.');
   };
@@ -136,7 +136,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     if (!setCargos) return;
     if (confirm('¿Deseas eliminar este cargo de la matriz de dotación?')) {
       setCargos(prev => prev.filter(c => c.id !== id));
-      deleteSingleDocFromFirebase('proclean_cargos', id);
+      deleteCargoFromFirebase(id);
     }
   };
 
@@ -144,7 +144,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     e.preventDefault();
     if (!editingCargo || !setCargos) return;
     setCargos(prev => prev.map(c => c.id === editingCargo.id ? editingCargo : c));
-    syncSingleDocToFirebase('proclean_cargos', editingCargo.id, editingCargo);
+    syncCargoToFirebase(editingCargo);
     setEditingCargo(null);
     alert('✅ Cargo actualizado exitosamente y sincronizado en tiempo real en la nube.');
   };
