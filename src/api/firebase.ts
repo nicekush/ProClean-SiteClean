@@ -322,9 +322,6 @@ export function subscribeFirebaseCollection<T>(collectionName: string, onUpdate:
   try {
     const colRef = collection(db, collectionName);
     return onSnapshot(colRef, (snapshot) => {
-      // Avoid overwriting local edits while writing to Cloud Firestore
-      if (snapshot.metadata.hasPendingWrites) return;
-
       const items: T[] = [];
       if (!snapshot.empty) {
         snapshot.forEach(docSnap => {

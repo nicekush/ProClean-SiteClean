@@ -405,25 +405,22 @@ export function App() {
     };
   }, []);
 
-  // Save changes to localStorage & Cloud Firebase Firestore
+  // Save changes to localStorage (matching direct Work Orders sync model)
   useEffect(() => {
     try {
       localStorage.setItem('proclean_coverageAreas', JSON.stringify(coverageAreas));
-      if (isFirebaseConfigured) syncArrayToFirebase('proclean_coverageAreas', coverageAreas);
     } catch(e) {}
   }, [coverageAreas]);
 
   useEffect(() => {
     try {
       localStorage.setItem('proclean_cargos', JSON.stringify(cargos));
-      if (isFirebaseConfigured) syncArrayToFirebase('proclean_cargos', cargos);
     } catch(e) {}
   }, [cargos]);
 
   useEffect(() => {
     try {
       localStorage.setItem('proclean_personnel', JSON.stringify(personnel));
-      if (isFirebaseConfigured) syncArrayToFirebase('proclean_personnel', personnel);
     } catch(e) {}
   }, [personnel]);
 
