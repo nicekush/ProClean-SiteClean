@@ -195,7 +195,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
       if (a.personId) cargoBreakdown[a.cargoId].covered += 1;
     });
 
-    const pct = totalRequired > 0 ? Math.round((totalCovered / totalRequired) * 100) : 100;
+    const pct = totalRequired > 0 ? Math.round((totalCovered / totalRequired) * 100) : 0;
     const gap = totalRequired - totalCovered;
 
     return { totalRequired, totalCovered, pct, gap, cargoBreakdown };
@@ -407,11 +407,11 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
             <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Cobertura Global Planta
             </div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: metrics.pct >= 90 ? '#15803D' : '#C2410C', marginTop: '4px' }}>
-              {metrics.pct}%
+            <div style={{ fontSize: '24px', fontWeight: 900, color: metrics.totalRequired === 0 ? 'var(--slate-400)' : metrics.pct >= 90 ? '#15803D' : '#C2410C', marginTop: '4px' }}>
+              {metrics.totalRequired === 0 ? '0%' : `${metrics.pct}%`}
             </div>
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--slate-600)', marginTop: '2px' }}>
-              {metrics.totalCovered} / {metrics.totalRequired} Personas Asignadas
+              {metrics.totalRequired === 0 ? 'Sin dotación declarada hoy' : `${metrics.totalCovered} / ${metrics.totalRequired} Personas Asignadas`}
             </div>
             <div style={{ width: '100%', height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', marginTop: '8px', overflow: 'hidden' }}>
               <div style={{ width: `${metrics.pct}%`, height: '100%', backgroundColor: metrics.pct >= 90 ? '#22C55E' : '#F97316', transition: 'width 0.3s' }} />
@@ -419,15 +419,15 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
           </div>
 
           {/* Card 2: Vacantes Pendientes */}
-          <div style={{ backgroundColor: metrics.gap > 0 ? '#FEF2F2' : '#F0FDF4', padding: '16px', borderRadius: '16px', border: `1px solid ${metrics.gap > 0 ? '#FCA5A5' : '#86EFAC'}` }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: metrics.gap > 0 ? '#991B1B' : '#166534', textTransform: 'uppercase' }}>
+          <div style={{ backgroundColor: metrics.totalRequired === 0 ? '#FFFBEB' : metrics.gap > 0 ? '#FEF2F2' : '#F0FDF4', padding: '16px', borderRadius: '16px', border: `1px solid ${metrics.totalRequired === 0 ? '#FDE68A' : metrics.gap > 0 ? '#FCA5A5' : '#86EFAC'}` }}>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: metrics.totalRequired === 0 ? '#B45309' : metrics.gap > 0 ? '#991B1B' : '#166534', textTransform: 'uppercase' }}>
               Vacantes / Brechas
             </div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: metrics.gap > 0 ? '#DC2626' : '#16A34A', marginTop: '4px' }}>
-              {metrics.gap > 0 ? `${metrics.gap} Cupos` : '0 Brechas'}
+            <div style={{ fontSize: '24px', fontWeight: 900, color: metrics.totalRequired === 0 ? '#D97706' : metrics.gap > 0 ? '#DC2626' : '#16A34A', marginTop: '4px' }}>
+              {metrics.totalRequired === 0 ? 'Sin Reportar' : metrics.gap > 0 ? `${metrics.gap} Cupos` : '0 Brechas'}
             </div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: metrics.gap > 0 ? '#B91C1C' : '#15803D', marginTop: '2px' }}>
-              {metrics.gap > 0 ? 'Dotación pendiente por asignar' : '100% Dotación Cubierta'}
+            <div style={{ fontSize: '12px', fontWeight: 700, color: metrics.totalRequired === 0 ? '#B45309' : metrics.gap > 0 ? '#B91C1C' : '#15803D', marginTop: '2px' }}>
+              {metrics.totalRequired === 0 ? 'Toca "+ Reportar Cobertura" para iniciar' : metrics.gap > 0 ? 'Dotación pendiente por asignar' : '100% Dotación Cubierta'}
             </div>
           </div>
 
