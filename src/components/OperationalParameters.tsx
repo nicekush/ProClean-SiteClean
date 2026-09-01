@@ -1317,7 +1317,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 right: 0,
                 bottom: 0,
                 backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                backdropFilter: 'blur(4px)',
+                backdropFilter: 'blur(6px)',
                 zIndex: 99999,
                 display: 'flex',
                 alignItems: 'center',
@@ -1328,38 +1328,55 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             >
               <div 
                 className="card" 
-                style={{ maxWidth: '440px', width: '100%', padding: '24px', backgroundColor: '#FFFFFF', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)' }}
+                style={{ maxWidth: '480px', width: '100%', padding: '28px', backgroundColor: '#FFFFFF', borderRadius: '24px', boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.45)', border: '1px solid #E2E8F0' }}
                 onClick={e => e.stopPropagation()}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)' }}>✏️ Editar Ubicación de Dotación</h3>
-                  <button className="btn btn-secondary" onClick={() => setEditingCovArea(null)} style={{ padding: '4px 8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', paddingBottom: '16px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(255,122,0,0.3)', flexShrink: 0 }}>
+                    <MapPin size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: 0, fontSize: '19px', fontWeight: 900, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
+                      Editar Ubicación de Dotación
+                    </h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', fontWeight: 700, color: 'var(--slate-500)' }}>
+                      Parámetros operacionales del sector de planta
+                    </p>
+                  </div>
+                  <button className="btn btn-secondary" onClick={() => setEditingCovArea(null)} style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #CBD5E1' }}>
                     <X size={16} />
                   </button>
                 </div>
-                <form onSubmit={handleUpdateCovArea} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                <form onSubmit={handleUpdateCovArea} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)', display: 'block', marginBottom: '4px' }}>Nombre de Ubicación</label>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
+                      Nombre de Ubicación
+                    </label>
                     <input 
                       type="text"
-                      className="input-field"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #E2E8F0', fontSize: '13px', fontWeight: 800, color: '#0F172A', backgroundColor: '#F8FAFC', outline: 'none' }}
                       value={editingCovArea.name}
                       onChange={e => setEditingCovArea({ ...editingCovArea, name: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)', display: 'block', marginBottom: '4px' }}>Código Corto</label>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
+                      Código Corto
+                    </label>
                     <input 
                       type="text"
-                      className="input-field"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #E2E8F0', fontSize: '13px', fontWeight: 800, color: '#0F172A', backgroundColor: '#F8FAFC', outline: 'none' }}
                       value={editingCovArea.code}
                       onChange={e => setEditingCovArea({ ...editingCovArea, code: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)', display: 'block', marginBottom: '4px' }}>Jornada / Turno</label>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
+                      Jornada / Turno
+                    </label>
                     <select
-                      className="input-field"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #E2E8F0', fontSize: '13px', fontWeight: 800, color: '#0F172A', backgroundColor: '#F8FAFC', outline: 'none' }}
                       value={editingCovArea.turnoId}
                       onChange={e => setEditingCovArea({ ...editingCovArea, turnoId: e.target.value as any })}
                     >
@@ -1368,9 +1385,14 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       <option value="t_4x3">👔 Staff 4x3 (6 HH)</option>
                     </select>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setEditingCovArea(null)}>Cancelar</button>
-                    <button type="submit" className="btn btn-primary"><Save size={14} /> Guardar Cambios</button>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
+                    <button type="button" onClick={() => setEditingCovArea(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
+                      Cancelar
+                    </button>
+                    <button type="submit" style={{ background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFFFFF', fontWeight: 900, padding: '12px 24px', borderRadius: '14px', boxShadow: '0 4px 14px rgba(255,122,0,0.3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <Save size={16} /> Guardar Cambios
+                    </button>
                   </div>
                 </form>
               </div>
@@ -1387,7 +1409,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 right: 0,
                 bottom: 0,
                 backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                backdropFilter: 'blur(4px)',
+                backdropFilter: 'blur(6px)',
                 zIndex: 99999,
                 display: 'flex',
                 alignItems: 'center',
@@ -1398,35 +1420,50 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             >
               <div 
                 className="card" 
-                style={{ maxWidth: '440px', width: '100%', padding: '24px', backgroundColor: '#FFFFFF', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)' }}
+                style={{ maxWidth: '480px', width: '100%', padding: '28px', backgroundColor: '#FFFFFF', borderRadius: '24px', boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.45)', border: '1px solid #E2E8F0' }}
                 onClick={e => e.stopPropagation()}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)' }}>✏️ Editar Cargo Operacional</h3>
-                  <button className="btn btn-secondary" onClick={() => setEditingCargo(null)} style={{ padding: '4px 8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', paddingBottom: '16px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(255,122,0,0.3)', flexShrink: 0 }}>
+                    <Users size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: 0, fontSize: '19px', fontWeight: 900, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
+                      Editar Cargo Operacional
+                    </h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', fontWeight: 700, color: 'var(--slate-500)' }}>
+                      Catálogo y restricciones de dotación
+                    </p>
+                  </div>
+                  <button className="btn btn-secondary" onClick={() => setEditingCargo(null)} style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #CBD5E1' }}>
                     <X size={16} />
                   </button>
                 </div>
-                <form onSubmit={handleUpdateCargo} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                <form onSubmit={handleUpdateCargo} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)', display: 'block', marginBottom: '4px' }}>Nombre del Cargo</label>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
+                      Nombre del Cargo
+                    </label>
                     <input 
                       type="text"
-                      className="input-field"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #E2E8F0', fontSize: '13px', fontWeight: 800, color: '#0F172A', backgroundColor: '#F8FAFC', outline: 'none' }}
                       value={editingCargo.nombre}
                       onChange={e => setEditingCargo({ ...editingCargo, nombre: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)', display: 'block', marginBottom: '4px' }}>Código Corto</label>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
+                      Código Corto
+                    </label>
                     <input 
                       type="text"
-                      className="input-field"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #E2E8F0', fontSize: '13px', fontWeight: 800, color: '#0F172A', backgroundColor: '#F8FAFC', outline: 'none' }}
                       value={editingCargo.code || ''}
                       onChange={e => setEditingCargo({ ...editingCargo, code: e.target.value })}
                     />
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)', cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', backgroundColor: '#FFF7ED', borderRadius: '14px', border: '1px solid #FFEDD5', cursor: 'pointer' }}>
                     <input 
                       type="checkbox"
                       checked={Boolean(editingCargo.restrictedAreaIds?.length)}
@@ -1435,11 +1472,16 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         restrictedAreaIds: e.target.checked ? ['a_personal_4x3'] : undefined
                       })}
                     />
-                    🔒 Restringir solo a Ubicación Staff 4x3
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#C2410C' }}>🔒 Restringir solo a Ubicación Staff 4x3</span>
                   </label>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setEditingCargo(null)}>Cancelar</button>
-                    <button type="submit" className="btn btn-primary"><Save size={14} /> Guardar Cambios</button>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
+                    <button type="button" onClick={() => setEditingCargo(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
+                      Cancelar
+                    </button>
+                    <button type="submit" style={{ background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFFFFF', fontWeight: 900, padding: '12px 24px', borderRadius: '14px', boxShadow: '0 4px 14px rgba(255,122,0,0.3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <Save size={16} /> Guardar Cambios
+                    </button>
                   </div>
                 </form>
               </div>
@@ -1456,7 +1498,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 right: 0,
                 bottom: 0,
                 backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                backdropFilter: 'blur(4px)',
+                backdropFilter: 'blur(6px)',
                 zIndex: 99999,
                 display: 'flex',
                 alignItems: 'center',
@@ -1467,38 +1509,55 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             >
               <div 
                 className="card" 
-                style={{ maxWidth: '440px', width: '100%', padding: '24px', backgroundColor: '#FFFFFF', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)' }}
+                style={{ maxWidth: '480px', width: '100%', padding: '28px', backgroundColor: '#FFFFFF', borderRadius: '24px', boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.45)', border: '1px solid #E2E8F0' }}
                 onClick={e => e.stopPropagation()}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)' }}>✏️ Editar Colaborador de Nómina</h3>
-                  <button className="btn btn-secondary" onClick={() => setEditingPersonnel(null)} style={{ padding: '4px 8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', paddingBottom: '16px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(255,122,0,0.3)', flexShrink: 0 }}>
+                    <Users size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: 0, fontSize: '19px', fontWeight: 900, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
+                      Editar Colaborador de Nómina
+                    </h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', fontWeight: 700, color: 'var(--slate-500)' }}>
+                      Personal oficial de contrato Minera Zaldívar
+                    </p>
+                  </div>
+                  <button className="btn btn-secondary" onClick={() => setEditingPersonnel(null)} style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #CBD5E1' }}>
                     <X size={16} />
                   </button>
                 </div>
-                <form onSubmit={handleUpdatePersonnel} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                <form onSubmit={handleUpdatePersonnel} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)', display: 'block', marginBottom: '4px' }}>Nombre Completo</label>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
+                      Nombre Completo
+                    </label>
                     <input 
                       type="text"
-                      className="input-field"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #E2E8F0', fontSize: '13px', fontWeight: 800, color: '#0F172A', backgroundColor: '#F8FAFC', outline: 'none' }}
                       value={editingPersonnel.nombre}
                       onChange={e => setEditingPersonnel({ ...editingPersonnel, nombre: e.target.value.toUpperCase() })}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)', display: 'block', marginBottom: '4px' }}>RUT</label>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
+                      RUT (Opcional)
+                    </label>
                     <input 
                       type="text"
-                      className="input-field"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #E2E8F0', fontSize: '13px', fontWeight: 800, color: '#0F172A', backgroundColor: '#F8FAFC', outline: 'none' }}
                       value={editingPersonnel.rut || ''}
                       onChange={e => setEditingPersonnel({ ...editingPersonnel, rut: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)', display: 'block', marginBottom: '4px' }}>Grupo de Turno (7x7)</label>
+                    <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
+                      Grupo de Turno (7x7)
+                    </label>
                     <select
-                      className="input-field"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #E2E8F0', fontSize: '13px', fontWeight: 800, color: '#0F172A', backgroundColor: '#F8FAFC', outline: 'none' }}
                       value={editingPersonnel.grupo}
                       onChange={e => setEditingPersonnel({ ...editingPersonnel, grupo: e.target.value as any })}
                     >
@@ -1507,9 +1566,14 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       <option value="AMBOS">Ambos Turnos</option>
                     </select>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setEditingPersonnel(null)}>Cancelar</button>
-                    <button type="submit" className="btn btn-primary"><Save size={14} /> Guardar Cambios</button>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
+                    <button type="button" onClick={() => setEditingPersonnel(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
+                      Cancelar
+                    </button>
+                    <button type="submit" style={{ background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFFFFF', fontWeight: 900, padding: '12px 24px', borderRadius: '14px', boxShadow: '0 4px 14px rgba(255,122,0,0.3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <Save size={16} /> Guardar Cambios
+                    </button>
                   </div>
                 </form>
               </div>
