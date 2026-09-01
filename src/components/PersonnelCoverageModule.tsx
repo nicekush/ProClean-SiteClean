@@ -33,82 +33,10 @@ interface PersonnelCoverageModuleProps {
   userEmail?: string;
 }
 
-// 10 Official Independent Personnel Coverage Areas (ProControl Zaldívar)
-const DEFAULT_COVERAGE_AREAS: CoverageArea[] = [
-  { id: 'a_sup_dia', name: 'Supervisión Día', code: 'SUP-DIA', turnoId: 't_dia', orden: 1 },
-  { id: 'a_ch_prim', name: 'Chancado Primario', code: 'CH-PRIM', turnoId: 't_dia', orden: 2 },
-  { id: 'a_ch_terc', name: 'Chancado Terciario', code: 'CH-TERC', turnoId: 't_dia', orden: 3 },
-  { id: 'a_apilado', name: 'Apilado', code: 'APILADO', turnoId: 't_dia', orden: 4 },
-  { id: 'a_remanejo', name: 'Remanejo', code: 'REMANEJO', turnoId: 't_dia', orden: 5 },
-  { id: 'a_humeda', name: 'Área Húmeda', code: 'AR-HUM', turnoId: 't_dia', orden: 6 },
-  { id: 'a_apoyo_dia', name: 'Staff / Apoyo Día', code: 'STAFF-DIA', turnoId: 't_dia', orden: 7 },
-  { id: 'a_sup_noche', name: 'Supervisión Noche', code: 'SUP-NCH', turnoId: 't_noche', orden: 8 },
-  { id: 'a_planta_noche', name: 'Dotación Planta Noche', code: 'PLT-NCH', turnoId: 't_noche', orden: 9 },
-  { id: 'a_personal_4x3', name: 'Personal Staff 4x3', code: 'STAFF-4X3', turnoId: 't_4x3', orden: 10 }
-];
-
-// Initial Default Cargos if empty
-const DEFAULT_CARGOS: CargoConfig[] = [
-  { id: 'c_sup', nombre: 'Supervisor', code: 'SUP' },
-  { id: 'c_cond', nombre: 'Conductor Sucker / Aljibe', code: 'COND' },
-  { id: 'c_ayu', nombre: 'Ayudante Aseo Industrial', code: 'AYU' },
-  { id: 'c_op_aseo', nombre: 'Operador de Aseo', code: 'OP-ASEO' },
-  { id: 'c_op_bomba', nombre: 'Operador Bomba / Camión Hidro', code: 'OP-BOMBA' },
-  { id: 'c_op_jet', nombre: 'Operador Hidrojet', code: 'OP-JET' },
-  { id: 'c_op_eq', nombre: 'Operador de Equipo / Alza Hombre', code: 'OP-EQ' },
-  { id: 'c_bod', nombre: 'Bodeguero', code: 'BOD' },
-  { id: 'c_mec', nombre: 'Mecánico', code: 'MEC' },
-  { id: 'c_prev', nombre: 'Asesor de Prevención (APR)', code: 'PREV' },
-  { id: 'c_robot', nombre: 'Aseo Robotizado', code: 'ROBOT', restrictedAreaIds: ['a_personal_4x3'] },
-  { id: 'c_acd', nombre: 'ACD', code: 'ACD', restrictedAreaIds: ['a_personal_4x3'] },
-  { id: 'c_jefe_prev', nombre: 'Jefe de Prevención', code: 'JEF-PREV', restrictedAreaIds: ['a_personal_4x3'] },
-  { id: 'c_planif', nombre: 'Planificador', code: 'PLANIF', restrictedAreaIds: ['a_personal_4x3'] },
-  { id: 'c_rrhh', nombre: 'RRHH', code: 'RRHH', restrictedAreaIds: ['a_personal_4x3'] },
-  { id: 'c_jefe_taller', nombre: 'Jefe de Taller', code: 'JEF-TALLER', restrictedAreaIds: ['a_personal_4x3'] }
-];
-
-// Pre-configured Default Required Slots (50 HH Total)
-const DEFAULT_AREA_CARGO_TARGETS: AreaCargoTarget[] = [
-  { id: 'ac1', areaId: 'a_sup_dia', cargoId: 'c_sup', cantidad: 2 },
-  { id: 'ac2', areaId: 'a_ch_prim', cargoId: 'c_cond', cantidad: 1 },
-  { id: 'ac3', areaId: 'a_ch_prim', cargoId: 'c_ayu', cantidad: 1 },
-  { id: 'ac4', areaId: 'a_ch_prim', cargoId: 'c_op_aseo', cantidad: 3 },
-  { id: 'ac5', areaId: 'a_ch_terc', cargoId: 'c_cond', cantidad: 1 },
-  { id: 'ac6', areaId: 'a_ch_terc', cargoId: 'c_ayu', cantidad: 1 },
-  { id: 'ac7', areaId: 'a_ch_terc', cargoId: 'c_op_aseo', cantidad: 3 },
-  { id: 'ac8', areaId: 'a_apilado', cargoId: 'c_ayu', cantidad: 2 },
-  { id: 'ac9', areaId: 'a_apilado', cargoId: 'c_op_eq', cantidad: 1 },
-  { id: 'ac10', areaId: 'a_apilado', cargoId: 'c_op_aseo', cantidad: 2 },
-  { id: 'ac11', areaId: 'a_remanejo', cargoId: 'c_op_bomba', cantidad: 1 },
-  { id: 'ac12', areaId: 'a_remanejo', cargoId: 'c_op_jet', cantidad: 2 },
-  { id: 'ac13', areaId: 'a_remanejo', cargoId: 'c_cond', cantidad: 1 },
-  { id: 'ac14', areaId: 'a_remanejo', cargoId: 'c_op_aseo', cantidad: 3 },
-  { id: 'ac15', areaId: 'a_humeda', cargoId: 'c_cond', cantidad: 1 },
-  { id: 'ac16', areaId: 'a_humeda', cargoId: 'c_ayu', cantidad: 1 },
-  { id: 'ac17', areaId: 'a_humeda', cargoId: 'c_op_aseo', cantidad: 2 },
-  { id: 'ac18', areaId: 'a_apoyo_dia', cargoId: 'c_cond', cantidad: 1 },
-  { id: 'ac19', areaId: 'a_apoyo_dia', cargoId: 'c_bod', cantidad: 1 },
-  { id: 'ac20', areaId: 'a_apoyo_dia', cargoId: 'c_mec', cantidad: 1 },
-  { id: 'ac21', areaId: 'a_apoyo_dia', cargoId: 'c_prev', cantidad: 1 },
-  { id: 'ac22', areaId: 'a_sup_noche', cargoId: 'c_sup', cantidad: 1 },
-  { id: 'ac23', areaId: 'a_planta_noche', cargoId: 'c_cond', cantidad: 4 },
-  { id: 'ac24', areaId: 'a_planta_noche', cargoId: 'c_ayu', cantidad: 2 },
-  { id: 'ac25', areaId: 'a_planta_noche', cargoId: 'c_op_aseo', cantidad: 3 },
-  { id: 'ac26', areaId: 'a_planta_noche', cargoId: 'c_op_bomba', cantidad: 1 },
-  { id: 'ac27', areaId: 'a_planta_noche', cargoId: 'c_op_jet', cantidad: 2 },
-  { id: 'ac28', areaId: 'a_planta_noche', cargoId: 'c_op_eq', cantidad: 2 },
-  { id: 'ac31', areaId: 'a_personal_4x3', cargoId: 'c_robot', cantidad: 1 },
-  { id: 'ac32', areaId: 'a_personal_4x3', cargoId: 'c_acd', cantidad: 1 },
-  { id: 'ac33', areaId: 'a_personal_4x3', cargoId: 'c_jefe_prev', cantidad: 1 },
-  { id: 'ac34', areaId: 'a_personal_4x3', cargoId: 'c_planif', cantidad: 1 },
-  { id: 'ac35', areaId: 'a_personal_4x3', cargoId: 'c_rrhh', cantidad: 1 },
-  { id: 'ac36', areaId: 'a_personal_4x3', cargoId: 'c_jefe_taller', cantidad: 1 }
-];
-
 export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = ({
   personnel = [],
-  cargos = DEFAULT_CARGOS,
-  coverageAreas = DEFAULT_COVERAGE_AREAS,
+  cargos = [],
+  coverageAreas = [],
   assignments = [],
   onSaveAssignments,
   userEmail = 'supervisor@procleanmg.cl'
@@ -132,9 +60,9 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   // Active Date string
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Effective Coverage Areas List
+  // Effective Coverage Areas List (Puras desde Base de Datos)
   const effectiveAreas = useMemo(() => {
-    return (coverageAreas && coverageAreas.length > 0) ? coverageAreas : DEFAULT_COVERAGE_AREAS;
+    return coverageAreas || [];
   }, [coverageAreas]);
 
   // Filtered Effective Areas based on Shift Filter
@@ -145,9 +73,9 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
     return effectiveAreas;
   }, [effectiveAreas, activeShiftFilter]);
 
-  // Effective Cargos List
+  // Effective Cargos List (Puros desde Base de Datos)
   const effectiveCargos = useMemo(() => {
-    return cargos.length > 0 ? cargos : DEFAULT_CARGOS;
+    return cargos || [];
   }, [cargos]);
 
   // Filtered Roster by Active Group (Turno A or Turno B)
