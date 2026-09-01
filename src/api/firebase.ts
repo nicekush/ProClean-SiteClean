@@ -267,21 +267,21 @@ export async function fetchSingleDocFromFirebase<T>(collectionName: string, docI
   }
 }
 
+export async function deleteSingleDocFromFirebase(collectionName: string, docId: string): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const docRef = doc(db, collectionName, docId);
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error(`Failed to delete doc from Firebase (${collectionName}/${docId}):`, err);
+    return false;
+  }
+}
+
 export async function syncArrayToFirebase(collectionName: string, items: any[]): Promise<boolean> {
   if (!db) return false;
   try {
-    const colRef = collection(db, collectionName);
-    const snapshot = await getDocs(colRef);
-    const localIds = new Set(items.map(item => item.id || 'singleton'));
-
-    if (!snapshot.empty) {
-      for (const docSnap of snapshot.docs) {
-        if (!localIds.has(docSnap.id)) {
-          await deleteDoc(doc(db, collectionName, docSnap.id));
-        }
-      }
-    }
-
     for (const item of items) {
       const docId = item.id || 'singleton';
       await syncSingleDocToFirebase(collectionName, docId, item);

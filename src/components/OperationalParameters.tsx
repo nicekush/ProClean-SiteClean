@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { PlantArea, Sector, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
+import { syncSingleDocToFirebase, deleteSingleDocFromFirebase } from '../api/firebase';
 import { 
   Plus, 
   Trash2, 
@@ -125,8 +126,8 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       code: newCargo.code || 'CARGO',
       restrictedAreaIds: newCargo.restrictedAreaIds.length > 0 ? newCargo.restrictedAreaIds : undefined
     };
-    const updated = [...cargos, newCargoObj];
-    setCargos(updated);
+    setCargos(prev => [...prev, newCargoObj]);
+    syncSingleDocToFirebase('proclean_cargos', newCargoObj.id, newCargoObj);
     setNewCargo({ nombre: '', code: '', restrictedAreaIds: [] });
     alert('✅ Cargo guardado exitosamente y sincronizado en tiempo real en la nube.');
   };
@@ -134,16 +135,16 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleDeleteCargo = (id: string) => {
     if (!setCargos) return;
     if (confirm('¿Deseas eliminar este cargo de la matriz de dotación?')) {
-      const updated = cargos.filter(c => c.id !== id);
-      setCargos(updated);
+      setCargos(prev => prev.filter(c => c.id !== id));
+      deleteSingleDocFromFirebase('proclean_cargos', id);
     }
   };
 
   const handleUpdateCargo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCargo || !setCargos) return;
-    const updated = cargos.map(c => c.id === editingCargo.id ? editingCargo : c);
-    setCargos(updated);
+    setCargos(prev => prev.map(c => c.id === editingCargo.id ? editingCargo : c));
+    syncSingleDocToFirebase('proclean_cargos', editingCargo.id, editingCargo);
     setEditingCargo(null);
     alert('✅ Cargo actualizado exitosamente y sincronizado en tiempo real en la nube.');
   };

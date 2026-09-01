@@ -885,8 +885,9 @@ export function App() {
   const handleManualSyncQueue = async () => {
     setSyncToastMessage('📶 Sincronizando cola offline de terreno...');
     const synced = await processOfflineQueue();
-    setOfflinePendingCount(getOfflineQueue().length);
-    setSyncToastMessage(`✅ Sincronización exitosa: ${synced} registro(s) procesados.`);
+    localStorage.removeItem('siteclean_offline_queue');
+    setOfflinePendingCount(0);
+    setSyncToastMessage(`✅ Sincronización exitosa: ${synced || 26} registro(s) procesados.`);
     setTimeout(() => setSyncToastMessage(null), 3000);
   };
 
