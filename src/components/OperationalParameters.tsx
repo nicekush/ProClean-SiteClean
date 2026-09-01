@@ -219,148 +219,205 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     setEditingPersonnel(null);
   };
 
-  // Plant Areas CRUD
+  // Plant Areas CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddArea = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newArea.name) return;
-    setPlantAreas([
-      ...plantAreas,
-      {
-        id: `pa-${Date.now()}`,
-        name: newArea.name,
-        code: newArea.code || `AREA-${plantAreas.length + 1}`
-      }
-    ]);
+    const newObj: PlantArea = {
+      id: `pa-${Date.now()}`,
+      name: newArea.name,
+      code: newArea.code || `AREA-${plantAreas.length + 1}`
+    };
+    setPlantAreas(prev => {
+      const updated = [...prev, newObj];
+      try { localStorage.setItem('proclean_plant_areas', JSON.stringify(updated)); } catch(e) {}
+      return updated;
+    });
+    syncSingleDocToFirebase('plant_areas', newObj.id, newObj);
     setNewArea({ name: '', code: '' });
   };
 
   const handleDeleteArea = (id: string) => {
     if (confirm('¿Deseas eliminar esta área de planta? Se eliminará la categoría para los sectores vinculados.')) {
-      setPlantAreas(plantAreas.filter(a => a.id !== id));
+      setPlantAreas(prev => {
+        const updated = prev.filter(a => a.id !== id);
+        try { localStorage.setItem('proclean_plant_areas', JSON.stringify(updated)); } catch(e) {}
+        return updated;
+      });
+      deleteSingleDocFromFirebase('plant_areas', id);
     }
   };
 
-  // Sectors CRUD
+  // Sectors CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddSector = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSector.name || !newSector.areaId) return;
     const linkedArea = plantAreas.find(a => a.id === newSector.areaId);
 
-    setSectors([
-      ...sectors,
-      {
-        id: `sec-${Date.now()}`,
-        areaId: newSector.areaId,
-        areaName: linkedArea ? linkedArea.name : 'General',
-        name: newSector.name,
-        code: newSector.code || `SEC-${sectors.length + 1}`,
-        description: newSector.description
-      }
-    ]);
+    const newObj: Sector = {
+      id: `sec-${Date.now()}`,
+      areaId: newSector.areaId,
+      areaName: linkedArea ? linkedArea.name : 'General',
+      name: newSector.name,
+      code: newSector.code || `SEC-${sectors.length + 1}`,
+      description: newSector.description
+    };
+
+    setSectors(prev => {
+      const updated = [...prev, newObj];
+      try { localStorage.setItem('proclean_sectors', JSON.stringify(updated)); } catch(e) {}
+      return updated;
+    });
+    syncSingleDocToFirebase('sectors', newObj.id, newObj);
     setNewSector({ areaId: '', name: '', code: '', description: '' });
   };
 
   const handleDeleteSector = (id: string) => {
     if (confirm('¿Deseas eliminar este sector operativo?')) {
-      setSectors(sectors.filter(s => s.id !== id));
+      setSectors(prev => {
+        const updated = prev.filter(s => s.id !== id);
+        try { localStorage.setItem('proclean_sectors', JSON.stringify(updated)); } catch(e) {}
+        return updated;
+      });
+      deleteSingleDocFromFirebase('sectors', id);
     }
   };
 
-  // Sub-Sectors CRUD
+  // Sub-Sectors CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddSubSector = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSubSector.name || !newSubSector.sectorId) return;
     const linkedSector = sectors.find(s => s.id === newSubSector.sectorId);
 
-    setSubSectors([
-      ...subSectors,
-      {
-        id: `sub-${Date.now()}`,
-        sectorId: newSubSector.sectorId,
-        sectorName: linkedSector ? linkedSector.name : 'Sector',
-        name: newSubSector.name,
-        code: newSubSector.code || `SUB-${subSectors.length + 1}`
-      }
-    ]);
+    const newObj: SubSector = {
+      id: `sub-${Date.now()}`,
+      sectorId: newSubSector.sectorId,
+      sectorName: linkedSector ? linkedSector.name : 'Sector',
+      name: newSubSector.name,
+      code: newSubSector.code || `SUB-${subSectors.length + 1}`
+    };
+
+    setSubSectors(prev => {
+      const updated = [...prev, newObj];
+      try { localStorage.setItem('proclean_sub_sectors', JSON.stringify(updated)); } catch(e) {}
+      return updated;
+    });
+    syncSingleDocToFirebase('sub_sectors', newObj.id, newObj);
     setNewSubSector({ sectorId: '', name: '', code: '' });
   };
 
   const handleDeleteSubSector = (id: string) => {
     if (confirm('¿Deseas eliminar este sub-sector / equipo?')) {
-      setSubSectors(subSectors.filter(s => s.id !== id));
+      setSubSectors(prev => {
+        const updated = prev.filter(s => s.id !== id);
+        try { localStorage.setItem('proclean_sub_sectors', JSON.stringify(updated)); } catch(e) {}
+        return updated;
+      });
+      deleteSingleDocFromFirebase('sub_sectors', id);
     }
   };
 
-  // Machines CRUD
+  // Machines CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddMachine = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMachine.name || !newMachine.patent) return;
     const capValue = newMachine.capacityM3 !== undefined && !isNaN(newMachine.capacityM3) ? Number(newMachine.capacityM3) : 0;
-    setMachines([
-      ...machines,
-      {
-        id: Date.now().toString(),
-        name: newMachine.name,
-        patent: newMachine.patent,
-        type: newMachine.type || 'Equipos',
-        capacity: capValue > 0 ? `${capValue} m³` : 'N/A',
-        capacityM3: capValue,
-        status: 'DISPONIBLE'
-      }
-    ]);
+    const newObj: Machine = {
+      id: Date.now().toString(),
+      name: newMachine.name,
+      patent: newMachine.patent,
+      type: newMachine.type || 'Equipos',
+      capacity: capValue > 0 ? `${capValue} m³` : 'N/A',
+      capacityM3: capValue,
+      status: 'DISPONIBLE'
+    };
+
+    setMachines(prev => {
+      const updated = [...prev, newObj];
+      try { localStorage.setItem('proclean_machines', JSON.stringify(updated)); } catch(e) {}
+      return updated;
+    });
+    syncSingleDocToFirebase('machines', newObj.id, newObj);
     setNewMachine({ name: '', patent: '', type: '', capacity: '', capacityM3: undefined });
   };
 
   const toggleMachineStatus = (id: string) => {
-    setMachines(machines.map(m => {
-      if (m.id === id) {
-        const nextStatus: Machine['status'] = 
-          m.status === 'DISPONIBLE' ? 'MANTENCION' :
-          m.status === 'MANTENCION' ? 'FUERA_SERVICIO' : 'DISPONIBLE';
-        return { ...m, status: nextStatus };
-      }
-      return m;
-    }));
+    setMachines(prev => {
+      const updated = prev.map(m => {
+        if (m.id === id) {
+          const nextStatus: Machine['status'] = 
+            m.status === 'DISPONIBLE' ? 'MANTENCION' :
+            m.status === 'MANTENCION' ? 'FUERA_SERVICIO' : 'DISPONIBLE';
+          const newMachineObj = { ...m, status: nextStatus };
+          syncSingleDocToFirebase('machines', m.id, newMachineObj);
+          return newMachineObj;
+        }
+        return m;
+      });
+      try { localStorage.setItem('proclean_machines', JSON.stringify(updated)); } catch(e) {}
+      return updated;
+    });
   };
 
   const handleUpdateMachineSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMachine) return;
     const capValue = Number(editingMachine.capacityM3) || 0.45;
-    setMachines(machines.map(m => m.id === editingMachine.id ? {
+    const updatedObj: Machine = {
       ...editingMachine,
       capacityM3: capValue,
       capacity: `${capValue} m³`
-    } : m));
+    };
+
+    setMachines(prev => {
+      const updated = prev.map(m => m.id === editingMachine.id ? updatedObj : m);
+      try { localStorage.setItem('proclean_machines', JSON.stringify(updated)); } catch(e) {}
+      return updated;
+    });
+    syncSingleDocToFirebase('machines', updatedObj.id, updatedObj);
     setEditingMachine(null);
   };
 
   const handleDeleteMachine = (id: string) => {
     if (confirm('¿Deseas eliminar este vehículo de la flota?')) {
-      setMachines(machines.filter(m => m.id !== id));
+      setMachines(prev => {
+        const updated = prev.filter(m => m.id !== id);
+        try { localStorage.setItem('proclean_machines', JSON.stringify(updated)); } catch(e) {}
+        return updated;
+      });
+      deleteSingleDocFromFirebase('machines', id);
     }
   };
 
-  // Workers CRUD
+  // Workers CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddWorker = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWorker.name) return;
-    setWorkers([
-      ...workers,
-      {
-        id: Date.now().toString(),
-        name: newWorker.name,
-        rut: newWorker.rut || '15.482.910-K',
-        role: newWorker.role,
-        active: true
-      }
-    ]);
+    const newObj: Worker = {
+      id: Date.now().toString(),
+      name: newWorker.name,
+      rut: newWorker.rut || '15.482.910-K',
+      role: newWorker.role as any,
+      active: true
+    };
+
+    setWorkers(prev => {
+      const updated = [...prev, newObj];
+      try { localStorage.setItem('proclean_workers', JSON.stringify(updated)); } catch(e) {}
+      return updated;
+    });
+    syncSingleDocToFirebase('workers', newObj.id, newObj);
     setNewWorker({ name: '', rut: '', role: 'OPERADOR_HIDRO' });
   };
 
   const handleDeleteWorker = (id: string) => {
     if (confirm('¿Deseas desvincular a este operario de la nómina?')) {
-      setWorkers(workers.filter(w => w.id !== id));
+      setWorkers(prev => {
+        const updated = prev.filter(w => w.id !== id);
+        try { localStorage.setItem('proclean_workers', JSON.stringify(updated)); } catch(e) {}
+        return updated;
+      });
+      deleteSingleDocFromFirebase('workers', id);
     }
   };
 
