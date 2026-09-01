@@ -352,7 +352,12 @@ export async function syncSingleDocToFirebase(collectionName: string, docId: str
   if (!db) return false;
   try {
     const docRef = doc(db, collectionName, docId);
-    await setDoc(docRef, { payload: data, updatedAt: new Date().toISOString() }, { merge: true });
+    await setDoc(docRef, { 
+      ...data, 
+      payload: data, 
+      id: docId, 
+      updatedAt: new Date().toISOString() 
+    });
     return true;
   } catch (err) {
     console.error(`Failed to sync doc to Firebase (${collectionName}):`, err);
@@ -369,7 +374,8 @@ export async function fetchSingleDocFromFirebase<T>(collectionName: string, docI
     snapshot.forEach(docSnap => {
       if (docSnap.id === docId) {
         const data = docSnap.data();
-        result = (data.payload || data) as T;
+        const payload = data.payload || data;
+        result = { ...payload, ...data, id: docSnap.id } as T;
       }
     });
     return result;
@@ -414,11 +420,8 @@ export async function fetchFirebaseCollection<T>(collectionName: string): Promis
       const items: T[] = [];
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
-        if (data.payload) {
-          items.push(data.payload as T);
-        } else {
-          items.push({ ...data, id: docSnap.id } as T);
-        }
+        const payload = data.payload || data;
+        items.push({ ...payload, ...data, id: docSnap.id } as T);
       });
       return items;
     }
@@ -438,11 +441,8 @@ export function subscribeFirebaseCollection<T>(collectionName: string, onUpdate:
       if (!snapshot.empty) {
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
-          if (data.payload) {
-            items.push(data.payload as T);
-          } else {
-            items.push({ ...data, id: docSnap.id } as T);
-          }
+          const payload = data.payload || data;
+          items.push({ ...payload, ...data, id: docSnap.id } as T);
         });
       }
       onUpdate(items);
