@@ -98,21 +98,36 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       turnoId: newCovArea.turnoId,
       orden: coverageAreas.length + 1
     };
-    setCoverageAreas([...coverageAreas, newAreaObj]);
+    setCoverageAreas(prev => {
+      const updated = [...prev, newAreaObj];
+      localStorage.setItem('proclean_coverageAreas', JSON.stringify(updated));
+      return updated;
+    });
+    syncSingleDocToFirebase('proclean_coverageAreas', newAreaObj.id, newAreaObj);
     setNewCovArea({ name: '', code: '', turnoId: 't_dia' });
   };
 
   const handleDeleteCovArea = (id: string) => {
     if (!setCoverageAreas) return;
     if (confirm('¿Deseas eliminar esta ubicación de dotación?')) {
-      setCoverageAreas(coverageAreas.filter(ca => ca.id !== id));
+      setCoverageAreas(prev => {
+        const updated = prev.filter(ca => ca.id !== id);
+        localStorage.setItem('proclean_coverageAreas', JSON.stringify(updated));
+        return updated;
+      });
+      deleteSingleDocFromFirebase('proclean_coverageAreas', id);
     }
   };
 
   const handleUpdateCovArea = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCovArea || !setCoverageAreas) return;
-    setCoverageAreas(coverageAreas.map(ca => ca.id === editingCovArea.id ? editingCovArea : ca));
+    setCoverageAreas(prev => {
+      const updated = prev.map(ca => ca.id === editingCovArea.id ? editingCovArea : ca);
+      localStorage.setItem('proclean_coverageAreas', JSON.stringify(updated));
+      return updated;
+    });
+    syncSingleDocToFirebase('proclean_coverageAreas', editingCovArea.id, editingCovArea);
     setEditingCovArea(null);
   };
 
@@ -171,21 +186,36 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       tipo: newPersonnel.tipo,
       estado: 'Activo'
     };
-    setPersonnel([...personnel, newMember]);
+    setPersonnel(prev => {
+      const updated = [...prev, newMember];
+      localStorage.setItem('proclean_personnel', JSON.stringify(updated));
+      return updated;
+    });
+    syncSingleDocToFirebase('proclean_personnel', newMember.id, newMember);
     setNewPersonnel({ nombre: '', rut: '', grupo: 'A', tipo: 'PLANTA' });
   };
 
   const handleDeletePersonnel = (id: string) => {
     if (!setPersonnel) return;
     if (confirm('¿Deseas eliminar a este colaborador de la nómina oficial?')) {
-      setPersonnel(personnel.filter(p => p.id !== id));
+      setPersonnel(prev => {
+        const updated = prev.filter(p => p.id !== id);
+        localStorage.setItem('proclean_personnel', JSON.stringify(updated));
+        return updated;
+      });
+      deleteSingleDocFromFirebase('proclean_personnel', id);
     }
   };
 
   const handleUpdatePersonnel = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPersonnel || !setPersonnel) return;
-    setPersonnel(personnel.map(p => p.id === editingPersonnel.id ? editingPersonnel : p));
+    setPersonnel(prev => {
+      const updated = prev.map(p => p.id === editingPersonnel.id ? editingPersonnel : p);
+      localStorage.setItem('proclean_personnel', JSON.stringify(updated));
+      return updated;
+    });
+    syncSingleDocToFirebase('proclean_personnel', editingPersonnel.id, editingPersonnel);
     setEditingPersonnel(null);
   };
 
