@@ -201,6 +201,43 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
     return { totalRequired, totalCovered, pct, gap, cargoBreakdown };
   }, [assignments]);
 
+  // Helper to select an area within Step 1 and pre-fill cargos/headcount
+  const handleSelectAreaInStep1 = (areaId: string) => {
+    setWizardAreaId(areaId);
+
+    const existing = assignments.filter(a => a.areaId === areaId);
+    if (existing.length > 0) {
+      const cargoIds = Array.from(new Set(existing.map(a => a.cargoId)));
+      const counts: Record<string, number> = {};
+      const slots: Record<string, { personId: string; personName: string }> = {};
+
+      existing.forEach(a => {
+        counts[a.cargoId] = (counts[a.cargoId] || 0) + 1;
+        const slotIdx = a.slotIndex || 0;
+        slots[`${a.cargoId}_${slotIdx}`] = { personId: a.personId || '', personName: a.personName || '' };
+      });
+
+      setWizardSelectedCargoIds(cargoIds);
+      setWizardCargoCounts(counts);
+      setWizardSlotAssignments(slots);
+    } else {
+      // Pre-select allowed cargos for this area so Siguiente is active right away
+      const allowed = effectiveCargos.filter(c => {
+        if (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0) return true;
+        return c.restrictedAreaIds.includes(areaId);
+      });
+      const allowedIds = allowed.map(c => c.id);
+      const counts: Record<string, number> = {};
+      allowedIds.forEach(id => { counts[id] = 1; });
+
+      setWizardSelectedCargoIds(allowedIds);
+      setWizardCargoCounts(counts);
+      setWizardSlotAssignments({});
+    }
+
+    setWizardStep(2);
+  };
+
   // Open Wizard for an Area (or launch Guided Continuous Tour)
   const handleOpenWizardForArea = (areaId?: string, forceTour: boolean = false) => {
     const isTourMode = forceTour || !areaId;
@@ -211,34 +248,10 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
     setWizardSlotAssignments({});
     setSlotSearchQuery({});
 
-    // Target area: if areaId specified, use it. If Tour mode, pick first unreported area or fallback to first area
-    let targetAreaId = areaId || '';
-    if (isTourMode && !targetAreaId) {
-      const unreported = effectiveAreas.find(a => !assignments.some(asg => asg.areaId === a.id));
-      targetAreaId = unreported ? unreported.id : (effectiveAreas[0]?.id || '');
-    }
-
-    setWizardAreaId(targetAreaId);
-
-    if (targetAreaId) {
-      const existing = assignments.filter(a => a.areaId === targetAreaId);
-      if (existing.length > 0) {
-        const cargoIds = Array.from(new Set(existing.map(a => a.cargoId)));
-        const counts: Record<string, number> = {};
-        const slots: Record<string, { personId: string; personName: string }> = {};
-
-        existing.forEach(a => {
-          counts[a.cargoId] = (counts[a.cargoId] || 0) + 1;
-          const slotIdx = a.slotIndex || 0;
-          slots[`${a.cargoId}_${slotIdx}`] = { personId: a.personId || '', personName: a.personName || '' };
-        });
-
-        setWizardSelectedCargoIds(cargoIds);
-        setWizardCargoCounts(counts);
-        setWizardSlotAssignments(slots);
-      }
-      setWizardStep(2);
+    if (areaId) {
+      handleSelectAreaInStep1(areaId);
     } else {
+      setWizardAreaId('');
       setWizardStep(1);
     }
 
@@ -783,36 +796,42 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                   <span><strong>¡Toca la casilla gigante!</strong> Selecciona el área de la planta que vas a reportar hoy:</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
-                  {effectiveAreas.map(area => (
-                    <button
-                      key={area.id}
-                      onClick={() => {
-                        setWizardAreaId(area.id);
-                        setWizardStep(2);
-                      }}
-                      style={{
-                        padding: '16px 12px',
-                        borderRadius: '18px',
-                        border: '3px solid #E2E8F0',
-                        backgroundColor: '#FFFFFF',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '8px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      <div style={{ width: '44px', height: '44px', borderRadius: '14px', backgroundColor: '#FFEDD5', color: 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Building2 size={24} />
-                      </div>
-                      <span style={{ fontSize: '14px', fontWeight: 900, color: 'var(--slate-900)' }}>{area.name}</span>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#C2410C', backgroundColor: '#FFF7ED', padding: '2px 8px', borderRadius: '10px' }}>📍 {area.code}</span>
-                    </button>
-                  ))}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                  {effectiveAreas.map(area => {
+                    const areaAsgs = assignments.filter(a => a.areaId === area.id);
+                    const isReported = areaAsgs.length > 0;
+                    const coveredCount = areaAsgs.filter(a => a.personId).length;
+
+                    return (
+                      <button
+                        key={area.id}
+                        type="button"
+                        onClick={() => handleSelectAreaInStep1(area.id)}
+                        style={{
+                          padding: '16px 12px',
+                          borderRadius: '18px',
+                          border: `3px solid ${isReported ? '#86EFAC' : '#E2E8F0'}`,
+                          backgroundColor: isReported ? '#F0FDF4' : '#FFFFFF',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        <div style={{ width: '44px', height: '44px', borderRadius: '14px', backgroundColor: isReported ? '#DCFCE7' : '#FFEDD5', color: isReported ? '#15803D' : 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Building2 size={24} />
+                        </div>
+                        <span style={{ fontSize: '14px', fontWeight: 900, color: 'var(--slate-900)' }}>{area.name}</span>
+                        <span style={{ fontSize: '10px', fontWeight: 900, color: isReported ? '#15803D' : '#C2410C', backgroundColor: isReported ? '#DCFCE7' : '#FFF7ED', padding: '3px 8px', borderRadius: '10px' }}>
+                          {isReported ? `✅ Cubierto (${coveredCount}/${areaAsgs.length})` : '🚨 Pendiente por Reportar'}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1161,13 +1180,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          setWizardAreaId(nextArea.id);
-                          setWizardSelectedCargoIds([]);
-                          setWizardCargoCounts({});
-                          setWizardSlotAssignments({});
-                          setWizardStep(2);
-                        }}
+                        onClick={() => handleSelectAreaInStep1(nextArea.id)}
                         style={{
                           width: '100%',
                           background: 'linear-gradient(135deg, var(--orange), #EA580C)',
