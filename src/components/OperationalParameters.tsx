@@ -87,7 +87,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const [editingCargo, setEditingCargo] = useState<CargoConfig | null>(null);
   const [editingPersonnel, setEditingPersonnel] = useState<PersonnelMember | null>(null);
 
-  // Coverage Areas CRUD
+  // Coverage Areas CRUD (100% Cloud Firestore Sync)
   const handleAddCovArea = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCovArea.name || !setCoverageAreas) return;
@@ -98,11 +98,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       turnoId: newCovArea.turnoId,
       orden: coverageAreas.length + 1
     };
-    setCoverageAreas(prev => {
-      const updated = [...prev, newAreaObj];
-      localStorage.setItem('proclean_coverageAreas', JSON.stringify(updated));
-      return updated;
-    });
+    setCoverageAreas(prev => [...prev, newAreaObj]);
     syncSingleDocToFirebase('proclean_coverageAreas', newAreaObj.id, newAreaObj);
     setNewCovArea({ name: '', code: '', turnoId: 't_dia' });
   };
@@ -110,11 +106,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleDeleteCovArea = (id: string) => {
     if (!setCoverageAreas) return;
     if (confirm('¿Deseas eliminar esta ubicación de dotación?')) {
-      setCoverageAreas(prev => {
-        const updated = prev.filter(ca => ca.id !== id);
-        localStorage.setItem('proclean_coverageAreas', JSON.stringify(updated));
-        return updated;
-      });
+      setCoverageAreas(prev => prev.filter(ca => ca.id !== id));
       deleteSingleDocFromFirebase('proclean_coverageAreas', id);
     }
   };
@@ -122,16 +114,12 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleUpdateCovArea = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCovArea || !setCoverageAreas) return;
-    setCoverageAreas(prev => {
-      const updated = prev.map(ca => ca.id === editingCovArea.id ? editingCovArea : ca);
-      localStorage.setItem('proclean_coverageAreas', JSON.stringify(updated));
-      return updated;
-    });
+    setCoverageAreas(prev => prev.map(ca => ca.id === editingCovArea.id ? editingCovArea : ca));
     syncSingleDocToFirebase('proclean_coverageAreas', editingCovArea.id, editingCovArea);
     setEditingCovArea(null);
   };
 
-  // Cargos CRUD (Direct DB & Local Storage Sync)
+  // Cargos CRUD (100% Cloud Firestore Sync)
   const handleAddCargo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCargo.nombre || !setCargos) return;
@@ -141,11 +129,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       code: newCargo.code || 'CARGO',
       restrictedAreaIds: newCargo.restrictedAreaIds.length > 0 ? newCargo.restrictedAreaIds : undefined
     };
-    setCargos(prev => {
-      const updated = [...prev, newCargoObj];
-      localStorage.setItem('proclean_cargos', JSON.stringify(updated));
-      return updated;
-    });
+    setCargos(prev => [...prev, newCargoObj]);
     syncCargoToFirebase(newCargoObj);
     setNewCargo({ nombre: '', code: '', restrictedAreaIds: [] });
   };
@@ -153,11 +137,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleDeleteCargo = (id: string) => {
     if (!setCargos) return;
     if (confirm('¿Deseas eliminar este cargo de la matriz de dotación?')) {
-      setCargos(prev => {
-        const updated = prev.filter(c => c.id !== id);
-        localStorage.setItem('proclean_cargos', JSON.stringify(updated));
-        return updated;
-      });
+      setCargos(prev => prev.filter(c => c.id !== id));
       deleteCargoFromFirebase(id);
     }
   };
@@ -165,16 +145,12 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleUpdateCargo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCargo || !setCargos) return;
-    setCargos(prev => {
-      const updated = prev.map(c => c.id === editingCargo.id ? editingCargo : c);
-      localStorage.setItem('proclean_cargos', JSON.stringify(updated));
-      return updated;
-    });
+    setCargos(prev => prev.map(c => c.id === editingCargo.id ? editingCargo : c));
     syncCargoToFirebase(editingCargo);
     setEditingCargo(null);
   };
 
-  // Personnel Roster CRUD
+  // Personnel Roster CRUD (100% Cloud Firestore Sync)
   const handleAddPersonnel = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPersonnel.nombre || !setPersonnel) return;
@@ -186,11 +162,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       tipo: newPersonnel.tipo,
       estado: 'Activo'
     };
-    setPersonnel(prev => {
-      const updated = [...prev, newMember];
-      localStorage.setItem('proclean_personnel', JSON.stringify(updated));
-      return updated;
-    });
+    setPersonnel(prev => [...prev, newMember]);
     syncSingleDocToFirebase('proclean_personnel', newMember.id, newMember);
     setNewPersonnel({ nombre: '', rut: '', grupo: 'A', tipo: 'PLANTA' });
   };
@@ -198,11 +170,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleDeletePersonnel = (id: string) => {
     if (!setPersonnel) return;
     if (confirm('¿Deseas eliminar a este colaborador de la nómina oficial?')) {
-      setPersonnel(prev => {
-        const updated = prev.filter(p => p.id !== id);
-        localStorage.setItem('proclean_personnel', JSON.stringify(updated));
-        return updated;
-      });
+      setPersonnel(prev => prev.filter(p => p.id !== id));
       deleteSingleDocFromFirebase('proclean_personnel', id);
     }
   };
@@ -210,11 +178,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleUpdatePersonnel = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPersonnel || !setPersonnel) return;
-    setPersonnel(prev => {
-      const updated = prev.map(p => p.id === editingPersonnel.id ? editingPersonnel : p);
-      localStorage.setItem('proclean_personnel', JSON.stringify(updated));
-      return updated;
-    });
+    setPersonnel(prev => prev.map(p => p.id === editingPersonnel.id ? editingPersonnel : p));
     syncSingleDocToFirebase('proclean_personnel', editingPersonnel.id, editingPersonnel);
     setEditingPersonnel(null);
   };

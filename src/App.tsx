@@ -170,58 +170,24 @@ export function App() {
   // Daily Personnel Coverage Assignments
   const [dailyAssignments, setDailyAssignments] = useState<DailyPersonnelAssignment[]>([]);
 
-  // Load Dotación & Cobertura saved state from localStorage if available
-  useEffect(() => {
-    try {
-      const savedCovAreas = localStorage.getItem('proclean_coverageAreas');
-      if (savedCovAreas) {
-        const parsed = JSON.parse(savedCovAreas);
-        if (Array.isArray(parsed)) setCoverageAreas(parsed);
-      }
-
-      const savedCargos = localStorage.getItem('proclean_cargos');
-      if (savedCargos) {
-        const parsedCargos = JSON.parse(savedCargos);
-        if (Array.isArray(parsedCargos)) setCargos(parsedCargos);
-      }
-
-      const savedPersonnel = localStorage.getItem('proclean_personnel');
-      if (savedPersonnel) {
-        const parsedPersonnel = JSON.parse(savedPersonnel);
-        if (Array.isArray(parsedPersonnel)) setPersonnel(parsedPersonnel);
-      }
-
-      const savedAsgs = localStorage.getItem('proclean_dailyAssignments');
-      if (savedAsgs) setDailyAssignments(JSON.parse(savedAsgs));
-    } catch (e) {
-      console.warn('Error restoring dotacion local storage:', e);
-    }
-  }, []);
-
   // Real-time Cloud Firebase Firestore Listener for Dotación & Cobertura (Sync PC & Mobile)
   useEffect(() => {
     if (!isFirebaseConfigured) return;
 
     const unsubAreas = subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', (items) => {
-      if (items && items.length > 0) {
-        setCoverageAreas(items);
-      }
+      setCoverageAreas(items || []);
     });
 
     const unsubCargos = subscribeFirebaseCargos((items) => {
-      if (items && items.length > 0) {
-        setCargos(items);
-      }
+      setCargos(items || []);
     });
 
     const unsubPersonnel = subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', (items) => {
-      if (items && items.length > 0) {
-        setPersonnel(items);
-      }
+      setPersonnel(items || []);
     });
 
     const unsubAsgs = subscribeFirebaseCollection<DailyPersonnelAssignment>('proclean_dailyAssignments', (items) => {
-      if (items) setDailyAssignments(items);
+      setDailyAssignments(items || []);
     });
 
     return () => {
@@ -231,32 +197,6 @@ export function App() {
       unsubAsgs?.();
     };
   }, []);
-
-  // Save changes to localStorage (matching direct Work Orders sync model)
-  useEffect(() => {
-    try {
-      localStorage.setItem('proclean_coverageAreas', JSON.stringify(coverageAreas));
-    } catch(e) {}
-  }, [coverageAreas]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('proclean_cargos', JSON.stringify(cargos));
-    } catch(e) {}
-  }, [cargos]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('proclean_personnel', JSON.stringify(personnel));
-    } catch(e) {}
-  }, [personnel]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('proclean_dailyAssignments', JSON.stringify(dailyAssignments));
-      if (isFirebaseConfigured) syncArrayToFirebase('proclean_dailyAssignments', dailyAssignments);
-    } catch(e) {}
-  }, [dailyAssignments]);
 
   // Monitor Network Online/Offline and auto-process offline queue
   useEffect(() => {
