@@ -355,27 +355,42 @@ export function App() {
 
     const unsubAreas = subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', (items) => {
       if (items && items.length > 0) {
-        const itemIds = new Set(items.map(a => a.id));
-        const missing = defaultAreas.filter(d => !itemIds.has(d.id));
-        setCoverageAreas([...items, ...missing]);
+        setCoverageAreas(prevAreas => {
+          const map = new Map<string, CoverageArea>();
+          defaultAreas.forEach(a => map.set(a.id, a));
+          prevAreas.forEach(a => map.set(a.id, a));
+          items.forEach(a => map.set(a.id, a));
+          return Array.from(map.values());
+        });
       }
     });
 
     const unsubCargos = subscribeFirebaseCollection<CargoConfig>('proclean_cargos', (items) => {
       if (items && items.length > 0) {
         const defaultRestrictedIds = ['c_robot', 'c_acd', 'c_jefe_prev', 'c_planif', 'c_rrhh', 'c_jefe_taller'];
-        const merged = items.map((c: any) => {
-          if (defaultRestrictedIds.includes(c.id) && (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0)) {
-            return { ...c, restrictedAreaIds: ['a_personal_4x3'] };
-          }
-          return c;
+        setCargos(prevCargos => {
+          const map = new Map<string, CargoConfig>();
+          prevCargos.forEach(c => map.set(c.id, c));
+          items.forEach((c: any) => {
+            const item = defaultRestrictedIds.includes(c.id) && (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0)
+              ? { ...c, restrictedAreaIds: ['a_personal_4x3'] }
+              : c;
+            map.set(c.id, item);
+          });
+          return Array.from(map.values());
         });
-        setCargos(merged);
       }
     });
 
     const unsubPersonnel = subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', (items) => {
-      if (items && items.length >= 30) setPersonnel(items);
+      if (items && items.length > 0) {
+        setPersonnel(prevPersonnel => {
+          const map = new Map<string, PersonnelMember>();
+          prevPersonnel.forEach(p => map.set(p.id, p));
+          items.forEach(p => map.set(p.id, p));
+          return Array.from(map.values());
+        });
+      }
     });
 
     const unsubAsgs = subscribeFirebaseCollection<DailyPersonnelAssignment>('proclean_dailyAssignments', (items) => {

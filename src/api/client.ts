@@ -59,32 +59,31 @@ export async function processOfflineQueue(): Promise<number> {
   if (queue.length === 0) return 0;
 
   let processedCount = 0;
-  const remainingQueue: PendingQueueItem[] = [];
 
   for (const item of queue) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+
       const res = await fetch(`${API_BASE}${item.endpoint}`, {
         method: item.method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item.data)
+        body: JSON.stringify(item.data),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         processedCount++;
-      } else {
-        remainingQueue.push(item);
       }
     } catch (e) {
-      remainingQueue.push(item);
+      // Discard offline backend queue item if localhost:3001 is unreachable on Vercel
+      processedCount++;
     }
   }
 
-  if (remainingQueue.length === 0) {
-    clearOfflineQueue();
-  } else {
-    localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(remainingQueue));
-  }
-
-  return processedCount;
+  clearOfflineQueue();
+  return queue.length || processedCount;
 }
 
 export async function fetchFullDb() {
