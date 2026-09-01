@@ -573,31 +573,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
       {/* 3. AREA CARDS GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
         {filteredAreas.map(area => {
-          let areaAssignments = assignments.filter(a => a.areaId === area.id);
-
-          // Fallback to default area cargo targets if no custom assignment has been saved yet
-          if (areaAssignments.length === 0) {
-            const targets = DEFAULT_AREA_CARGO_TARGETS.filter(t => t.areaId === area.id);
-            const defaultAsgs: DailyPersonnelAssignment[] = [];
-            targets.forEach(t => {
-              const cargoObj = effectiveCargos.find(c => c.id === t.cargoId);
-              for (let i = 0; i < t.cantidad; i++) {
-                defaultAsgs.push({
-                  id: `asg_${area.id}_${t.cargoId}_${i}`,
-                  areaId: area.id,
-                  cargoId: t.cargoId,
-                  cargoName: cargoObj ? cargoObj.nombre : 'Cargo',
-                  slotIndex: i,
-                  fecha: todayStr,
-                  grupo: activeGrupoFilter === 'ALL' ? 'A' : activeGrupoFilter,
-                  shiftId: area.turnoId,
-                  personId: '',
-                  personName: ''
-                });
-              }
-            });
-            areaAssignments = defaultAsgs;
-          }
+          const areaAssignments = assignments.filter(a => a.areaId === area.id);
 
           const reqCount = areaAssignments.length;
           const coveredCount = areaAssignments.filter(a => a.personId).length;
