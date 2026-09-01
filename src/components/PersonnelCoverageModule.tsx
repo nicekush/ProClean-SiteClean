@@ -169,13 +169,15 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
     return set;
   }, [assignments, wizardSlotAssignments]);
 
-  // Filtered Cargos for Wizard Step 2 based on selected Area restrictions
+  // Filtered Cargos for Wizard Step 2 based on selected Area restrictions (with safe fallback)
   const availableCargosForSelectedArea = useMemo(() => {
     if (!wizardAreaId) return effectiveCargos;
-    return effectiveCargos.filter(c => {
+    const filtered = effectiveCargos.filter(c => {
       if (!c.restrictedAreaIds || c.restrictedAreaIds.length === 0) return true;
+      if (wizardAreaId === 'a_personal_4x3') return true;
       return c.restrictedAreaIds.includes(wizardAreaId);
     });
+    return filtered.length > 0 ? filtered : effectiveCargos;
   }, [wizardAreaId, effectiveCargos]);
 
   // Calculate Coverage Metrics
@@ -696,54 +698,55 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                         {area.name}
                       </h3>
 
-                      {/* Slots Breakdown inside Card */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                      {/* Slots Breakdown inside Card (Child-Proof Ultra Simple) */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                         {areaAssignments.map(asg => (
                           <div 
                             key={asg.id}
                             style={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between', 
-                              alignItems: 'center', 
-                              gap: '6px',
-                              padding: '8px 12px', 
+                              padding: '8px 10px', 
                               backgroundColor: asg.personId ? '#F0FDF4' : '#FEF2F2',
                               borderRadius: '12px',
                               border: `1.5px solid ${asg.personId ? '#86EFAC' : '#FCA5A5'}`,
                               width: '100%',
                               maxWidth: '100%',
                               boxSizing: 'border-box',
-                              overflow: 'hidden'
+                              overflow: 'hidden',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '6px'
                             }}
                           >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 0 }}>
+                              <span style={{ fontSize: '14px', flexShrink: 0 }}>{asg.personId ? '👤' : '🚨'}</span>
+                              <span 
+                                title={`${asg.cargoName}: ${asg.personName || 'Vacante'}`}
+                                style={{ 
+                                  fontSize: '12px', 
+                                  fontWeight: 900, 
+                                  color: asg.personId ? '#166534' : '#991B1B',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {asg.cargoName}{asg.personName ? `: ${asg.personName}` : ''}
+                              </span>
+                            </div>
                             <span 
-                              title={asg.cargoName}
                               style={{ 
-                                fontSize: '12px', 
-                                fontWeight: 800, 
-                                color: 'var(--slate-800)',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                flex: '1 1 auto',
-                                minWidth: 0
-                              }}
-                            >
-                              {asg.cargoName}:
-                            </span>
-                            <span 
-                              style={{ 
-                                fontSize: '11px', 
+                                fontSize: '10px', 
                                 fontWeight: 900, 
                                 color: asg.personId ? '#15803D' : '#DC2626',
                                 backgroundColor: asg.personId ? '#DCFCE7' : '#FEE2E2',
-                                padding: '3px 8px',
-                                borderRadius: '8px',
+                                padding: '2px 6px',
+                                borderRadius: '6px',
                                 whiteSpace: 'nowrap',
                                 flexShrink: 0
                               }}
                             >
-                              {asg.personId ? `✅ ${asg.personName}` : '❌ Vacante'}
+                              {asg.personId ? '✓ Cubierto' : 'Vacante'}
                             </span>
                           </div>
                         ))}
