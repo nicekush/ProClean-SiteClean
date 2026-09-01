@@ -605,93 +605,156 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
       </div>
 
       {/* 3. AREA CARDS GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-        {filteredAreas.map(area => {
-          const areaAssignments = assignments.filter(a => a.areaId === area.id);
+      {(() => {
+        const declaredAreas = filteredAreas.filter(area => assignments.some(a => a.areaId === area.id));
 
-          const reqCount = areaAssignments.length;
-          const coveredCount = areaAssignments.filter(a => a.personId).length;
-          const isComplete = reqCount > 0 && coveredCount === reqCount;
-
+        if (declaredAreas.length === 0) {
           return (
-            <div 
-              key={area.id} 
-              className="card" 
-              style={{ 
-                padding: '18px', 
-                borderTop: `4px solid ${isComplete ? '#22C55E' : 'var(--orange)'}`,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '14px'
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    📍 {area.code || 'UBICACION'}
-                  </span>
-                  <span 
-                    style={{ 
-                      fontSize: '11px', 
-                      fontWeight: 800, 
-                      padding: '4px 10px', 
-                      borderRadius: '12px',
-                      backgroundColor: isComplete ? '#DCFCE7' : '#FEF3C7',
-                      color: isComplete ? '#15803D' : '#B45309'
-                    }}
-                  >
-                    {reqCount === 0 ? 'Sin Dotación Configurada' : isComplete ? '✅ 100% Cubierto' : `🚨 ${reqCount - coveredCount} Vacantes`}
-                  </span>
-                </div>
-
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 12px 0' }}>
-                  {area.name}
-                </h3>
-
-                {/* Slots Breakdown inside Card */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {areaAssignments.length === 0 ? (
-                    <div style={{ fontSize: '13px', color: 'var(--slate-400)', fontStyle: 'italic', padding: '10px 0' }}>
-                      No se ha reportado dotación para esta ubicación. Toca el botón para iniciar.
-                    </div>
-                  ) : (
-                    areaAssignments.map(asg => (
-                      <div 
-                        key={asg.id}
-                        style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center', 
-                          padding: '8px 12px', 
-                          backgroundColor: asg.personId ? '#F1F5F9' : '#FEF2F2',
-                          borderRadius: '10px',
-                          border: `1px solid ${asg.personId ? '#CBD5E1' : '#FCA5A5'}`
-                        }}
-                      >
-                        <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-800)' }}>
-                          {asg.cargoName}:
-                        </div>
-                        <div style={{ fontSize: '12px', fontWeight: 900, color: asg.personId ? '#0F172A' : '#DC2626' }}>
-                          {asg.personName || '❌ Vacante (Sin Asignar)'}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+            <div className="card" style={{ padding: '40px 24px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '24px', border: '2px dashed #CBD5E1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '20px', backgroundColor: '#FFEDD5', color: 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
+                🧹
               </div>
-
+              <div>
+                <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 6px 0' }}>
+                  Hoja de Dotación del Día Limpia
+                </h3>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--slate-600)', margin: 0, maxWidth: '520px', lineHeight: '1.5' }}>
+                  No se ha declarado dotación para ninguna ubicación hoy. Presiona el botón a continuación para iniciar el asistente guiado que te llevará paso a paso por cada una de las áreas configuradas.
+                </p>
+              </div>
               <button
-                onClick={() => handleOpenWizardForArea(area.id)}
-                className="btn btn-secondary"
-                style={{ width: '100%', padding: '10px', fontSize: '13px', fontWeight: 800, justifyContent: 'center', marginTop: '8px' }}
+                onClick={() => handleOpenWizardForArea()}
+                className="btn btn-primary"
+                style={{
+                  padding: '16px 32px',
+                  fontSize: '15px',
+                  fontWeight: 900,
+                  backgroundColor: 'var(--orange)',
+                  borderRadius: '16px',
+                  boxShadow: '0 8px 24px rgba(255,122,0,0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
               >
-                ✏️ Editar / Reportar Cobertura del Área
+                <Plus size={20} /> 🚀 INICIAR RECORRIDO GUIADO DE PLANTA
               </button>
             </div>
           );
-        })}
-      </div>
+        }
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+              {declaredAreas.map(area => {
+                const areaAssignments = assignments.filter(a => a.areaId === area.id);
+
+                const reqCount = areaAssignments.length;
+                const coveredCount = areaAssignments.filter(a => a.personId).length;
+                const isComplete = reqCount > 0 && coveredCount === reqCount;
+
+                return (
+                  <div 
+                    key={area.id} 
+                    className="card" 
+                    style={{ 
+                      padding: '18px', 
+                      borderTop: `4px solid ${isComplete ? '#22C55E' : 'var(--orange)'}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '14px'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          📍 {area.code || 'UBICACION'}
+                        </span>
+                        <span 
+                          style={{ 
+                            fontSize: '11px', 
+                            fontWeight: 800, 
+                            padding: '4px 10px', 
+                            borderRadius: '12px',
+                            backgroundColor: isComplete ? '#DCFCE7' : '#FEF3C7',
+                            color: isComplete ? '#15803D' : '#B45309'
+                          }}
+                        >
+                          {reqCount === 0 ? 'Sin Dotación Configurada' : isComplete ? '✅ 100% Cubierto' : `🚨 ${reqCount - coveredCount} Vacantes`}
+                        </span>
+                      </div>
+
+                      <h3 style={{ fontSize: '17px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 12px 0' }}>
+                        {area.name}
+                      </h3>
+
+                      {/* Slots Breakdown inside Card */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {areaAssignments.map(asg => (
+                          <div 
+                            key={asg.id}
+                            style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center', 
+                              padding: '10px 14px', 
+                              backgroundColor: asg.personId ? '#F0FDF4' : '#FEF2F2',
+                              borderRadius: '14px',
+                              border: `1.5px solid ${asg.personId ? '#86EFAC' : '#FCA5A5'}`
+                            }}
+                          >
+                            <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--slate-800)' }}>
+                              {asg.cargoName}:
+                            </span>
+                            <span style={{ fontSize: '13px', fontWeight: 900, color: asg.personId ? '#15803D' : '#DC2626' }}>
+                              {asg.personId ? `✅ ${asg.personName}` : '❌ Vacante (Sin Asignar)'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => handleOpenWizardForArea(area.id)}
+                      className="btn btn-secondary" 
+                      style={{ 
+                        width: '100%', 
+                        padding: '10px', 
+                        fontSize: '12px', 
+                        fontWeight: 900, 
+                        color: 'var(--orange)', 
+                        border: '1.5px solid #FFEDD5', 
+                        backgroundColor: '#FFF7ED',
+                        borderRadius: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✏️ EDITAR / RE-REPORTAR ÁREA
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {declaredAreas.length < filteredAreas.length && (
+              <div style={{ backgroundColor: '#FFF7ED', border: '1.5px solid #FFEDD5', borderRadius: '16px', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#C2410C' }}>
+                  📋 Quedan {filteredAreas.length - declaredAreas.length} de {filteredAreas.length} áreas operacionales pendientes por declarar hoy.
+                </span>
+                <button
+                  onClick={() => handleOpenWizardForArea()}
+                  style={{ border: 'none', backgroundColor: 'var(--orange)', color: '#FFF', padding: '8px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 900, cursor: 'pointer' }}
+                >
+                  ➡️ Continuar Recorrido Guiado ➔
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 4. "A PRUEBA DE NIÑOS" 4-STEP WIZARD MODAL (TOP-LEVEL FIXED OVERLAY) */}
       {showWizardModal && (
