@@ -1046,61 +1046,24 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       {/* TAB 7: COVERAGE CONFIG (FULL PARAMETRIC CRUD MANAGER) */}
       {activeTab === 'coverage_config' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
-          <div className="card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 4px 0' }}>
-                👥 Matriz Paramétrica de Dotación & Cobertura
-              </h3>
-              <p style={{ fontSize: '13px', color: 'var(--slate-600)', margin: 0 }}>
-                Crea, edita y elimina Ubicaciones de Dotación, Cargos Operacionales y la Nómina Oficial en Cloud Firestore.
-              </p>
-            </div>
-            <button 
-              onClick={async () => {
-                const ok = await seedOfficialDatabaseToFirebase(true);
-                if (ok) {
-                  alert('✅ Tablas oficiales sembradas e inicializadas en Cloud Firestore.');
-                }
-              }}
-              className="btn"
-              style={{ padding: '10px 16px', backgroundColor: '#0284C7', color: '#FFF', fontWeight: 900, fontSize: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              title="Asegurar que todas las tablas oficiales existan en Cloud Firestore"
-            >
-              ⚡ Forzar Sembrado Base de Datos Cloud
-            </button>
+          <div className="card" style={{ padding: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 4px 0' }}>
+              👥 Matriz Paramétrica de Dotación & Cobertura
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--slate-600)', margin: 0 }}>
+              Crea, edita y elimina Ubicaciones de Dotación, Cargos Operacionales y la Nómina Oficial en Cloud Firestore.
+            </p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
             
             {/* PANEL 1: UBICACIONES DE DOTACION (AREAS) */}
             <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ borderBottom: '2px solid #E2E8F0', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h4 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MapPin size={18} color="var(--orange)" /> 1. Ubicaciones de Dotación ({coverageAreas.length})
-                  </h4>
-                  <span style={{ fontSize: '11px', color: 'var(--slate-500)' }}>Áreas configuradas para la dotación de terreno</span>
-                </div>
-                <button 
-                  onClick={() => {
-                    localStorage.removeItem('proclean_coverageAreas');
-                    setCoverageAreas?.([
-                      { id: 'a_sup', name: 'Supervisión', code: 'SUP', turnoId: 't_ambos', orden: 1 },
-                      { id: 'a_ch_prim', name: 'Chancado Primario', code: 'CH-PRIM', turnoId: 't_ambos', orden: 2 },
-                      { id: 'a_ch_terc', name: 'Chancado Terciario', code: 'CH-TERC', turnoId: 't_ambos', orden: 3 },
-                      { id: 'a_remanejo', name: 'Apilado y Remanejo', code: 'REM', turnoId: 't_ambos', orden: 4 },
-                      { id: 'a_humeda', name: 'Área Húmeda', code: 'AR-HUM', turnoId: 't_ambos', orden: 5 },
-                      { id: 'a_apoyo', name: 'Staff / Apoyo Planta', code: 'STAFF', turnoId: 't_ambos', orden: 6 },
-                      { id: 'a_personal_4x3', name: 'Personal Staff 4x3', code: 'STAFF-4X3', turnoId: 't_4x3', orden: 7 }
-                    ]);
-                  }}
-                  className="btn btn-secondary"
-                  style={{ fontSize: '10px', padding: '4px 8px', fontWeight: 800, color: '#047857', border: '1px solid #A7F3D0', backgroundColor: '#ECFDF5' }}
-                  title="Restablecer a las 7 Ubicaciones Físicas Únicas"
-                >
-                  🔄 Resetear Áreas Únicas
-                </button>
+              <div style={{ borderBottom: '2px solid #E2E8F0', paddingBottom: '12px' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MapPin size={18} color="var(--orange)" /> 1. Ubicaciones de Dotación ({coverageAreas.length})
+                </h4>
+                <span style={{ fontSize: '11px', color: 'var(--slate-500)' }}>Áreas configuradas para la dotación de terreno</span>
               </div>
 
               {/* Form Agregar Ubicacion */}
