@@ -697,37 +697,72 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
             onClick={e => e.stopPropagation()}
           >
             
-            {/* WIZARD STEP HEADER */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #E2E8F0', paddingBottom: '14px', flexWrap: 'wrap' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(255,122,0,0.3)', flexShrink: 0 }}>
-                {wizardStep === 1 && <Building2 size={20} />}
-                {wizardStep === 2 && <Users size={20} />}
-                {wizardStep === 3 && <Plus size={20} />}
-                {wizardStep === 4 && <CheckCircle size={20} />}
+            {/* WIZARD GAMIFIED STEP HEADER */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', borderBottom: '2px solid #E2E8F0', paddingBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(255,122,0,0.35)', flexShrink: 0 }}>
+                    {wizardStep === 1 && <Building2 size={22} />}
+                    {wizardStep === 2 && <Users size={22} />}
+                    {wizardStep === 3 && <Plus size={22} />}
+                    {wizardStep === 4 && <CheckCircle size={22} />}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '17px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, letterSpacing: '-0.02em' }}>
+                      {wizardStep === 1 && '🏭 Paso 1: Escoge el Área de Trabajo'}
+                      {wizardStep === 2 && '💼 Paso 2: Escoge los Cargos del Área'}
+                      {wizardStep === 3 && '🔢 Paso 3: Ajusta las Cantidades con + y -'}
+                      {wizardStep === 4 && '✍️ Paso 4: Selecciona a las Personas'}
+                    </h3>
+                  </div>
+                </div>
+                <button onClick={() => setShowWizardModal(false)} style={{ width: '34px', height: '34px', borderRadius: '50%', border: '2px solid #CBD5E1', backgroundColor: '#F8FAFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={18} />
+                </button>
               </div>
-              <div style={{ flex: '1 1 180px', minWidth: '150px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 900, color: '#C2410C', backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', padding: '2px 8px', borderRadius: '16px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Paso {wizardStep} de 4
-                </span>
-                <h3 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: '2px 0 0 0', letterSpacing: '-0.02em', wordBreak: 'break-word' }}>
-                  {wizardStep === 1 && '📍 Paso 1: Selecciona la Ubicación'}
-                  {wizardStep === 2 && '💼 Paso 2: Selecciona los Cargos'}
-                  {wizardStep === 3 && '🔢 Paso 3: Define la Cantidad'}
-                  {wizardStep === 4 && '👥 Paso 4: Asigna el Personal'}
-                </h3>
+
+              {/* GAMIFIED PROGRESS TRACKER */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                {[
+                  { step: 1, label: '1. Área' },
+                  { step: 2, label: '2. Cargos' },
+                  { step: 3, label: '3. Cantidad' },
+                  { step: 4, label: '4. Personas' }
+                ].map(s => {
+                  const isActive = wizardStep === s.step;
+                  const isDone = wizardStep > s.step;
+                  return (
+                    <div 
+                      key={s.step}
+                      style={{
+                        padding: '6px 4px',
+                        borderRadius: '10px',
+                        textAlign: 'center',
+                        fontSize: '11px',
+                        fontWeight: 900,
+                        backgroundColor: isActive ? 'var(--orange)' : isDone ? '#DCFCE7' : '#F1F5F9',
+                        color: isActive ? '#FFFFFF' : isDone ? '#15803D' : '#64748B',
+                        border: `2px solid ${isActive ? '#EA580C' : isDone ? '#86EFAC' : '#E2E8F0'}`,
+                        boxShadow: isActive ? '0 2px 8px rgba(255,122,0,0.3)' : 'none',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {isDone ? '✓ ' : ''}{s.label}
+                    </div>
+                  );
+                })}
               </div>
-              <button onClick={() => setShowWizardModal(false)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' }}>
-                <X size={16} />
-              </button>
             </div>
 
             {/* STEP 1: SELECT AREA */}
             {wizardStep === 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '100%', boxSizing: 'border-box' }}>
-                <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--slate-600)', margin: 0 }}>
-                  Toca el área de planta que vas a reportar en este turno:
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                <div style={{ backgroundColor: '#EFF6FF', border: '2px solid #BFDBFE', borderRadius: '14px', padding: '12px 16px', fontSize: '13px', color: '#1E40AF', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>👇</span>
+                  <span><strong>¡Toca la casilla gigante!</strong> Selecciona el área de la planta que vas a reportar hoy:</span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                   {effectiveAreas.map(area => (
                     <button
                       key={area.id}
@@ -736,22 +771,25 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                         setWizardStep(2);
                       }}
                       style={{
-                        padding: '18px',
+                        padding: '16px 12px',
                         borderRadius: '18px',
-                        border: '2px solid #E2E8F0',
-                        backgroundColor: '#FFF',
+                        border: '3px solid #E2E8F0',
+                        backgroundColor: '#FFFFFF',
                         cursor: 'pointer',
-                        textAlign: 'left',
+                        textAlign: 'center',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '6px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                        transition: 'all 0.2s'
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s'
                       }}
                     >
-                      <Building2 size={24} style={{ color: 'var(--orange)' }} />
-                      <span style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)' }}>{area.name}</span>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--slate-500)' }}>{area.code}</span>
+                      <div style={{ width: '44px', height: '44px', borderRadius: '14px', backgroundColor: '#FFEDD5', color: 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Building2 size={24} />
+                      </div>
+                      <span style={{ fontSize: '14px', fontWeight: 900, color: 'var(--slate-900)' }}>{area.name}</span>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#C2410C', backgroundColor: '#FFF7ED', padding: '2px 8px', borderRadius: '10px' }}>📍 {area.code}</span>
                     </button>
                   ))}
                 </div>
@@ -761,16 +799,16 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
             {/* STEP 2: SELECT CARGOS */}
             {wizardStep === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '14px', padding: '10px 14px', fontSize: '12px', color: '#0369A1', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '16px' }}>💡</span>
-                  <span>Toca un cargo marcado <strong>(✅)</strong> para <u>ELIMINARLO</u> de esta área, o toca un cargo con <strong>(+)</strong> para <u>AGREGARLO</u>.</span>
+                <div style={{ backgroundColor: '#F0F9FF', border: '2px solid #BAE6FD', borderRadius: '14px', padding: '12px 16px', fontSize: '13px', color: '#0369A1', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>💡</span>
+                  <span><strong>¡Toca para activar o desactivar!</strong> Los verdes <strong>(✅)</strong> operan hoy. Los grises <strong>(+)</strong> no.</span>
                 </div>
 
-                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--slate-600)', margin: 0 }}>
-                  Cargos operacionales asignados hoy a <strong style={{ color: 'var(--slate-900)' }}>{effectiveAreas.find(a => a.id === wizardAreaId)?.name}</strong>:
+                <p style={{ fontSize: '13px', fontWeight: 800, color: 'var(--slate-700)', margin: 0 }}>
+                  Cargos autorizados para <strong style={{ color: 'var(--orange)', fontSize: '15px' }}>{effectiveAreas.find(a => a.id === wizardAreaId)?.name}</strong>:
                 </p>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', maxHeight: '300px', overflowY: 'auto', padding: '6px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', maxHeight: '300px', overflowY: 'auto', padding: '4px' }}>
                   {availableCargosForSelectedArea.map(cargo => {
                     const isSelected = wizardSelectedCargoIds.includes(cargo.id);
                     return (
@@ -778,29 +816,31 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                         key={cargo.id}
                         onClick={() => handleToggleCargo(cargo.id)}
                         style={{
-                          padding: '10px 18px',
+                          padding: '12px 20px',
                           borderRadius: '24px',
-                          border: `2px solid ${isSelected ? 'var(--orange)' : '#CBD5E1'}`,
-                          backgroundColor: isSelected ? '#FFEDD5' : '#FFF',
-                          color: isSelected ? '#C2410C' : '#334155',
-                          fontSize: '13px',
-                          fontWeight: 800,
+                          border: `3px solid ${isSelected ? '#10B981' : '#CBD5E1'}`,
+                          background: isSelected ? 'linear-gradient(135deg, #10B981, #059669)' : '#F1F5F9',
+                          color: isSelected ? '#FFFFFF' : '#334155',
+                          fontSize: '14px',
+                          fontWeight: 900,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: isSelected ? '0 4px 12px rgba(255,122,0,0.15)' : 'none'
+                          gap: '8px',
+                          boxShadow: isSelected ? '0 4px 14px rgba(16,185,129,0.35)' : 'none',
+                          transition: 'all 0.15s'
                         }}
                       >
-                        {isSelected ? '✅ ' : '+ '} {cargo.nombre}
+                        <span style={{ fontSize: '16px' }}>{isSelected ? '✅' : '➕'}</span>
+                        <span>{cargo.nombre}</span>
                       </button>
                     );
                   })}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-                  <button onClick={() => setWizardStep(1)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
-                    ◄ Atrás
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '2px solid #E2E8F0', gap: '10px' }}>
+                  <button onClick={() => setWizardStep(1)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 900, padding: '14px 22px', borderRadius: '16px', border: '2px solid #CBD5E1', cursor: 'pointer', fontSize: '14px' }}>
+                    ◄ Volver al Área
                   </button>
                   <button 
                     disabled={wizardSelectedCargoIds.length === 0}
@@ -809,17 +849,17 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                       background: wizardSelectedCargoIds.length > 0 ? 'linear-gradient(135deg, var(--orange), #EA580C)' : '#CBD5E1', 
                       color: '#FFF', 
                       fontWeight: 900, 
-                      padding: '12px 24px', 
-                      borderRadius: '14px', 
+                      padding: '14px 28px', 
+                      borderRadius: '16px', 
                       border: 'none', 
                       cursor: wizardSelectedCargoIds.length > 0 ? 'pointer' : 'not-allowed', 
-                      fontSize: '13px',
+                      fontSize: '14px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      boxShadow: wizardSelectedCargoIds.length > 0 ? '0 4px 14px rgba(255,122,0,0.3)' : 'none'
+                      boxShadow: wizardSelectedCargoIds.length > 0 ? '0 6px 18px rgba(255,122,0,0.4)' : 'none'
                     }}
                   >
-                    Siguiente: Modificar Cantidades ➔
+                    Definir Cantidades ➔
                   </button>
                 </div>
               </div>
@@ -828,16 +868,12 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
             {/* STEP 3: DEFINE CARGO HEADCOUNT */}
             {wizardStep === 3 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '14px', padding: '10px 14px', fontSize: '12px', color: '#C2410C', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '16px' }}>🔢</span>
-                  <span>Usa los botones <strong>[-]</strong> y <strong>[+]</strong> para aumentar o disminuir la cantidad exacta de vacantes/cupos requeridos.</span>
+                <div style={{ backgroundColor: '#FFF7ED', border: '2px solid #FFEDD5', borderRadius: '14px', padding: '12px 16px', fontSize: '13px', color: '#C2410C', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>🔢</span>
+                  <span><strong>¡Usa los botones gigantes + y -!</strong> Sube o baja la cantidad de personas por cargo:</span>
                 </div>
 
-                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--slate-600)', margin: 0 }}>
-                  Ajusta la cantidad de personas requeridas por cargo:
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '320px', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '320px', overflowY: 'auto' }}>
                   {wizardSelectedCargoIds.map(cargoId => {
                     const cargoObj = effectiveCargos.find(c => c.id === cargoId);
                     const count = wizardCargoCounts[cargoId] || 1;
@@ -851,46 +887,59 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                           alignItems: 'center',
                           padding: '14px 18px',
                           backgroundColor: '#F8FAFC',
-                          borderRadius: '16px',
-                          border: '1.5px solid #E2E8F0'
+                          borderRadius: '18px',
+                          border: '2px solid #E2E8F0',
+                          gap: '10px'
                         }}
                       >
-                        <span style={{ fontSize: '14px', fontWeight: 900, color: 'var(--slate-900)' }}>
-                          {cargoObj?.nombre}
+                        <span style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', flex: 1, wordBreak: 'break-word' }}>
+                          💼 {cargoObj?.nombre}
                         </span>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <button
+                            type="button"
                             onClick={() => handleAdjustCargoCount(cargoId, -1)}
                             style={{
-                              width: '38px',
-                              height: '38px',
-                              borderRadius: '12px',
-                              border: '1px solid #CBD5E1',
-                              backgroundColor: '#FFF',
+                              width: '46px',
+                              height: '46px',
+                              borderRadius: '14px',
+                              border: 'none',
+                              backgroundColor: '#EF4444',
+                              color: '#FFF',
                               fontWeight: 900,
-                              fontSize: '18px',
-                              cursor: 'pointer'
+                              fontSize: '24px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 4px 10px rgba(239,68,68,0.35)'
                             }}
                           >
                             -
                           </button>
 
-                          <span style={{ fontSize: '18px', fontWeight: 900, color: 'var(--orange)', minWidth: '28px', textAlign: 'center' }}>
+                          <div style={{ width: '48px', height: '46px', borderRadius: '14px', backgroundColor: '#FFFFFF', border: '2px solid #CBD5E1', color: '#0F172A', fontSize: '20px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {count}
-                          </span>
+                          </div>
 
                           <button
+                            type="button"
                             onClick={() => handleAdjustCargoCount(cargoId, 1)}
                             style={{
-                              width: '38px',
-                              height: '38px',
-                              borderRadius: '12px',
-                              border: '1px solid #CBD5E1',
-                              backgroundColor: '#FFF',
+                              width: '46px',
+                              height: '46px',
+                              borderRadius: '14px',
+                              border: 'none',
+                              backgroundColor: '#22C55E',
+                              color: '#FFF',
                               fontWeight: 900,
-                              fontSize: '18px',
-                              cursor: 'pointer'
+                              fontSize: '24px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 4px 10px rgba(34,197,94,0.35)'
                             }}
                           >
                             +
@@ -901,9 +950,9 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                   })}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-                  <button onClick={() => setWizardStep(2)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
-                    ◄ Atrás
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '2px solid #E2E8F0', gap: '10px' }}>
+                  <button onClick={() => setWizardStep(2)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 900, padding: '14px 22px', borderRadius: '16px', border: '2px solid #CBD5E1', cursor: 'pointer', fontSize: '14px' }}>
+                    ◄ Volver a Cargos
                   </button>
                   <button 
                     onClick={() => setWizardStep(4)}
@@ -911,17 +960,17 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                       background: 'linear-gradient(135deg, var(--orange), #EA580C)', 
                       color: '#FFF', 
                       fontWeight: 900, 
-                      padding: '12px 24px', 
-                      borderRadius: '14px', 
+                      padding: '14px 28px', 
+                      borderRadius: '16px', 
                       border: 'none', 
                       cursor: 'pointer', 
-                      fontSize: '13px',
+                      fontSize: '14px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      boxShadow: '0 4px 14px rgba(255,122,0,0.3)'
+                      boxShadow: '0 6px 18px rgba(255,122,0,0.4)'
                     }}
                   >
-                    Siguiente: Asignar Nombres ➔
+                    Asignar Nombres ➔
                   </button>
                 </div>
               </div>
@@ -930,9 +979,10 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
             {/* STEP 4: ASSIGN PERSON NAMES */}
             {wizardStep === 4 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--slate-600)', margin: 0 }}>
-                  Asigna el colaborador correspondiente a cada cupo de la lista:
-                </p>
+                <div style={{ backgroundColor: '#F0FDF4', border: '2px solid #86EFAC', borderRadius: '14px', padding: '12px 16px', fontSize: '13px', color: '#166534', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>✍️</span>
+                  <span><strong>¡Busca o toca el nombre del colaborador!</strong> Asigna quién cubrirá cada vacante hoy:</span>
+                </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '360px', overflowY: 'auto' }}>
                   {wizardSelectedCargoIds.map(cargoId => {
@@ -954,74 +1004,76 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                         <div 
                           key={slotKey}
                           style={{
-                            padding: '14px',
-                            backgroundColor: currentAssigned?.personId ? '#F0FDF4' : '#FEF2F2',
-                            borderRadius: '16px',
-                            border: `2px solid ${currentAssigned?.personId ? '#86EFAC' : '#FCA5A5'}`,
+                            padding: '14px 16px',
+                            backgroundColor: currentAssigned?.personId ? '#F0FDF4' : '#FFF7ED',
+                            borderRadius: '18px',
+                            border: `2px solid ${currentAssigned?.personId ? '#86EFAC' : '#FFEDD5'}`,
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '8px'
+                            gap: '10px'
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 900, color: 'var(--slate-900)' }}>
-                              📍 {cargoObj?.nombre} (Cupo {slotIdx + 1} de {count})
+                            <span style={{ fontSize: '14px', fontWeight: 900, color: 'var(--slate-900)' }}>
+                              📍 {cargoObj?.nombre} <span style={{ color: '#C2410C', fontSize: '12px' }}>(Cupo {slotIdx + 1} de {count})</span>
                             </span>
                             {currentAssigned?.personId ? (
                               <button 
                                 onClick={() => handleRemovePersonFromSlot(cargoId, slotIdx)}
-                                style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                                style={{ border: 'none', backgroundColor: '#FEE2E2', color: '#DC2626', fontSize: '12px', fontWeight: 900, padding: '4px 10px', borderRadius: '10px', cursor: 'pointer' }}
                               >
-                                ✖ Quitar
+                                ✖ Cambiar
                               </button>
                             ) : (
-                              <span style={{ fontSize: '11px', fontWeight: 900, color: '#DC2626', textTransform: 'uppercase' }}>
-                                🚨 Vacante
+                              <span style={{ fontSize: '11px', fontWeight: 900, color: '#DC2626', backgroundColor: '#FEF2F2', padding: '2px 8px', borderRadius: '10px' }}>
+                                🚨 Vacante Pendiente
                               </span>
                             )}
                           </div>
 
                           {currentAssigned?.personId ? (
-                            <div style={{ fontSize: '14px', fontWeight: 900, color: '#166534' }}>
-                              ✅ {currentAssigned.personName}
+                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#166534', backgroundColor: '#DCFCE7', padding: '10px 14px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '18px' }}>✅</span>
+                              <span>{currentAssigned.personName}</span>
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                               <input
                                 type="text"
-                                placeholder={`🔍 Buscar colaborador para ${cargoObj?.nombre}...`}
+                                placeholder={`🔍 Escribe o busca a la persona...`}
                                 value={query}
                                 onChange={e => {
                                   const val = e.target.value;
                                   setSlotSearchQuery(prev => ({ ...prev, [slotKey]: val }));
                                 }}
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '2px solid #CBD5E1', fontSize: '13px', fontWeight: 800, color: '#0F172A', backgroundColor: '#FFF', outline: 'none' }}
+                                style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #CBD5E1', fontSize: '13px', fontWeight: 900, color: '#0F172A', backgroundColor: '#FFF', outline: 'none', boxSizing: 'border-box' }}
                               />
 
-                              {query && (
-                                <div style={{ backgroundColor: '#FFF', borderRadius: '12px', border: '2px solid #CBD5E1', maxHeight: '140px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                                  {matchingPeople.length === 0 ? (
-                                    <div style={{ padding: '10px', fontSize: '12px', color: 'var(--slate-400)' }}>Sin coincidencias disponibles</div>
-                                  ) : (
-                                    matchingPeople.slice(0, 5).map(p => (
-                                      <div
-                                        key={p.id}
-                                        onClick={() => handleAssignPersonToSlot(cargoId, slotIdx, p)}
-                                        style={{
-                                          padding: '10px 14px',
-                                          fontSize: '13px',
-                                          fontWeight: 800,
-                                          color: 'var(--slate-900)',
-                                          cursor: 'pointer',
-                                          borderBottom: '1px solid #F1F5F9'
-                                        }}
-                                      >
-                                        👤 {p.nombre} ({p.grupo})
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
-                              )}
+                              {/* TAP-SUGGESTION CHIPS */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '100px', overflowY: 'auto' }}>
+                                {matchingPeople.slice(0, 6).map(p => (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => handleAssignPersonToSlot(cargoId, slotIdx, p)}
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: '12px',
+                                      border: '1.5px solid #86EFAC',
+                                      backgroundColor: '#F0FDF4',
+                                      color: '#15803D',
+                                      fontSize: '12px',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    👤 {p.nombre}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1030,30 +1082,30 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                   })}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-                  <button onClick={() => setWizardStep(3)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
-                    ◄ Atrás
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '2px solid #E2E8F0', gap: '10px' }}>
+                  <button onClick={() => setWizardStep(3)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 900, padding: '14px 22px', borderRadius: '16px', border: '2px solid #CBD5E1', cursor: 'pointer', fontSize: '14px' }}>
+                    ◄ Volver a Cantidades
                   </button>
                   <button 
                     onClick={handleSaveWizardAreaCoverage}
                     style={{ 
-                      background: 'linear-gradient(135deg, #16A34A, #15803D)', 
+                      background: 'linear-gradient(135deg, #22C55E, #15803D)', 
                       color: '#FFF', 
                       fontWeight: 900, 
-                      padding: '12px 24px', 
-                      borderRadius: '14px', 
+                      padding: '14px 28px', 
+                      borderRadius: '16px', 
                       border: 'none', 
                       cursor: 'pointer', 
-                      fontSize: '13px',
+                      fontSize: '14px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
-                      boxShadow: '0 4px 14px rgba(22,163,74,0.3)',
+                      boxShadow: '0 6px 20px rgba(34,197,94,0.4)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px'
                     }}
                   >
-                    <CheckCircle size={16} /> Guardar Cobertura del Área
+                    🎉 ¡FINALIZAR Y GUARDAR REPORTE!
                   </button>
                 </div>
               </div>
