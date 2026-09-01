@@ -389,6 +389,31 @@ export function App() {
         }
       };
 
+      if (isFirebaseConfigured) {
+        // Fetch Cloud Firestore Collections on initial load (F5 refresh)
+        const cloudCovAreas = await fetchFirebaseCollection<CoverageArea>('proclean_coverageAreas');
+        if (cloudCovAreas) setCoverageAreas(cloudCovAreas);
+
+        const cloudCargos = await fetchFirebaseCollection<CargoConfig>('proclean_cargos');
+        if (cloudCargos) setCargos(cloudCargos);
+
+        const cloudPersonnel = await fetchFirebaseCollection<PersonnelMember>('proclean_personnel');
+        if (cloudPersonnel) setPersonnel(cloudPersonnel);
+
+        // Real-Time Cloud Firestore Subscriptions across all devices
+        subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', (items) => {
+          if (items) setCoverageAreas(items);
+        });
+
+        subscribeFirebaseCollection<CargoConfig>('proclean_cargos', (items) => {
+          if (items) setCargos(items);
+        });
+
+        subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', (items) => {
+          if (items) setPersonnel(items);
+        });
+      }
+
       if (db.whiteLabel) await loadEntity('proclean_whitelabel', 'whitelabel', setWhiteLabel, db.whiteLabel, true);
       if (db.contracts) await loadEntity('proclean_contracts', 'contracts', setContracts, db.contracts);
       if (db.shifts) await loadEntity('proclean_shifts', 'shifts', setShifts, db.shifts);
