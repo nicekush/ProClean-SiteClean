@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { PlantArea, Sector, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
-import { syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase } from '../api/firebase';
+import { syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase, seedOfficialDatabaseToFirebase } from '../api/firebase';
 import { 
   Plus, 
   Trash2, 
@@ -1047,13 +1047,28 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       {activeTab === 'coverage_config' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          <div className="card" style={{ padding: '20px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 4px 0' }}>
-              👥 Matriz Paramétrica de Dotación & Cobertura
-            </h3>
-            <p style={{ fontSize: '13px', color: 'var(--slate-600)', margin: 0 }}>
-              Crea, edita y elimina Ubicaciones de Dotación, Cargos Operacionales y la Nómina Oficial de Colaboradores de forma 100% independiente de las OTs.
-            </p>
+          <div className="card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 4px 0' }}>
+                👥 Matriz Paramétrica de Dotación & Cobertura
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--slate-600)', margin: 0 }}>
+                Crea, edita y elimina Ubicaciones de Dotación, Cargos Operacionales y la Nómina Oficial en Cloud Firestore.
+              </p>
+            </div>
+            <button 
+              onClick={async () => {
+                const ok = await seedOfficialDatabaseToFirebase(true);
+                if (ok) {
+                  alert('✅ Tablas oficiales sembradas e inicializadas en Cloud Firestore.');
+                }
+              }}
+              className="btn"
+              style={{ padding: '10px 16px', backgroundColor: '#0284C7', color: '#FFF', fontWeight: 900, fontSize: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Asegurar que todas las tablas oficiales existan en Cloud Firestore"
+            >
+              ⚡ Forzar Sembrado Base de Datos Cloud
+            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>

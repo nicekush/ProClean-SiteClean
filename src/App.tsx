@@ -29,7 +29,7 @@ import type {
   CoverageArea
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
-import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection, subscribeFirebaseCargos, syncCargoToFirebase, deleteCargoFromFirebase } from './api/firebase';
+import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection, subscribeFirebaseCargos, syncCargoToFirebase, deleteCargoFromFirebase, seedOfficialDatabaseToFirebase } from './api/firebase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
@@ -342,6 +342,9 @@ export function App() {
   // Real-time Cloud Firebase Firestore Listener for Dotación & Cobertura (Sync PC & Mobile)
   useEffect(() => {
     if (!isFirebaseConfigured) return;
+
+    // Seed master official tables to Cloud Firestore if missing or empty
+    seedOfficialDatabaseToFirebase(false);
 
     const defaultAreas: CoverageArea[] = [
       { id: 'a_sup', name: 'Supervisión', code: 'SUP', turnoId: 't_ambos', orden: 1 },

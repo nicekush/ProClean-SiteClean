@@ -235,6 +235,36 @@ export async function deleteFirebaseUser(id: string): Promise<boolean> {
   }
 }
 
+// OFFICIAL DEFAULT CATALOGUES FOR DATABASE SEEDING
+export const DEFAULT_OFFICIAL_COVERAGE_AREAS = [
+  { id: 'a_sup', name: 'Supervisión', code: 'SUP', turnoId: 't_ambos', orden: 1 },
+  { id: 'a_ch_prim', name: 'Chancado Primario', code: 'CH-PRIM', turnoId: 't_ambos', orden: 2 },
+  { id: 'a_ch_terc', name: 'Chancado Terciario', code: 'CH-TERC', turnoId: 't_ambos', orden: 3 },
+  { id: 'a_remanejo', name: 'Apilado y Remanejo', code: 'REM', turnoId: 't_ambos', orden: 4 },
+  { id: 'a_humeda', name: 'Área Húmeda', code: 'AR-HUM', turnoId: 't_ambos', orden: 5 },
+  { id: 'a_apoyo', name: 'Staff / Apoyo Planta', code: 'STAFF', turnoId: 't_ambos', orden: 6 },
+  { id: 'a_personal_4x3', name: 'Personal Staff 4x3', code: 'STAFF-4X3', turnoId: 't_4x3', orden: 7 }
+];
+
+export const DEFAULT_OFFICIAL_CARGOS = [
+  { id: 'c_sup', nombre: 'Supervisor', code: 'SUP' },
+  { id: 'c_cond', nombre: 'Conductor Sucker / Aljibe', code: 'COND' },
+  { id: 'c_ayu', nombre: 'Ayudante Aseo Industrial', code: 'AYU' },
+  { id: 'c_op_aseo', nombre: 'Operador de Aseo', code: 'OP-ASEO' },
+  { id: 'c_op_bomba', nombre: 'Operador Bomba / Camión Hidro', code: 'OP-BOMBA' },
+  { id: 'c_op_jet', nombre: 'Operador Hidrojet', code: 'OP-JET' },
+  { id: 'c_op_eq', nombre: 'Operador de Equipo / Alza Hombre', code: 'OP-EQ' },
+  { id: 'c_bod', nombre: 'Bodeguero', code: 'BOD' },
+  { id: 'c_mec', nombre: 'Mecánico', code: 'MEC' },
+  { id: 'c_prev', nombre: 'Asesor de Prevención (APR)', code: 'PREV' },
+  { id: 'c_robot', nombre: 'Aseo Robotizado', code: 'ROBOT', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_acd', nombre: 'ACD', code: 'ACD', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_jefe_prev', nombre: 'Jefe de Prevención', code: 'JEF-PREV', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_planif', nombre: 'Planificador', code: 'PLANIF', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_rrhh', nombre: 'RRHH', code: 'RRHH', restrictedAreaIds: ['a_personal_4x3'] },
+  { id: 'c_jefe_taller', nombre: 'Jefe de Taller', code: 'JEF-TALLER', restrictedAreaIds: ['a_personal_4x3'] }
+];
+
 // DEDICATED CARGOS CLOUD FIRESTORE SYNC (100% PARITY WITH WORK ORDERS OT PATTERN)
 export async function syncCargoToFirebase(cargo: any): Promise<boolean> {
   if (!db) return false;
@@ -287,6 +317,33 @@ export function subscribeFirebaseCargos(onUpdate: (cargos: any[]) => void): (() 
   } catch (err) {
     console.warn('Failed setup listener for cargos:', err);
     return null;
+  }
+}
+
+export async function seedOfficialDatabaseToFirebase(force: boolean = false): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const cargosRef = collection(db, 'proclean_cargos');
+    const cargosSnap = await getDocs(cargosRef);
+    if (force || cargosSnap.empty) {
+      for (const cargo of DEFAULT_OFFICIAL_CARGOS) {
+        await syncCargoToFirebase(cargo);
+      }
+    }
+
+    const areasRef = collection(db, 'proclean_coverageAreas');
+    const areasSnap = await getDocs(areasRef);
+    if (force || areasSnap.empty) {
+      for (const area of DEFAULT_OFFICIAL_COVERAGE_AREAS) {
+        const docRef = doc(db, 'proclean_coverageAreas', area.id);
+        await setDoc(docRef, { payload: area, updatedAt: new Date().toISOString() }, { merge: true });
+      }
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Error seeding database to Firebase:', err);
+    return false;
   }
 }
 
