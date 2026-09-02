@@ -543,21 +543,20 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px', borderBottom: '2px solid var(--slate-100)', paddingBottom: '12px' }}>
         
         {/* PROCESS DIAGRAM TABS */}
-        <div className="scrollable-tabs" style={{ margin: 0, border: 'none', padding: 0 }}>
+        <div className="scrollable-tabs operational-area-tabs" style={{ margin: 0, border: 'none', padding: '2px' }}>
           {DIAGRAMS.map(d => (
             <button
               key={d.id}
               onClick={() => { setActiveDiagramId(d.id); setSelectedBeltLabel(null); }}
-              className={`nav-item ${activeDiagramId === d.id ? 'active' : ''}`}
+              className={`nav-item operational-area-tab ${activeDiagramId === d.id ? 'active' : ''}`}
               style={{
                 padding: '8px 16px',
                 borderRadius: '12px',
                 fontSize: '12px',
                 fontWeight: 900,
-                whiteSpace: 'nowrap',
                 backgroundColor: activeDiagramId === d.id ? '#FFF7ED' : 'transparent',
                 color: activeDiagramId === d.id ? 'var(--orange)' : 'var(--slate-600)',
-                borderRight: activeDiagramId === d.id ? '4px solid var(--orange)' : 'none'
+                border: activeDiagramId === d.id ? '1px solid #FDBA74' : '1px solid transparent'
               }}
             >
               {d.title}
@@ -565,16 +564,15 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
           ))}
           <button
             onClick={() => { setActiveDiagramId('humeda'); setSelectedBeltLabel(null); }}
-            className={`nav-item ${activeDiagramId === 'humeda' ? 'active' : ''}`}
+            className={`nav-item operational-area-tab ${activeDiagramId === 'humeda' ? 'active' : ''}`}
             style={{
               padding: '8px 16px',
               borderRadius: '12px',
               fontSize: '12px',
               fontWeight: 900,
-              whiteSpace: 'nowrap',
               backgroundColor: activeDiagramId === 'humeda' ? '#ECFEFF' : 'transparent',
               color: activeDiagramId === 'humeda' ? '#0E7490' : 'var(--slate-600)',
-              borderRight: activeDiagramId === 'humeda' ? '4px solid #0891B2' : 'none'
+              border: activeDiagramId === 'humeda' ? '1px solid #67E8F9' : '1px solid transparent'
             }}
           >
             5. Área Húmeda (LIX-SX-EW-RO)
@@ -785,6 +783,8 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
               const cx = n.x + n.w / 2;
               const cy = n.y + n.h / 2;
               const lines = n.label.split('\n');
+              const metricLabel = metrics.totalOTs > 0 ? formatMetricValue(metrics) : '';
+              const textLines = metricLabel ? [...lines, metricLabel] : lines;
 
               return (
                 <g
@@ -840,53 +840,30 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                     />
                   )}
 
-                  {/* NODE LABEL TEXT */}
+                  {/* Labels and values stay inside each node to avoid collisions with adjacent equipment. */}
                   <text
                     x={cx}
-                    y={cy - (lines.length - 1) * 6 + 3}
+                    y={cy - (textLines.length - 1) * 6 + 3}
                     textAnchor="middle"
                     fill={colorInfo.text}
-                    fontSize={11}
+                    fontSize={n.vertical ? 10 : 11}
                     fontWeight={900}
+                    transform={n.vertical ? `rotate(-90 ${cx} ${cy})` : undefined}
+                    pointerEvents="none"
                   >
-                    {lines.map((l, i) => (
-                      <tspan key={i} x={cx} dy={i === 0 ? 0 : 12}>{l}</tspan>
+                    {textLines.map((line, index) => (
+                      <tspan
+                        key={`${line}-${index}`}
+                        x={cx}
+                        dy={index === 0 ? 0 : 12}
+                        fontSize={metricLabel && index === textLines.length - 1 ? 9 : undefined}
+                        fontWeight={metricLabel && index === textLines.length - 1 ? 800 : 900}
+                        opacity={metricLabel && index === textLines.length - 1 ? 0.82 : 1}
+                      >
+                        {line}
+                      </tspan>
                     ))}
                   </text>
-
-                  {/* METRIC BADGE CENTERED ATOP NODE WITH DYNAMIC AUTO-WIDTH & DROP SHADOW */}
-                  {metrics.totalOTs > 0 && (() => {
-                    const valStr = formatMetricValue(metrics);
-                    
-                    const badgeWidth = Math.max(36, valStr.length * 6.5 + 14);
-                    const badgeHeight = 18;
-                    const badgeX = cx - badgeWidth / 2;
-                    const badgeY = n.y - badgeHeight + 3;
-
-                    return (
-                      <g transform={`translate(${badgeX}, ${badgeY})`} style={{ pointerEvents: 'none' }}>
-                        <rect 
-                          width={badgeWidth} 
-                          height={badgeHeight} 
-                          rx={9} 
-                          fill={colorInfo.stroke} 
-                          stroke="#FFFFFF" 
-                          strokeWidth="1.5"
-                          style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.25))' }} 
-                        />
-                        <text 
-                          x={badgeWidth / 2} 
-                          y={12} 
-                          textAnchor="middle" 
-                          fill="#FFFFFF" 
-                          fontSize="10" 
-                          fontWeight="900"
-                        >
-                          {valStr}
-                        </text>
-                      </g>
-                    );
-                  })()}
                 </g>
               );
             })}

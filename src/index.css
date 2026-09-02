@@ -44,6 +44,22 @@
   max-width: 100%;
 }
 
+.operational-area-tabs {
+  width: 100%;
+  min-width: 0;
+  gap: 8px !important;
+}
+
+.operational-area-tab {
+  width: auto !important;
+  min-width: max-content;
+  min-height: 40px !important;
+  flex: 0 0 auto;
+  justify-content: center;
+  line-height: 1.2;
+  box-shadow: none !important;
+}
+
 .wet-area-dashboard {
   min-width: 0;
   display: flex;
@@ -329,6 +345,15 @@
 }
 
 @media (max-width: 768px) {
+  .operational-area-tabs {
+    padding-bottom: 7px !important;
+    scroll-snap-type: x proximity;
+  }
+
+  .operational-area-tab {
+    scroll-snap-align: start;
+  }
+
   .operational-map-metrics,
   .operational-map-filters {
     width: 100%;
