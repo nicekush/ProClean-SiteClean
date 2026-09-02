@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test:rules": "firebase emulators:exec --only firestore \"node --test tests/firestore.rules.test.mjs\"",
     "backup:firestore": "node scripts/backup-firestore.mjs",
+    "migrate:personnel-both-groups": "node scripts/set-personnel-both-groups.mjs",
     "diagnose:firebase": "node scripts/check-firebase-cloud-status.mjs",
     "migrate:auth": "node scripts/migrate-firebase-auth.mjs"
   },
