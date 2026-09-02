@@ -18,6 +18,7 @@ import {
   CheckCircle,
   Trash2
 } from 'lucide-react';
+import { OFFICIAL_PROCLEAN_LOGO_URL } from '../config/branding';
 
 interface PersonnelCoverageModuleProps {
   personnel: PersonnelMember[];
@@ -31,6 +32,7 @@ interface PersonnelCoverageModuleProps {
   shifts?: ShiftType[];
   currentRole: UserRole;
   userEmail?: string;
+  userName?: string;
 }
 
 interface WizardSlotAssignment {
@@ -61,7 +63,8 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   coverageAreas = [],
   assignments = [],
   onSaveAssignments,
-  userEmail = 'supervisor@procleanmg.cl'
+  userEmail = 'supervisor@procleanmg.cl',
+  userName = 'Supervisor de Terreno'
 }) => {
   // Filter States
   const [activeShiftFilter, setActiveShiftFilter] = useState<'ALL' | 'DAY' | 'NIGHT' | 'STAFF'>('ALL');
@@ -78,6 +81,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   // Slot Assignments Map in Wizard: key = `${cargoId}_${slotIndex}` -> personId
   const [wizardSlotAssignments, setWizardSlotAssignments] = useState<Record<string, WizardSlotAssignment>>({});
   const [slotSearchQuery, setSlotSearchQuery] = useState<Record<string, string>>({});
+  const [printGeneratedAt, setPrintGeneratedAt] = useState(() => new Date());
 
   // Active Date string
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -152,6 +156,64 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
 
     return { totalRequired, totalCovered, pct, gap, cargoBreakdown };
   }, [assignments]);
+
+  const printAssignments = useMemo(() => {
+    const shiftAliases: Record<typeof activeShiftFilter, string[]> = {
+      ALL: [],
+      DAY: ['DAY', 't_dia'],
+      NIGHT: ['NIGHT', 't_noche'],
+      STAFF: ['STAFF', 't_4x3']
+    };
+
+    return assignments.filter(assignment => {
+      const matchesGroup = activeGrupoFilter === 'ALL' || assignment.grupo === activeGrupoFilter;
+      const matchesShift = activeShiftFilter === 'ALL' || shiftAliases[activeShiftFilter].includes(assignment.shiftId);
+      return matchesGroup && matchesShift;
+    });
+  }, [assignments, activeGrupoFilter, activeShiftFilter]);
+
+  const printAreas = useMemo(() => effectiveAreas
+    .filter(area => printAssignments.some(assignment => assignment.areaId === area.id))
+    .sort((a, b) => a.orden - b.orden), [effectiveAreas, printAssignments]);
+
+  const printMetrics = useMemo(() => {
+    const required = printAssignments.length;
+    const coveredAssignments = printAssignments.filter(assignment => assignment.personId);
+    const covered = coveredAssignments.length;
+    const planta = coveredAssignments.filter(assignment => personnel.find(person => person.id === assignment.personId)?.tipo === 'PLANTA').length;
+    const spot = coveredAssignments.filter(assignment => personnel.find(person => person.id === assignment.personId)?.tipo === 'SPOT').length;
+    return {
+      required,
+      covered,
+      gap: required - covered,
+      pct: required > 0 ? Math.round((covered / required) * 100) : 0,
+      planta,
+      spot
+    };
+  }, [printAssignments, personnel]);
+
+  const printShiftLabel = {
+    ALL: 'Malla Completa',
+    DAY: 'Turno Día',
+    NIGHT: 'Turno Noche',
+    STAFF: 'Staff 4x3'
+  }[activeShiftFilter];
+  const printGroupLabel = activeGrupoFilter === 'ALL' ? 'Todos los grupos' : `Turno ${activeGrupoFilter}`;
+  const reportDate = printAssignments[0]?.fecha || todayStr;
+  const formattedReportDate = (() => {
+    const [year, month, day] = reportDate.split('-');
+    return year && month && day ? `${day}-${month}-${year}` : reportDate;
+  })();
+  const formattedPrintTime = new Intl.DateTimeFormat('es-CL', {
+    timeZone: 'America/Santiago',
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(printGeneratedAt);
+
+  const handlePrintCoverageReport = () => {
+    setPrintGeneratedAt(new Date());
+    window.setTimeout(() => window.print(), 50);
+  };
 
   // Helper to select an area within Step 1 and pre-fill cargos/headcount
   const handleSelectAreaInStep1 = (areaId: string) => {
@@ -347,7 +409,74 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+    <>
+      <section className="personnel-print-report" aria-label="Reporte imprimible de dotación">
+        <header className="personnel-print-header">
+          <img src={OFFICIAL_PROCLEAN_LOGO_URL} alt="ProCleanMG" />
+          <div className="personnel-print-title">
+            <h1>PROCONTROL ZALDÍVAR</h1>
+            <p>FICHA EJECUTIVA DE COBERTURA OPERACIONAL</p>
+          </div>
+          <div className="personnel-print-contract">
+            <strong>MINERA ZALDÍVAR</strong>
+            <span>Fecha: {formattedReportDate}</span>
+          </div>
+        </header>
+
+        <div className="personnel-print-summary">
+          <div><span>RÉGIMEN</span><strong>{printShiftLabel}</strong></div>
+          <div><span>MALLA</span><strong>{printGroupLabel}</strong></div>
+          <div><span>DOTACIÓN</span><strong>{printMetrics.covered}/{printMetrics.required} HH ({printMetrics.pct}%)</strong></div>
+          <div><span>PLANTA</span><strong>{printMetrics.planta}</strong></div>
+          <div><span>SPOT</span><strong>{printMetrics.spot}</strong></div>
+          <div className={printMetrics.gap > 0 ? 'has-gap' : ''}><span>BRECHA</span><strong>{printMetrics.gap}</strong></div>
+        </div>
+
+        {printAreas.length > 0 ? (
+          <div className="personnel-print-area-grid">
+            {printAreas.map(area => {
+              const areaAssignments = printAssignments.filter(assignment => assignment.areaId === area.id);
+              const areaCovered = areaAssignments.filter(assignment => assignment.personId).length;
+              const areaGap = areaAssignments.length - areaCovered;
+              return (
+                <article className="personnel-print-area" key={area.id}>
+                  <div className="personnel-print-area-header">
+                    <h2>{area.name}</h2>
+                    <strong className={areaGap > 0 ? 'has-gap' : ''}>
+                      {areaGap > 0 ? `BRECHA ${areaCovered}/${areaAssignments.length}` : `${areaCovered}/${areaAssignments.length}`}
+                    </strong>
+                  </div>
+                  <div className="personnel-print-rows">
+                    {areaAssignments.map(assignment => {
+                      const rosterPerson = personnel.find(person => person.id === assignment.personId);
+                      return (
+                        <div className={`personnel-print-row ${assignment.personId ? '' : 'is-vacant'}`} key={assignment.id}>
+                          <span className="personnel-print-role">{assignment.cargoName}</span>
+                          <span className="personnel-print-name">
+                            {assignment.personName || '[VACANTE]'}
+                            {rosterPerson?.tipo ? <small>[{rosterPerson.tipo}]</small> : null}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="personnel-print-empty">
+            No existe dotación declarada para los filtros seleccionados.
+          </div>
+        )}
+
+        <footer className="personnel-print-footer">
+          <span>Generado por: <strong>{userName || userEmail}</strong></span>
+          <span>{formattedPrintTime} hrs · Fuente: Firebase Cloud</span>
+        </footer>
+      </section>
+
+      <div className="personnel-screen-view" style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
       
       {/* 1. EXECUTIVE HEADER & KPI METRICS */}
       <div className="card" style={{ padding: '20px' }}>
@@ -371,7 +500,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
               <Trash2 size={16} /> Limpiar Cobertura del Día
             </button>
             <button 
-              onClick={() => window.print()} 
+              onClick={handlePrintCoverageReport}
               className="btn btn-secondary" 
               style={{ fontSize: '13px', padding: '10px 18px' }}
             >
@@ -551,7 +680,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
               transition: 'all 0.2s'
             }}
           >
-            🅰️ Turno A (42 Colaboradores)
+            🅰️ Turno A ({personnel.filter(person => person.grupo === 'A' || person.grupo === 'AMBOS').length} Colaboradores)
           </button>
           <button
             onClick={() => setActiveGrupoFilter('B')}
@@ -569,7 +698,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
               transition: 'all 0.2s'
             }}
           >
-            🅱️ Turno B (44 Colaboradores)
+            🅱️ Turno B ({personnel.filter(person => person.grupo === 'B' || person.grupo === 'AMBOS').length} Colaboradores)
           </button>
           <button
             onClick={() => setActiveGrupoFilter('ALL')}
@@ -1404,6 +1533,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
         </div>
       )}
 
-    </div>
+      </div>
+    </>
   );
 };

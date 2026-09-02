@@ -912,6 +912,7 @@ export function App() {
               shifts={shifts}
               currentRole={currentRole}
               userEmail={authenticatedUser?.email}
+              userName={authenticatedUser?.name}
             />
           )}
 
