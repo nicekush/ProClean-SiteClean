@@ -334,7 +334,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
         </div>
 
         {/* KPI METRICS CARDS GRID */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+        <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px' }}>
           
           {/* Card 1: Cobertura Global */}
           <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
@@ -581,7 +581,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+            <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
               {declaredAreas.map(area => {
                 const areaAssignments = assignments.filter(a => a.areaId === area.id);
 
@@ -726,7 +726,8 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
 
       {/* 4. "A PRUEBA DE NIÑOS" 4-STEP WIZARD MODAL (TOP-LEVEL FIXED OVERLAY) */}
       {showWizardModal && (
-        <div 
+        <div
+          className="modal-backdrop-overlay"
           style={{
             position: 'fixed',
             top: 0,
@@ -744,8 +745,8 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
           }}
           onClick={() => setShowWizardModal(false)}
         >
-          <div 
-            className="card" 
+          <div
+            className="card modal-content-card"
             style={{ 
               maxWidth: '640px', 
               width: '100%', 
@@ -827,7 +828,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                   <span><strong>¡Toca la casilla gigante!</strong> Selecciona el área de la planta que vas a reportar hoy:</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                <div className="responsive-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '12px' }}>
                   {effectiveAreas.map(area => {
                     const areaAsgs = assignments.filter(a => a.areaId === area.id);
                     const isReported = areaAsgs.length > 0;

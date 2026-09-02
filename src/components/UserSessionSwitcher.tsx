@@ -68,8 +68,8 @@ export const UserSessionSwitcher: React.FC<UserSessionSwitcherProps> = ({
 
       {/* Active User Session Modal */}
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#FFF', padding: '28px', borderRadius: '16px', width: '100%', maxWidth: '420px', boxShadow: 'var(--shadow-lg)' }}>
+        <div className="modal-backdrop-overlay" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-content-card" style={{ maxWidth: '420px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-primary-dark)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                 <ShieldCheck size={20} style={{ color: 'var(--color-action-teal)' }} />

@@ -103,7 +103,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-primary-dark)', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Camera size={24} style={{ color: 'var(--color-action-teal)' }} /> Evidencias Fotográficas & Comparador Slider Antes / Después
@@ -114,7 +114,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
         </div>
 
         {/* OT Selector Dropdown & Upload Action */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="responsive-control-group" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           {selectedOrder && onUpdateWorkOrder && (
             <button 
               onClick={() => handleOpenUploadModal(selectedOrder)}
@@ -139,8 +139,8 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
       </div>
 
       {/* Search & Evidence Readiness Filter */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, position: 'relative', minWidth: '240px' }}>
+      <div className="responsive-toolbar" style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="responsive-search" style={{ flex: 1, position: 'relative', minWidth: 'min(240px, 100%)' }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             type="text"
@@ -169,8 +169,8 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
 
       {/* Upload Evidence Modal */}
       {uploadingOrder && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '560px', boxShadow: 'var(--shadow-lg)' }}>
+        <div className="modal-backdrop-overlay" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <div className="modal-content-card" style={{ maxWidth: '560px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-primary-dark)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Camera size={20} /> Cargar Evidencia Fotográfica ({uploadingOrder.sapCode})
@@ -182,7 +182,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
               Adjunta las fotos en sus respectivos momentos del turno para {uploadingOrder.equipoCorrea}.
             </p>
 
-            <form onSubmit={handleSaveEvidence} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <form className="responsive-two-column-grid" onSubmit={handleSaveEvidence} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               
               {/* Before Image Box (Phase 1) */}
               <div style={{ textAlign: 'center' }}>
@@ -373,7 +373,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
             </div>
           ) : beforeImage || afterImage ? (
             /* CASE 2: ONLY ONE PHOTO AVAILABLE */
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+            <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '16px' }}>
               <div style={{ position: 'relative', height: '320px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--slate-200)' }}>
                 {beforeImage ? (
                   <>

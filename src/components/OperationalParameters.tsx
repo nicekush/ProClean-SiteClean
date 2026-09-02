@@ -494,7 +494,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             Nivel 1: Configuración de Áreas Principales de la Planta Minera
           </h3>
 
-          <form onSubmit={handleAddArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" onSubmit={handleAddArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <input
               type="text"
               placeholder="Nombre del Área (Ej: Chancador Terciario)"
@@ -558,7 +558,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             Nivel 2: Configuración de Sectores Vincualdos a un Área
           </h3>
 
-          <form onSubmit={handleAddSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" onSubmit={handleAddSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <select
               value={newSector.areaId}
               onChange={e => setNewSector({ ...newSector, areaId: e.target.value })}
@@ -643,7 +643,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             Nivel 3: Sub-Sectores / Equipos Vincualdos a un Sector
           </h3>
 
-          <form onSubmit={handleAddSubSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" onSubmit={handleAddSubSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <select
               value={newSubSector.sectorId}
               onChange={e => setNewSubSector({ ...newSubSector, sectorId: e.target.value })}
@@ -717,13 +717,13 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       {/* TAB 4: MACHINES */}
       {activeTab === 'machines' && (
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
               Flota de Maquinaria y Equipos de Aseo Industrial
             </h3>
 
             {/* Quick Search */}
-            <div style={{ position: 'relative', width: '260px' }}>
+            <div className="responsive-search" style={{ position: 'relative', width: '260px' }}>
               <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="text"
@@ -745,7 +745,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 <button onClick={() => setEditingMachine(null)} className="btn btn-secondary" style={{ padding: '2px 6px' }}><X size={14} /></button>
               </div>
 
-              <form onSubmit={handleUpdateMachineSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+              <form className="responsive-form-grid" onSubmit={handleUpdateMachineSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '2px' }}>Nombre / Modelo</label>
                   <input
@@ -799,7 +799,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           )}
 
           {/* New Machine Form */}
-          <form onSubmit={handleAddMachine} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" onSubmit={handleAddMachine} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <input
               type="text"
               placeholder="Nombre del Vehículo (Ej: Mini Cargador Bobcat S650)"
@@ -891,13 +891,13 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       {/* TAB 5: WORKERS */}
       {activeTab === 'workers' && (
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
               Nómina de Personal y Operadores de Cuadrilla
             </h3>
 
             {/* Quick Search */}
-            <div style={{ position: 'relative', width: '260px' }}>
+            <div className="responsive-search" style={{ position: 'relative', width: '260px' }}>
               <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="text"
@@ -909,7 +909,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             </div>
           </div>
 
-          <form onSubmit={handleAddWorker} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" onSubmit={handleAddWorker} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <input
               type="text"
               placeholder="Nombre Completo (Ej: Manuel Torres)"
@@ -980,7 +980,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             Parametriza la matriz física para calcular automáticamente los metros cúbicos (m³) removidos por persona/hora en terreno según la capacidad de carretillas.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '16px', marginBottom: '24px' }}>
             
             <div>
               <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>
@@ -1124,7 +1124,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
+          <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: '20px' }}>
             
             {/* PANEL 1: UBICACIONES DE DOTACION (AREAS) */}
             <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1412,7 +1412,8 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
           {/* EDIT MODAL UBICACION */}
           {editingCovArea && (
-            <div 
+            <div
+              className="modal-backdrop-overlay"
               style={{
                 position: 'fixed',
                 top: 0,
@@ -1429,8 +1430,8 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               }}
               onClick={() => setEditingCovArea(null)}
             >
-              <div 
-                className="card" 
+              <div
+                className="card modal-content-card"
                 style={{ maxWidth: '480px', width: '100%', padding: '28px', backgroundColor: '#FFFFFF', borderRadius: '24px', boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.45)', border: '1px solid #E2E8F0' }}
                 onClick={e => e.stopPropagation()}
               >
@@ -1505,7 +1506,8 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
           {/* EDIT MODAL CARGO */}
           {editingCargo && (
-            <div 
+            <div
+              className="modal-backdrop-overlay"
               style={{
                 position: 'fixed',
                 top: 0,
@@ -1522,8 +1524,8 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               }}
               onClick={() => setEditingCargo(null)}
             >
-              <div 
-                className="card" 
+              <div
+                className="card modal-content-card"
                 style={{ maxWidth: '480px', width: '100%', padding: '28px', backgroundColor: '#FFFFFF', borderRadius: '24px', boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.45)', border: '1px solid #E2E8F0' }}
                 onClick={e => e.stopPropagation()}
               >
@@ -1574,7 +1576,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                     <p style={{ fontSize: '11px', color: 'var(--slate-500)', margin: '0 0 10px 0' }}>
                       Toca las tarjetas de las ubicaciones donde este cargo podrá asignarse. Si no seleccionas ninguna, estará <strong>Disponible en Todas las Ubicaciones</strong>.
                     </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                    <div className="responsive-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
                       {coverageAreas.map(area => {
                         const currentList = editingCargo.restrictedAreaIds || [];
                         const isSelected = currentList.includes(area.id);
@@ -1627,7 +1629,8 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
           {/* EDIT MODAL COLABORADOR */}
           {editingPersonnel && (
-            <div 
+            <div
+              className="modal-backdrop-overlay"
               style={{
                 position: 'fixed',
                 top: 0,
@@ -1644,8 +1647,8 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               }}
               onClick={() => setEditingPersonnel(null)}
             >
-              <div 
-                className="card" 
+              <div
+                className="card modal-content-card"
                 style={{ maxWidth: '480px', width: '100%', padding: '28px', backgroundColor: '#FFFFFF', borderRadius: '24px', boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.45)', border: '1px solid #E2E8F0' }}
                 onClick={e => e.stopPropagation()}
               >

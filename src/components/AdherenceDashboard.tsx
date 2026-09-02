@@ -98,7 +98,7 @@ export const AdherenceDashboard: React.FC<AdherenceDashboardProps> = ({
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
             Reporte Semanal de Adherencia y Desviación (KPI)
@@ -108,9 +108,9 @@ export const AdherenceDashboard: React.FC<AdherenceDashboardProps> = ({
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="responsive-control-group" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Week Filter Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFF', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
+          <div className="responsive-inline-select" style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFF', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
             <Calendar size={16} style={{ color: 'var(--color-action-teal)' }} />
             <span style={{ fontSize: '12px', fontWeight: 800 }}>Semana Operacional:</span>
             <select
@@ -136,7 +136,7 @@ export const AdherenceDashboard: React.FC<AdherenceDashboardProps> = ({
       </div>
 
       {/* KPI Stat Cards Grid (Mobile Adaptable) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+      <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '16px', marginBottom: '28px' }}>
         
         {/* Adherence % Card */}
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: 0 }}>
@@ -230,7 +230,7 @@ export const AdherenceDashboard: React.FC<AdherenceDashboardProps> = ({
       </div>
 
       {/* Dynamic Breakdown per Shift (Adaptable Grid) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+      <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: '24px' }}>
         
         <div className="card" style={{ margin: 0 }}>
           <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '16px' }}>

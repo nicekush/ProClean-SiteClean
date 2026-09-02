@@ -820,8 +820,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
       {/* Quick Contingency Report Modal */}
       {reportingContingencyOrder && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', padding: '24px', borderRadius: '24px', width: '100%', maxWidth: '500px', boxShadow: 'var(--shadow-lg)', border: '2px solid #FCA5A5' }}>
+        <div className="modal-backdrop-overlay" style={{ backgroundColor: 'rgba(15,23,42,0.6)' }}>
+          <div className="modal-content-card" style={{ maxWidth: '500px', border: '2px solid #FCA5A5' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#991B1B', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertOctagon size={22} /> Reportar Detención / Contingencia
@@ -874,8 +874,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
       {/* ITO Sign-off & Digital Signature Canvas Modal */}
       {itoApprovingOrder && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', padding: '24px', borderRadius: '24px', width: '100%', maxWidth: '560px', boxShadow: 'var(--shadow-lg)', border: '2px solid var(--orange)', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="modal-backdrop-overlay" style={{ backgroundColor: 'rgba(15,23,42,0.6)' }}>
+          <div className="modal-content-card" style={{ maxWidth: '560px', border: '2px solid var(--orange)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <UserCheck size={22} style={{ color: 'var(--orange)' }} /> Certificación & Firma Digital ITO Mandante
@@ -964,7 +964,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
             {renderStepper(currentEditStep, 9)}
 
-          <form onSubmit={handleUpdateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+          <form className="responsive-form-grid" onSubmit={handleUpdateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '16px' }}>
             
             {/* PASO 1: CLASIFICACIÓN DE TAREA */}
             {currentEditStep === 1 && (
@@ -1281,7 +1281,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   ⏱️ Paso 5: ¿Cuándo y en qué Turno se ejecutó?
                 </h4>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                <div className="responsive-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '16px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>📅 Fecha de Ejecución</label>
                     <input
@@ -1771,9 +1771,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
       {/* Search and Collapsible Filter Controls */}
       <div style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="responsive-toolbar" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Quick Search Input */}
-          <div style={{ flex: 1, position: 'relative', minWidth: '220px' }}>
+          <div className="responsive-search" style={{ flex: 1, position: 'relative', minWidth: 'min(220px, 100%)' }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--slate-400)' }} />
             <input
               type="text"
@@ -1824,7 +1824,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
         {/* Collapsible Filter Panel */}
         {showFilters && (
-          <div className="filter-drawer-box" style={{ marginTop: '12px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+          <div className="filter-drawer-box responsive-form-grid" style={{ marginTop: '12px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid var(--slate-200)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px' }}>
             {/* Date Preset Filter */}
             <div>
               <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>📅 Fecha de Ejecución</label>
@@ -2141,7 +2141,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
             {renderStepper(currentAddStep, 10)}
 
-            <form onSubmit={handleCreateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            <form className="responsive-form-grid" onSubmit={handleCreateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '16px' }}>
               
               {/* PASO 1: CLASIFICACIÓN DE TAREA */}
               {currentAddStep === 1 && (
@@ -2689,7 +2689,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     ⏱️ Paso 9: ¿Cuándo y en qué Turno se ejecutó?
                   </h4>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                  <div className="responsive-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '16px' }}>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '6px' }}>📅 Fecha de Ejecución</label>
                       <input

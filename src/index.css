@@ -44,6 +44,28 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  min-width: 0;
+  max-width: 100%;
+}
+
 body {
   background-color: var(--slate-50);
   color: var(--slate-900);
@@ -220,6 +242,28 @@ h1, h2, h3, h4, h5, h6 {
   padding: clamp(16px, 2.5vw, 32px);
   box-shadow: var(--shadow-sm);
   margin-bottom: 24px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* Reusable guards for toolbars and grids containing long operational data. */
+.responsive-toolbar,
+.responsive-card-grid,
+.responsive-form-grid,
+.responsive-search {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.responsive-search {
+  width: min(260px, 100%) !important;
+}
+
+.responsive-control-group,
+.responsive-inline-select {
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Master Data-Grid ProClean */
@@ -337,6 +381,8 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 42px;
+  white-space: normal;
+  text-align: center;
 }
 
 .btn-primary {
@@ -471,6 +517,47 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 16px;
   }
 
+  .responsive-toolbar {
+    align-items: stretch !important;
+    width: 100%;
+  }
+
+  .responsive-toolbar > * {
+    max-width: 100%;
+  }
+
+  .responsive-search {
+    width: 100% !important;
+    flex-basis: 100% !important;
+  }
+
+  .responsive-control-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .responsive-control-group > * {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .responsive-inline-select {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .responsive-inline-select select {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .responsive-form-grid,
+  .responsive-card-grid,
+  .responsive-two-column-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
   .desktop-only-table {
     display: none;
   }
@@ -502,6 +589,18 @@ h1, h2, h3, h4, h5, h6 {
     padding-bottom: 10px;
   }
 
+  .mobile-ot-card-header > div {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .mobile-ot-card-header .pill {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .mobile-ot-card-body {
     font-size: 13px;
     line-height: 1.5;
@@ -524,6 +623,7 @@ h1, h2, h3, h4, h5, h6 {
     justify-content: flex-end;
     padding-top: 10px;
     border-top: 1px solid var(--slate-100);
+    flex-wrap: wrap;
   }
 }
 
@@ -617,6 +717,17 @@ h1, h2, h3, h4, h5, h6 {
   box-sizing: border-box;
 }
 
+.modal-content-card > * {
+  min-width: 0;
+}
+
+.modal-content-card h2,
+.modal-content-card h3,
+.modal-content-card h4,
+.modal-content-card p {
+  overflow-wrap: anywhere;
+}
+
 .badge-select-btn {
   max-width: 100%;
   white-space: normal;
@@ -676,4 +787,3 @@ h1, h2, h3, h4, h5, h6 {
     justify-content: center !important;
   }
 }
-

@@ -691,7 +691,8 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
 
       {/* POP-UP MODAL EMERGENTE DE INSPECCIÓN DE CORREA / SECTOR */}
       {selectedBeltLabel && selectedMetrics && (
-        <div 
+        <div
+          className="modal-backdrop-overlay"
           onClick={() => setSelectedBeltLabel(null)}
           style={{ 
             position: 'fixed', 
@@ -708,7 +709,8 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             padding: '16px' 
           }}
         >
-          <div 
+          <div
+            className="modal-content-card"
             onClick={e => e.stopPropagation()}
             style={{ 
               backgroundColor: '#FFFFFF', 
@@ -746,7 +748,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             </div>
 
             {/* ACCUMULATED METRICS SUMMARY CARDS (3 DIDACTIC KPIS FOR TOTAL, MANUAL & MACHINERY) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+            <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(130px, 100%), 1fr))', gap: '10px' }}>
               <div style={{ backgroundColor: '#FFF7ED', padding: '12px', borderRadius: '14px', border: '1px solid #FFEDD5' }}>
                 <div style={{ fontSize: '10px', fontWeight: 900, color: '#C2410C', textTransform: 'uppercase' }}>📦 Volumen Total</div>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--orange)' }}>{selectedMetrics.totalM3.toFixed(1)} m³</div>

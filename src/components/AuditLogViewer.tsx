@@ -94,8 +94,8 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ auditLogs }) => 
       </div>
 
       {/* Toolbar Filters */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, position: 'relative', minWidth: '220px' }}>
+      <div className="responsive-toolbar" style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="responsive-search" style={{ flex: 1, position: 'relative', minWidth: 'min(220px, 100%)' }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             type="text"

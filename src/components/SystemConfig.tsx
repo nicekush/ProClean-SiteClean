@@ -291,7 +291,7 @@ export const SystemConfig: React.FC<SystemConfigProps> = ({
       </div>
 
       {/* Configuration Health Widgets */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+      <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
         <div style={{ padding: '12px 16px', borderRadius: '12px', backgroundColor: '#FFF', border: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Users size={20} style={{ color: 'var(--color-action-teal)' }} />
           <div>
@@ -407,7 +407,7 @@ export const SystemConfig: React.FC<SystemConfigProps> = ({
                 <button onClick={() => setEditingUser(null)} className="btn btn-secondary" style={{ padding: '4px 8px' }}><X size={16} /></button>
               </div>
 
-              <form onSubmit={handleUpdateUserSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+              <form className="responsive-form-grid" onSubmit={handleUpdateUserSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Nombre y Apellidos</label>
                   <input
@@ -465,7 +465,7 @@ export const SystemConfig: React.FC<SystemConfigProps> = ({
           )}
 
           {/* New User Form */}
-          <form onSubmit={handleAddUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" onSubmit={handleAddUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <input
               type="text"
               placeholder="Nombre Completo (Ej: Pedro Alarcón)"
@@ -568,7 +568,7 @@ export const SystemConfig: React.FC<SystemConfigProps> = ({
                 <button onClick={() => setEditingContract(null)} className="btn btn-secondary" style={{ padding: '4px 8px' }}><X size={16} /></button>
               </div>
 
-              <form onSubmit={handleUpdateContractSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              <form className="responsive-form-grid" onSubmit={handleUpdateContractSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Nombre Cliente / Empresa Minera</label>
                   <input
@@ -611,7 +611,7 @@ export const SystemConfig: React.FC<SystemConfigProps> = ({
           )}
 
           {/* New Client Form */}
-          <form onSubmit={handleAddContract} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" onSubmit={handleAddContract} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <input
               type="text"
               placeholder="Cliente / Empresa Minera (Ej: Minera Escondida)"
@@ -707,7 +707,7 @@ export const SystemConfig: React.FC<SystemConfigProps> = ({
             Personalización de Nombre y Paleta de Colores
           </h3>
 
-          <form onSubmit={handleSaveBranding} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+          <form className="responsive-form-grid" onSubmit={handleSaveBranding} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '16px' }}>
             <div>
               <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Nombre de Tu Empresa (Contratista)</label>
               <input
@@ -789,7 +789,7 @@ export const SystemConfig: React.FC<SystemConfigProps> = ({
 
       {/* Subtab: Logos */}
       {activeSubTab === 'logos' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
+        <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '24px' }}>
           <div className="card" style={{ textAlign: 'center', padding: '28px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '8px' }}>
               1. Logo Empresa Contratista
