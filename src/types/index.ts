@@ -82,6 +82,7 @@ export interface WorkOrder {
   equipmentName?: string;
   subSectorId?: string;
   subSectorName?: string;
+  selectedSubSectorIds?: string[];
   selectedSubSectorNames?: string[];
   hasManualLabor?: boolean;
   hasEquipment?: boolean;

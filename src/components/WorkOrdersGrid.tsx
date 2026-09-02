@@ -23,6 +23,33 @@ interface WorkOrdersGridProps {
   onClearTargetEditOrder?: () => void;
 }
 
+const getOrderDateMetadata = (localDate: string) => {
+  if (!localDate) return { executionDate: '', semana: 0, dia: '' };
+  const now = new Date(`${localDate}T12:00:00`);
+  const utcDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const day = utcDate.getUTCDay() || 7;
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+  const semana = Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  const dia = now.toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: '2-digit' });
+  return { executionDate: localDate, semana, dia: dia.charAt(0).toUpperCase() + dia.slice(1) };
+};
+
+const getTodayOrderDefaults = () => {
+  const now = new Date();
+  const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return getOrderDateMetadata(localDate);
+};
+
+const getWorkOrderResourceFlags = (order: WorkOrder) => {
+  const hasExplicitFlags = typeof order.hasManualLabor === 'boolean' || typeof order.hasEquipment === 'boolean';
+  if (hasExplicitFlags) return { manual: order.hasManualLabor === true, equipment: order.hasEquipment === true };
+  return {
+    manual: (order.headcount || 0) > 0 && (order.realHours || 0) > 0,
+    equipment: Boolean(order.vehiclePatent?.trim()) || (order.fleetTripsCount || 0) > 0 || (order.machineHours || 0) > 0
+  };
+};
+
 export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   workOrders,
   pendingWorkOrderIds = new Set<string>(),
@@ -87,9 +114,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const [editSelectedSubSectorNames, setEditSelectedSubSectorNames] = useState<string[]>([]);
 
   const [newOrder, setNewOrder] = useState({
-    executionDate: new Date().toISOString().split('T')[0],
-    semana: 33,
-    dia: 'Lunes 15/08',
+    ...getTodayOrderDefaults(),
     sapCode: '',
     equipoCorrea: '',
     operationDetail: '',
@@ -224,9 +249,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     setSelectedEquipmentId('');
     setSelectedSubSectorNames([]);
     setNewOrder({
-      executionDate: new Date().toISOString().split('T')[0],
-      semana: 33,
-      dia: 'Lunes 15/08',
+      ...getTodayOrderDefaults(),
       sapCode: '',
       equipoCorrea: '',
       operationDetail: '',
@@ -269,8 +292,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   };
 
   const handleOpenEditModal = (order: WorkOrder) => {
+    const resourceFlags = getWorkOrderResourceFlags(order);
     setCurrentEditStep(1);
-    setEditingOrder({ ...order });
+    setEditingOrder({ ...order, hasManualLabor: resourceFlags.manual, hasEquipment: resourceFlags.equipment });
     setEditSelectedAreaId(order.areaId || '');
     setEditSelectedSectorId(order.sectorId || '');
     setEditSelectedEquipmentId(order.equipmentId || '');
@@ -551,8 +575,14 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       sapCode: finalSapCode,
       headcount: newOrder.hasManualLabor ? newOrder.headcount : 0,
       vehiclePatent: newOrder.hasEquipment ? newOrder.vehiclePatent : '',
+      fleetTripsCount: newOrder.hasEquipment ? newOrder.fleetTripsCount : 0,
+      bucketCapacityM3: newOrder.hasEquipment ? newOrder.bucketCapacityM3 : 0,
+      machineHours: newOrder.hasEquipment ? newOrder.machineHours : 0,
       equipoCorrea: finalEquipo,
       equipmentName: equipName,
+      selectedSubSectorIds: selectedSubSectorNames
+        .map(name => (subSectors || []).find(sub => sub.name === name && (!selectedEquipmentId || sub.equipmentId === selectedEquipmentId))?.id)
+        .filter((id): id is string => Boolean(id)),
       selectedSubSectorNames,
       shiftName: selectedShift.name
     });
@@ -564,9 +594,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     setSelectedEquipmentId('');
     setSelectedSubSectorNames([]);
     setNewOrder({
-      executionDate: new Date().toISOString().split('T')[0],
-      semana: 33,
-      dia: 'Lunes 15/08',
+      ...getTodayOrderDefaults(),
       sapCode: '',
       equipoCorrea: '',
       operationDetail: '',
@@ -621,10 +649,16 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       equipmentId: editSelectedEquipmentId || editingOrder.equipmentId,
       equipmentName: equipName,
       equipoCorrea: finalEquipo,
+      selectedSubSectorIds: editSelectedSubSectorNames
+        .map(name => (subSectors || []).find(sub => sub.name === name && (!editSelectedEquipmentId || sub.equipmentId === editSelectedEquipmentId))?.id)
+        .filter((id): id is string => Boolean(id)),
       selectedSubSectorNames: editSelectedSubSectorNames,
       shiftName: selectedShift.name,
       headcount: editingOrder.hasManualLabor ? editingOrder.headcount : 0,
-      vehiclePatent: editingOrder.hasEquipment ? editingOrder.vehiclePatent : ''
+      vehiclePatent: editingOrder.hasEquipment ? editingOrder.vehiclePatent : '',
+      fleetTripsCount: editingOrder.hasEquipment ? editingOrder.fleetTripsCount : 0,
+      bucketCapacityM3: editingOrder.hasEquipment ? editingOrder.bucketCapacityM3 : 0,
+      machineHours: editingOrder.hasEquipment ? editingOrder.machineHours : 0
     });
     setEditingOrder(null);
   };
@@ -1287,7 +1321,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     <input
                       type="date"
                       value={editingOrder.executionDate || new Date().toISOString().split('T')[0]}
-                      onChange={e => setEditingOrder({ ...editingOrder, executionDate: e.target.value })}
+                      onChange={e => setEditingOrder({ ...editingOrder, ...getOrderDateMetadata(e.target.value) })}
                       style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid var(--slate-300)', fontWeight: 800, fontSize: '14px' }}
                       required
                     />
@@ -1984,12 +2018,12 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     <td style={{ fontWeight: 800, color: 'var(--orange)' }}>{order.equipoCorrea}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                        {order.hasManualLabor !== false && (
+                        {getWorkOrderResourceFlags(order).manual && (
                           <span className="pill pill-complete" style={{ fontSize: '10px', padding: '2px 6px' }}>
                             👷 {order.headcount} pers.
                           </span>
                         )}
-                        {order.hasEquipment !== false && order.vehiclePatent && (
+                        {getWorkOrderResourceFlags(order).equipment && order.vehiclePatent && (
                           <span className="pill pill-pending" style={{ fontSize: '10px', padding: '2px 6px', backgroundColor: '#F1F5F9', color: '#334155' }}>
                             🚜 {order.vehiclePatent}
                           </span>
@@ -2695,7 +2729,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <input
                         type="date"
                         value={newOrder.executionDate || new Date().toISOString().split('T')[0]}
-                        onChange={e => setNewOrder({ ...newOrder, executionDate: e.target.value })}
+                        onChange={e => setNewOrder({ ...newOrder, ...getOrderDateMetadata(e.target.value) })}
                         style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid var(--slate-300)', fontWeight: 800, fontSize: '14px' }}
                         required
                       />

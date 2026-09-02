@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { WorkOrder, PlantArea, Sector, PlantEquipment, SubSector, WhiteLabelConfig, Machine } from '../types';
-import { Layers, Box, Users, Clock, AlertTriangle, ChevronRight, X, Filter, Activity, Cpu, Wrench, Truck, HardHat, Edit } from 'lucide-react';
+import { Layers, Box, Clock, X, Filter, Activity, Cpu, Truck, HardHat, Edit, MapPin, ChevronDown } from 'lucide-react';
 
 interface OperationalMapProps {
   workOrders: WorkOrder[];
@@ -13,9 +13,10 @@ interface OperationalMapProps {
   onEditWorkOrder?: (order: WorkOrder) => void;
 }
 
-type MetricType = 'VOLUME_M3' | 'MAN_HOURS' | 'OT_COUNT';
+type MetricType = 'VOLUME_M3' | 'RESOURCE_HOURS' | 'OT_COUNT';
 type ResourceFilterType = 'MANUAL' | 'EQUIPMENT';
 type TimeFilterType = 'ACTIVE_WEEK' | 'MONTH' | 'ALL';
+type StatusFilterType = 'ALL' | 'PENDING' | 'APPROVED' | 'CONTINGENCY';
 
 interface BeltNode {
   id: string;
@@ -37,17 +38,75 @@ interface DiagramConfig {
   edges: [string, string][];
 }
 
+interface MapMetrics {
+  totalM3: number;
+  totalHH: number;
+  totalHM: number;
+  totalOTs: number;
+  manualM3: number;
+  machineryM3: number;
+  matchingOrders: WorkOrder[];
+}
+
+const normalizeLabel = (value?: string) => (value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toUpperCase();
+
+const getResourceFlags = (order: WorkOrder) => {
+  const hasExplicitFlags = typeof order.hasManualLabor === 'boolean' || typeof order.hasEquipment === 'boolean';
+  if (hasExplicitFlags) {
+    return {
+      manual: order.hasManualLabor === true,
+      equipment: order.hasEquipment === true
+    };
+  }
+
+  // Compatibilidad conservadora para documentos históricos sin indicadores.
+  return {
+    manual: (order.headcount || 0) > 0 && (order.realHours || 0) > 0,
+    equipment: Boolean(order.vehiclePatent?.trim()) || (order.fleetTripsCount || 0) > 0 || (order.machineHours || 0) > 0
+  };
+};
+
+const getLocalDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getIsoWeek = (date: Date) => {
+  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = utcDate.getUTCDay() || 7;
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+  return Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+};
+
 export const OperationalMap: React.FC<OperationalMapProps> = ({
   workOrders = [],
+  plantAreas = [],
+  sectors = [],
+  equipments = [],
+  subSectors = [],
   whiteLabel,
   machines = [],
   onEditWorkOrder
 }) => {
   const [activeDiagramId, setActiveDiagramId] = useState<string>('primario');
-  const [activeMetric, setActiveMetric] = useState<MetricType>('VOLUME_M3');
-  const [resourceFilter, setResourceFilter] = useState<ResourceFilterType>('EQUIPMENT');
+  const [activeMetric, setActiveMetric] = useState<MetricType>('RESOURCE_HOURS');
+  const [resourceFilter, setResourceFilter] = useState<ResourceFilterType>('MANUAL');
   const [timeFilter, setTimeFilter] = useState<TimeFilterType>('ALL');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
   const [selectedBeltLabel, setSelectedBeltLabel] = useState<string | null>(null);
+  const [expandedWetSectorId, setExpandedWetSectorId] = useState<string | null>(null);
+
+  const now = new Date();
+  const activeWeek = getIsoWeek(now);
+  const currentMonth = getLocalDateKey(now).slice(0, 7);
 
   // Zaldívar Operational Diagrams Definition
   const DIAGRAMS: DiagramConfig[] = [
@@ -191,9 +250,12 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
       return nodeNumbers.length > 0 && nodeNumbers.every(n => otNumbers.includes(n));
     }
 
-    // Case 2: Node is a standard belt (e.g. "CT-32", "CT-1", "CT-106")
-    const nodeMatch = cleanNode.match(/\bCT-?0*(\d+)\b/i);
-    const otMatch = cleanOt.match(/\bCT-?0*(\d+)\b/i);
+    // Una OT de traspaso no debe iluminar además cada correa mencionada en su nombre.
+    if (otHasTraspaso) return false;
+
+    // Case 2: preserve alpha suffixes so CT-5, CT-5A and CT-5B stay distinct.
+    const nodeMatch = cleanNode.match(/\bCT-?0*(\d+[A-Z]?)\b/i);
+    const otMatch = cleanOt.match(/\bCT-?0*(\d+[A-Z]?)\b/i);
 
     if (nodeMatch && otMatch) {
       return nodeMatch[1] === otMatch[1];
@@ -205,93 +267,148 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
     return normNode === normOt;
   };
 
-  // Work Orders Filtered by Resource & Time (Non-exclusive)
-  const filteredOrders = workOrders.filter(o => {
-    if (timeFilter === 'ACTIVE_WEEK' && o.semana !== 33) return false;
-    
-    if (resourceFilter === 'EQUIPMENT') {
-      // Include any order that removed m3 OR used machinery OR has vehicle
-      return (o.cubicMetersRemoved && o.cubicMetersRemoved > 0) || o.hasEquipment || Boolean(o.vehiclePatent);
-    } else if (resourceFilter === 'MANUAL') {
-      // Include any order that used manual crew OR has real hours
-      return o.hasManualLabor || (o.realHours && o.realHours > 0) || (o.headcount && o.headcount > 0);
+  const orderMatchesPeriod = (order: WorkOrder) => {
+    if (timeFilter === 'ALL') return true;
+    const executionDate = order.executionDate ? new Date(`${order.executionDate}T12:00:00`) : null;
+    if (timeFilter === 'MONTH') {
+      return Boolean(order.executionDate?.startsWith(currentMonth));
     }
-    return true;
-  });
-
-  // Calculate Heatmap Metrics per Belt Node Label
-  const getBeltMetrics = (label: string) => {
-    const matchingOrders = filteredOrders.filter(o => {
-      const eqStr = `${o.equipmentName || ''} ${o.equipoCorrea || ''}`;
-      return isBeltMatch(label, eqStr);
-    });
-
-    const totalM3 = matchingOrders.reduce((sum, o) => sum + (o.cubicMetersRemoved || 0), 0);
-    const totalHH = matchingOrders.reduce((sum, o) => sum + (o.realHours || 0), 0);
-    const totalOTs = matchingOrders.length;
-
-    // Sub-breakdown of m3 by resource type
-    let manualM3 = 0;
-    let machineryM3 = 0;
-
-    const wPerDay = whiteLabel?.manualLaborConfig?.wheelbarrowsPerDay ?? 60;
-    const hEff = whiteLabel?.manualLaborConfig?.effectiveHoursPerDay ?? 6;
-    const capM3 = whiteLabel?.manualLaborConfig?.wheelbarrowCapacityM3 ?? 0.08;
-    const m3PerHour = (hEff > 0 ? wPerDay / hEff : 10) * capM3;
-
-    matchingOrders.forEach(o => {
-      let oManual = 0;
-      let oMachinery = 0;
-
-      if (o.hasManualLabor !== false) {
-        const hh = (o.headcount || 0) * (o.realHours || 0);
-        oManual = hh * m3PerHour;
-      }
-
-      if (o.hasEquipment !== false) {
-        const selectedMachine = (machines || []).find(m => m.patent === o.vehiclePatent);
-        const cap = selectedMachine?.capacityM3 ?? o.bucketCapacityM3 ?? 0;
-        oMachinery = (o.fleetTripsCount || 0) * cap;
-      }
-
-      if (o.hasManualLabor !== false && o.hasEquipment === false) {
-        oManual = o.cubicMetersRemoved || oManual;
-      } else if (o.hasEquipment !== false && o.hasManualLabor === false) {
-        oMachinery = o.cubicMetersRemoved || oMachinery;
-      }
-
-      manualM3 += oManual;
-      machineryM3 += oMachinery;
-    });
-
-    return { totalM3, totalHH, totalOTs, manualM3, machineryM3, matchingOrders };
+    if (executionDate && !Number.isNaN(executionDate.getTime())) {
+      return executionDate.getFullYear() === now.getFullYear() && getIsoWeek(executionDate) === activeWeek;
+    }
+    return order.semana === activeWeek;
   };
 
-  // Determine Heatmap Status Color
-  const getHeatmapColor = (label: string) => {
-    const { totalM3, totalHH, totalOTs } = getBeltMetrics(label);
-    
-    let isCritical = false;
-    let isMedium = false;
+  const orderMatchesStatus = (order: WorkOrder) => {
+    if (statusFilter === 'ALL') return true;
+    if (statusFilter === 'PENDING') return order.status === 'PENDIENTE_APROBACION_ITO';
+    if (statusFilter === 'APPROVED') return order.status === 'APROBADO_MANDANTE' || order.status === 'COMPLETADO';
+    return order.status === 'CONTINGENCIA' || order.status === 'RECHAZADO_CONTINGENCIA';
+  };
 
-    if (activeMetric === 'VOLUME_M3') {
-      if (totalM3 >= 30) isCritical = true;
-      else if (totalM3 > 0) isMedium = true;
-    } else if (activeMetric === 'MAN_HOURS') {
-      if (totalHH >= 24) isCritical = true;
-      else if (totalHH > 0) isMedium = true;
-    } else if (activeMetric === 'OT_COUNT') {
-      if (totalOTs >= 3) isCritical = true;
-      else if (totalOTs > 0) isMedium = true;
+  // Resource flags are the source of truth. Volume and personnel values are metrics, not classifiers.
+  const filteredOrders = workOrders.filter(order => {
+    if (!orderMatchesPeriod(order) || !orderMatchesStatus(order)) return false;
+    const flags = getResourceFlags(order);
+    return resourceFilter === 'MANUAL' ? flags.manual : flags.equipment;
+  });
+
+  const getOrderBreakdown = (order: WorkOrder) => {
+    const flags = getResourceFlags(order);
+    const totalHH = flags.manual ? (order.headcount || 0) * (order.realHours || 0) : 0;
+    const totalHM = flags.equipment ? (order.machineHours || 0) : 0;
+    const wheelbarrowsPerDay = whiteLabel?.manualLaborConfig?.wheelbarrowsPerDay ?? 60;
+    const effectiveHours = whiteLabel?.manualLaborConfig?.effectiveHoursPerDay ?? 6;
+    const wheelbarrowCapacity = whiteLabel?.manualLaborConfig?.wheelbarrowCapacityM3 ?? 0.08;
+    const manualRate = (effectiveHours > 0 ? wheelbarrowsPerDay / effectiveHours : 10) * wheelbarrowCapacity;
+    const machine = machines.find(item => item.patent === order.vehiclePatent);
+    const machineCapacity = machine?.capacityM3 ?? order.bucketCapacityM3 ?? 0;
+
+    let manualM3 = flags.manual ? totalHH * manualRate : 0;
+    let machineryM3 = flags.equipment ? (order.fleetTripsCount || 0) * machineCapacity : 0;
+
+    // A single-resource OT stores an authoritative total. Mixed OTs keep their calculated split.
+    if (flags.manual && !flags.equipment) manualM3 = order.cubicMetersRemoved ?? manualM3;
+    if (flags.equipment && !flags.manual) machineryM3 = order.cubicMetersRemoved ?? machineryM3;
+
+    return { totalHH, totalHM, manualM3, machineryM3 };
+  };
+
+  const getMetricsForOrders = (orders: WorkOrder[]): MapMetrics => {
+    let totalHH = 0;
+    let totalHM = 0;
+    let manualM3 = 0;
+    let machineryM3 = 0;
+    orders.forEach(order => {
+      const metrics = getOrderBreakdown(order);
+      totalHH += metrics.totalHH;
+      totalHM += metrics.totalHM;
+      manualM3 += metrics.manualM3;
+      machineryM3 += metrics.machineryM3;
+    });
+    return {
+      totalM3: resourceFilter === 'MANUAL' ? manualM3 : machineryM3,
+      totalHH,
+      totalHM,
+      totalOTs: orders.length,
+      manualM3,
+      machineryM3,
+      matchingOrders: orders
+    };
+  };
+
+  const getEquipmentToken = (value: string) => normalizeLabel(value).replace(/[^A-Z0-9]/g, '').match(/CT0*(\d+[A-Z]?)/)?.[1] || '';
+
+  // Prefer stable catalog IDs; retain text matching only for historical records.
+  const getBeltMetrics = (label: string) => {
+    const nodeToken = getEquipmentToken(label);
+    const catalogIds = equipments
+      .filter(item => nodeToken && (getEquipmentToken(item.code) === nodeToken || getEquipmentToken(item.name) === nodeToken))
+      .map(item => item.id);
+    const matchingOrders = filteredOrders.filter(order => {
+      if (order.equipmentId && catalogIds.includes(order.equipmentId)) return true;
+      const equipmentText = `${order.equipmentName || ''} ${order.equipoCorrea || ''}`;
+      return isBeltMatch(label, equipmentText);
+    });
+    return getMetricsForOrders(matchingOrders);
+  };
+
+  const wetArea = plantAreas.find(area => area.code === 'REAH' || normalizeLabel(area.name).includes('AREA HUMEDA'));
+  const wetSectors = sectors.filter(sector => wetArea && (sector.areaId === wetArea.id || normalizeLabel(sector.areaName) === normalizeLabel(wetArea.name)));
+  const wetSectorIds = new Set(wetSectors.map(sector => sector.id));
+  const wetOrders = filteredOrders.filter(order =>
+    Boolean(wetArea) && (order.areaId === wetArea?.id || wetSectorIds.has(order.sectorId || '') || normalizeLabel(order.areaName) === normalizeLabel(wetArea?.name))
+  );
+
+  const getWetSectorMetrics = (sector: Sector) => getMetricsForOrders(wetOrders.filter(order =>
+    order.sectorId === sector.id || normalizeLabel(order.sectorName) === normalizeLabel(sector.name)
+  ));
+
+  const getWetLocationMetrics = (location: SubSector) => getMetricsForOrders(wetOrders.filter(order => {
+    if (order.selectedSubSectorIds?.includes(location.id)) return true;
+    if (order.subSectorId === location.id) return true;
+    return (order.selectedSubSectorNames || []).some(name => normalizeLabel(name) === normalizeLabel(location.name))
+      || normalizeLabel(order.subSectorName) === normalizeLabel(location.name);
+  }));
+
+  const getMetricValue = (metrics: MapMetrics) => {
+    if (activeMetric === 'VOLUME_M3') return metrics.totalM3;
+    if (activeMetric === 'RESOURCE_HOURS') return resourceFilter === 'MANUAL' ? metrics.totalHH : metrics.totalHM;
+    return metrics.totalOTs;
+  };
+
+  const getMetricThresholds = () => {
+    if (activeMetric === 'VOLUME_M3') return { medium: 15, critical: 50, unit: 'm³', label: 'Volumen removido' };
+    if (activeMetric === 'RESOURCE_HOURS' && resourceFilter === 'MANUAL') return { medium: 15, critical: 40, unit: 'HH', label: 'Horas hombre' };
+    if (activeMetric === 'RESOURCE_HOURS') return { medium: 8, critical: 16, unit: 'HM', label: 'Horas máquina' };
+    return { medium: 1, critical: 3, unit: 'OT', label: 'Frecuencia de OT' };
+  };
+
+  const getHeatmapColorForMetrics = (metrics: MapMetrics) => {
+    if (metrics.totalOTs === 0) {
+      return { fill: '#F8FAFC', stroke: '#CBD5E1', text: '#64748B', badge: '⚪ SIN REGISTROS', pattern: false };
     }
-
-    if (isCritical) {
+    const value = getMetricValue(metrics);
+    const thresholds = getMetricThresholds();
+    if (value >= thresholds.critical) {
       return { fill: '#FEF2F2', stroke: '#EF4444', text: '#991B1B', badge: '🔴 CRÍTICO', pattern: true };
-    } else if (isMedium) {
-      return { fill: '#FFF7ED', stroke: '#F97316', text: '#C2410C', badge: '🟡 MEDIO', pattern: false };
-    } else {
-      return { fill: '#ECFDF5', stroke: '#10B981', text: '#047857', badge: '🟢 LIMPIO', pattern: false };
     }
+    if (value >= thresholds.medium) {
+      return { fill: '#FFF7ED', stroke: '#F97316', text: '#C2410C', badge: '🟡 MEDIO', pattern: false };
+    }
+    return { fill: '#ECFDF5', stroke: '#10B981', text: '#047857', badge: '🟢 NORMAL', pattern: false };
+  };
+
+  const getHeatmapColor = (label: string) => getHeatmapColorForMetrics(
+    activeDiagramId === 'humeda'
+      ? getWetLocationMetrics(subSectors.find(location => location.name === label) || { id: '', name: label, code: '' })
+      : getBeltMetrics(label)
+  );
+
+  const formatMetricValue = (metrics: MapMetrics) => {
+    const value = getMetricValue(metrics);
+    if (activeMetric === 'OT_COUNT') return `${value} ${value === 1 ? 'OT' : 'OTs'}`;
+    return `${value.toFixed(1)} ${getMetricThresholds().unit}`;
   };
 
   // Helper Node Anchor Routing
@@ -328,8 +445,24 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   const nodeMap: Record<string, BeltNode> = {};
   currentDiagram.nodes.forEach(n => nodeMap[n.id] = n);
 
-  // Selected Belt Metrics for Side Inspection Drawer
-  const selectedMetrics = selectedBeltLabel ? getBeltMetrics(selectedBeltLabel) : null;
+  const selectedWetLocation = selectedBeltLabel
+    ? subSectors.find(location => normalizeLabel(location.name) === normalizeLabel(selectedBeltLabel))
+    : undefined;
+  const selectedMetrics = selectedBeltLabel
+    ? (activeDiagramId === 'humeda' && selectedWetLocation
+      ? getWetLocationMetrics(selectedWetLocation)
+      : getBeltMetrics(selectedBeltLabel))
+    : null;
+  const wetAreaMetrics = getMetricsForOrders(wetOrders);
+  const wetLocationRanking = subSectors
+    .filter(location => wetSectorIds.has(location.sectorId || ''))
+    .map(location => ({ location, metrics: getWetLocationMetrics(location) }))
+    .filter(item => item.metrics.totalOTs > 0)
+    .sort((a, b) => getMetricValue(b.metrics) - getMetricValue(a.metrics))
+    .slice(0, 8);
+  const rankingMax = Math.max(1, ...wetLocationRanking.map(item => getMetricValue(item.metrics)));
+  const metricThresholds = getMetricThresholds();
+  const wetCriticalCount = wetLocationRanking.filter(item => getMetricValue(item.metrics) >= metricThresholds.critical).length;
 
   return (
     <div className="card" style={{ padding: '24px' }}>
@@ -338,15 +471,15 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--slate-900)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Layers style={{ color: 'var(--orange)' }} /> Mapa Operacional SVG & Heatmap de Planta (Zaldívar)
+            <Layers style={{ color: 'var(--orange)' }} /> Mapa Operacional y Heatmap de Planta (Zaldívar)
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--slate-600)', marginTop: '2px' }}>
-            Visualización gráfica en tiempo real de correas, volumen de material removido (m³), HH y criticidad
+            Visualización en tiempo real de ubicaciones, volumen removido, HH/HM y criticidad operacional
           </p>
         </div>
 
         {/* METRIC CONTROLLER BUTTONS */}
-        <div style={{ display: 'flex', gap: '8px', backgroundColor: 'var(--slate-100)', padding: '4px', borderRadius: '14px', border: '1px solid var(--slate-200)' }}>
+        <div className="operational-map-metrics" style={{ display: 'flex', gap: '8px', backgroundColor: 'var(--slate-100)', padding: '4px', borderRadius: '14px', border: '1px solid var(--slate-200)' }}>
           <button
             onClick={() => setActiveMetric('VOLUME_M3')}
             style={{
@@ -367,7 +500,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveMetric('MAN_HOURS')}
+            onClick={() => setActiveMetric('RESOURCE_HOURS')}
             style={{
               padding: '8px 14px',
               borderRadius: '10px',
@@ -375,14 +508,14 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
               fontSize: '11px',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeMetric === 'MAN_HOURS' ? 'var(--orange)' : 'transparent',
-              color: activeMetric === 'MAN_HOURS' ? '#FFF' : 'var(--slate-600)',
+              backgroundColor: activeMetric === 'RESOURCE_HOURS' ? 'var(--orange)' : 'transparent',
+              color: activeMetric === 'RESOURCE_HOURS' ? '#FFF' : 'var(--slate-600)',
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
             }}
           >
-            <Clock size={14} /> 👷 Horas Hombre (HH)
+            <Clock size={14} /> {resourceFilter === 'MANUAL' ? '👷 Horas Hombre (HH)' : '🚜 Horas Máquina (HM)'}
           </button>
 
           <button
@@ -430,10 +563,42 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
               {d.title}
             </button>
           ))}
+          <button
+            onClick={() => { setActiveDiagramId('humeda'); setSelectedBeltLabel(null); }}
+            className={`nav-item ${activeDiagramId === 'humeda' ? 'active' : ''}`}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '12px',
+              fontSize: '12px',
+              fontWeight: 900,
+              whiteSpace: 'nowrap',
+              backgroundColor: activeDiagramId === 'humeda' ? '#ECFEFF' : 'transparent',
+              color: activeDiagramId === 'humeda' ? '#0E7490' : 'var(--slate-600)',
+              borderRight: activeDiagramId === 'humeda' ? '4px solid #0891B2' : 'none'
+            }}
+          >
+            5. Área Húmeda (LIX-SX-EW-RO)
+          </button>
         </div>
 
-        {/* TIME FILTER */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div className="operational-map-filters" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="operational-resource-toggle" style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '12px', border: '1px solid var(--slate-200)', backgroundColor: '#FFFFFF' }}>
+            <button
+              onClick={() => { setResourceFilter('MANUAL'); setActiveMetric('RESOURCE_HOURS'); }}
+              className="btn"
+              style={{ padding: '7px 10px', fontSize: '11px', backgroundColor: resourceFilter === 'MANUAL' ? '#0284C7' : 'transparent', color: resourceFilter === 'MANUAL' ? '#FFF' : 'var(--slate-600)' }}
+            >
+              <HardHat size={14} /> Manual
+            </button>
+            <button
+              onClick={() => { setResourceFilter('EQUIPMENT'); setActiveMetric('VOLUME_M3'); }}
+              className="btn"
+              style={{ padding: '7px 10px', fontSize: '11px', backgroundColor: resourceFilter === 'EQUIPMENT' ? 'var(--orange)' : 'transparent', color: resourceFilter === 'EQUIPMENT' ? '#FFF' : 'var(--slate-600)' }}
+            >
+              <Truck size={14} /> Maquinaria
+            </button>
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800 }}>
             <Filter size={14} style={{ color: 'var(--slate-400)' }} />
             <span>Periodo:</span>
@@ -443,105 +608,148 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
               style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--slate-200)', fontSize: '11px', fontWeight: 800 }}
             >
               <option value="ALL">Histórico Consolidado</option>
-              <option value="ACTIVE_WEEK">Semana Activa (W33)</option>
+              <option value="ACTIVE_WEEK">Semana Activa (W{activeWeek})</option>
+              <option value="MONTH">Mes actual</option>
             </select>
           </div>
+          <select
+            aria-label="Filtrar por estado de orden"
+            value={statusFilter}
+            onChange={event => setStatusFilter(event.target.value as StatusFilterType)}
+            style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--slate-200)', fontSize: '11px', fontWeight: 800 }}
+          >
+            <option value="ALL">Todos los estados</option>
+            <option value="PENDING">Pendientes</option>
+            <option value="APPROVED">Aprobadas / completadas</option>
+            <option value="CONTINGENCY">Contingencias</option>
+          </select>
         </div>
       </div>
 
       {/* HEATMAP LEGEND BAR */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', padding: '10px 16px', backgroundColor: 'var(--slate-50)', borderRadius: '12px', border: '1px solid var(--slate-200)', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--slate-400)', letterSpacing: '0.05em' }}>
-          Nivel de Calor ({resourceFilter === 'EQUIPMENT' ? '📦 Volumen m³' : '👷 Horas Hombre'}):
+          Nivel de calor ({metricThresholds.label}):
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#991B1B' }}>
           <span style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: '#FEF2F2', border: '2px solid #EF4444', display: 'inline-block' }} />
-          🔴 Crítico ({resourceFilter === 'EQUIPMENT' ? '>50 m³' : '>40 HH'})
+          🔴 Crítico (≥ {metricThresholds.critical} {metricThresholds.unit})
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#C2410C' }}>
           <span style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: '#FFF7ED', border: '2px solid #F97316', display: 'inline-block' }} />
-          🟡 Medio ({resourceFilter === 'EQUIPMENT' ? '15-50 m³' : '15-40 HH'})
+          🟡 Medio ({metricThresholds.medium}–{metricThresholds.critical - 1} {metricThresholds.unit})
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#047857' }}>
           <span style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: '#ECFDF5', border: '2px solid #10B981', display: 'inline-block' }} />
-          🟢 Normal ({resourceFilter === 'EQUIPMENT' ? '<15 m³' : '<15 HH'})
+          🟢 Normal (&lt; {metricThresholds.medium} {metricThresholds.unit})
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#64748B' }}>
+          <span style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: '#F8FAFC', border: '2px solid #CBD5E1', display: 'inline-block' }} />
+          ⚪ Sin registros
         </div>
       </div>
 
       {/* MAIN LAYOUT CONTAINER: SVG DIAGRAM CANVAS WITH FLOATING TOP-RIGHT TOGGLE */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', alignItems: 'start' }}>
-        
-        {/* SVG DIAGRAM CANVAS WITH RELATIVE POSITIONING */}
-        <div style={{ position: 'relative', backgroundColor: '#FFFFFF', borderRadius: '24px', border: '1px solid var(--slate-200)', padding: '20px', overflowX: 'auto', boxShadow: 'var(--shadow-sm)' }}>
-          
-          {/* FLOATING TOP-RIGHT DIDACTIC RESOURCE TOGGLE SWITCHER */}
-          <div 
-            style={{ 
-              position: 'absolute', 
-              top: '20px', 
-              right: '20px', 
-              zIndex: 20, 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '4px', 
-              backgroundColor: '#FFFFFF', 
-              padding: '6px', 
-              borderRadius: '16px', 
-              border: '2px solid var(--orange)', 
-              boxShadow: 'var(--shadow-md)' 
-            }}
-          >
-            <button
-              onClick={() => {
-                setResourceFilter('EQUIPMENT');
-                setActiveMetric('VOLUME_M3');
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 14px',
-                borderRadius: '12px',
-                fontWeight: 900,
-                fontSize: '12px',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                backgroundColor: resourceFilter === 'EQUIPMENT' ? 'var(--orange)' : 'transparent',
-                color: resourceFilter === 'EQUIPMENT' ? '#FFFFFF' : 'var(--slate-600)',
-                boxShadow: resourceFilter === 'EQUIPMENT' ? '0 4px 12px rgba(255, 122, 0, 0.3)' : 'none'
-              }}
-            >
-              <Truck size={16} /> 🚜 Maquinaria (Flota)
-            </button>
+        {activeDiagramId === 'humeda' ? (
+          <div className="wet-area-dashboard">
+            <div className="wet-area-kpis">
+              <div className="wet-kpi-card"><span>OT visibles</span><strong>{wetAreaMetrics.totalOTs}</strong></div>
+              <div className="wet-kpi-card"><span>{resourceFilter === 'MANUAL' ? 'Horas hombre' : 'Horas máquina'}</span><strong>{resourceFilter === 'MANUAL' ? wetAreaMetrics.totalHH.toFixed(1) : wetAreaMetrics.totalHM.toFixed(1)}</strong></div>
+              <div className="wet-kpi-card"><span>Volumen {resourceFilter === 'MANUAL' ? 'manual' : 'maquinaria'}</span><strong>{wetAreaMetrics.totalM3.toFixed(1)} m³</strong></div>
+              <div className="wet-kpi-card wet-kpi-critical"><span>Ubicaciones críticas</span><strong>{wetCriticalCount}</strong></div>
+            </div>
 
-            <button
-              onClick={() => {
-                setResourceFilter('MANUAL');
-                setActiveMetric('MAN_HOURS');
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 14px',
-                borderRadius: '12px',
-                fontWeight: 900,
-                fontSize: '12px',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                backgroundColor: resourceFilter === 'MANUAL' ? '#0284C7' : 'transparent',
-                color: resourceFilter === 'MANUAL' ? '#FFFFFF' : 'var(--slate-600)',
-                boxShadow: resourceFilter === 'MANUAL' ? '0 4px 12px rgba(2, 132, 199, 0.3)' : 'none'
-              }}
-            >
-              <HardHat size={16} /> 👷 Trabajo Manual
-            </button>
+            {!wetArea || wetSectors.length === 0 ? (
+              <div className="wet-empty-state">
+                <MapPin size={28} />
+                <strong>No se encontró la parametrización del Área Húmeda.</strong>
+                <span>Configura el área y sus sectores para habilitar esta visualización.</span>
+              </div>
+            ) : (
+              <div className="wet-area-layout">
+                <div className="wet-sector-grid">
+                  {wetSectors.map(sector => {
+                    const metrics = getWetSectorMetrics(sector);
+                    const color = getHeatmapColorForMetrics(metrics);
+                    const isExpanded = expandedWetSectorId === sector.id;
+                    const locations = subSectors.filter(location =>
+                      location.sectorId === sector.id || normalizeLabel(location.sectorName) === normalizeLabel(sector.name)
+                    );
+                    return (
+                      <section key={sector.id} className="wet-sector-card" style={{ borderColor: color.stroke }}>
+                        <button
+                          type="button"
+                          className="wet-sector-header"
+                          onClick={() => setExpandedWetSectorId(isExpanded ? null : sector.id)}
+                          aria-expanded={isExpanded}
+                        >
+                          <span className="wet-sector-icon" style={{ backgroundColor: color.fill, color: color.text }}><MapPin size={18} /></span>
+                          <span className="wet-sector-title"><strong>{sector.name}</strong><small>{color.badge}</small></span>
+                          <span className="wet-sector-value" style={{ color: color.text }}>{formatMetricValue(metrics)}</span>
+                          <ChevronDown size={18} className={isExpanded ? 'is-expanded' : ''} />
+                        </button>
+                        <div className="wet-sector-summary">
+                          <span>{metrics.totalOTs} OT</span>
+                          <span>{metrics.totalHH.toFixed(1)} HH</span>
+                          <span>{metrics.totalHM.toFixed(1)} HM</span>
+                          <span>{metrics.totalM3.toFixed(1)} m³</span>
+                        </div>
+                        {isExpanded && (
+                          <div className="wet-location-list">
+                            {locations.length === 0 ? (
+                              <div className="wet-location-empty">Sin ubicaciones parametrizadas.</div>
+                            ) : locations.map(location => {
+                              const locationMetrics = getWetLocationMetrics(location);
+                              const locationColor = getHeatmapColorForMetrics(locationMetrics);
+                              return (
+                                <button
+                                  type="button"
+                                  key={location.id}
+                                  className="wet-location-row"
+                                  onClick={() => setSelectedBeltLabel(location.name)}
+                                >
+                                  <span className="wet-status-dot" style={{ backgroundColor: locationColor.stroke }} />
+                                  <span className="wet-location-name">{location.name}</span>
+                                  <strong style={{ color: locationColor.text }}>{formatMetricValue(locationMetrics)}</strong>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </section>
+                    );
+                  })}
+                </div>
+
+                <aside className="wet-ranking-card">
+                  <div className="wet-ranking-heading">
+                    <div><span>Priorización operacional</span><h3>Ubicaciones con mayor carga</h3></div>
+                    <Activity size={20} />
+                  </div>
+                  {wetLocationRanking.length === 0 ? (
+                    <div className="wet-location-empty">No existen ubicaciones con OT para los filtros seleccionados.</div>
+                  ) : wetLocationRanking.map(({ location, metrics }, index) => {
+                    const color = getHeatmapColorForMetrics(metrics);
+                    const width = Math.max(8, (getMetricValue(metrics) / rankingMax) * 100);
+                    return (
+                      <button type="button" key={location.id} className="wet-ranking-row" onClick={() => setSelectedBeltLabel(location.name)}>
+                        <span className="wet-ranking-label"><b>{index + 1}</b><span>{location.name}</span><strong>{formatMetricValue(metrics)}</strong></span>
+                        <span className="wet-ranking-track"><span style={{ width: `${width}%`, backgroundColor: color.stroke }} /></span>
+                      </button>
+                    );
+                  })}
+                </aside>
+              </div>
+            )}
           </div>
+        ) : (
+        /* SVG DIAGRAM CANVAS WITH RELATIVE POSITIONING */
+        <div className="operational-svg-canvas" style={{ position: 'relative', backgroundColor: '#FFFFFF', borderRadius: '24px', border: '1px solid var(--slate-200)', padding: '20px', overflowX: 'auto', boxShadow: 'var(--shadow-sm)' }}>
+
           <svg
             viewBox={`0 0 ${currentDiagram.w} ${currentDiagram.h}`}
             style={{ width: '100%', height: 'auto', display: 'block', backgroundColor: '#FFFFFF' }}
@@ -648,11 +856,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
 
                   {/* METRIC BADGE CENTERED ATOP NODE WITH DYNAMIC AUTO-WIDTH & DROP SHADOW */}
                   {metrics.totalOTs > 0 && (() => {
-                    const valStr = activeMetric === 'VOLUME_M3' 
-                      ? `${Math.round(metrics.totalM3)} m³` 
-                      : activeMetric === 'MAN_HOURS' 
-                        ? `${metrics.totalHH}h` 
-                        : `${metrics.totalOTs} OTs`;
+                    const valStr = formatMetricValue(metrics);
                     
                     const badgeWidth = Math.max(36, valStr.length * 6.5 + 14);
                     const badgeHeight = 18;
@@ -688,6 +892,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             })}
           </svg>
         </div>
+        )}
 
       {/* POP-UP MODAL EMERGENTE DE INSPECCIÓN DE CORREA / SECTOR */}
       {selectedBeltLabel && selectedMetrics && (
@@ -750,7 +955,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             {/* ACCUMULATED METRICS SUMMARY CARDS (3 DIDACTIC KPIS FOR TOTAL, MANUAL & MACHINERY) */}
             <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(130px, 100%), 1fr))', gap: '10px' }}>
               <div style={{ backgroundColor: '#FFF7ED', padding: '12px', borderRadius: '14px', border: '1px solid #FFEDD5' }}>
-                <div style={{ fontSize: '10px', fontWeight: 900, color: '#C2410C', textTransform: 'uppercase' }}>📦 Volumen Total</div>
+                <div style={{ fontSize: '10px', fontWeight: 900, color: '#C2410C', textTransform: 'uppercase' }}>📦 Volumen del filtro</div>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--orange)' }}>{selectedMetrics.totalM3.toFixed(1)} m³</div>
                 <div style={{ fontSize: '10px', color: 'var(--slate-500)', marginTop: '2px', fontWeight: 700 }}>{selectedMetrics.totalOTs} OTs Totales</div>
               </div>
@@ -759,7 +964,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                 <div style={{ fontSize: '10px', fontWeight: 900, color: '#047857', textTransform: 'uppercase' }}>👷 Aporte Manual</div>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: '#059669' }}>{selectedMetrics.manualM3.toFixed(1)} m³</div>
                 <div style={{ fontSize: '10px', color: '#047857', marginTop: '2px', fontWeight: 800 }}>
-                  {selectedMetrics.totalM3 > 0 ? `${((selectedMetrics.manualM3 / selectedMetrics.totalM3) * 100).toFixed(0)}% del total` : '0%'}
+                  {selectedMetrics.totalHH.toFixed(1)} HH
                 </div>
               </div>
 
@@ -767,7 +972,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                 <div style={{ fontSize: '10px', fontWeight: 900, color: '#0369A1', textTransform: 'uppercase' }}>🚜 Aporte Maquinaria</div>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: '#0284C7' }}>{selectedMetrics.machineryM3.toFixed(1)} m³</div>
                 <div style={{ fontSize: '10px', color: '#0369A1', marginTop: '2px', fontWeight: 800 }}>
-                  {selectedMetrics.totalM3 > 0 ? `${((selectedMetrics.machineryM3 / selectedMetrics.totalM3) * 100).toFixed(0)}% del total` : '0%'}
+                  {selectedMetrics.totalHM.toFixed(1)} HM
                 </div>
               </div>
             </div>
@@ -780,31 +985,13 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
 
               {selectedMetrics.matchingOrders.length === 0 ? (
                 <div style={{ fontSize: '12px', color: 'var(--slate-400)', fontStyle: 'italic', padding: '16px', backgroundColor: 'var(--slate-50)', borderRadius: '14px', textAlign: 'center' }}>
-                  Sin Órdenes de Trabajo registradas en este periodo para esta correa.
+                  Sin Órdenes de Trabajo registradas en este periodo para esta ubicación.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' }}>
                   {selectedMetrics.matchingOrders.map(o => {
-                    let oManualM3 = 0;
-                    let oMachineryM3 = 0;
-                    const wPerDay = whiteLabel?.manualLaborConfig?.wheelbarrowsPerDay ?? 60;
-                    const hEff = whiteLabel?.manualLaborConfig?.effectiveHoursPerDay ?? 6;
-                    const capM3 = whiteLabel?.manualLaborConfig?.wheelbarrowCapacityM3 ?? 0.08;
-                    const m3PerHour = (hEff > 0 ? wPerDay / hEff : 10) * capM3;
-
-                    if (o.hasManualLabor !== false) {
-                      oManualM3 = (o.headcount || 0) * (o.realHours || 0) * m3PerHour;
-                    }
-                    if (o.hasEquipment !== false) {
-                      const selectedMachine = (machines || []).find(m => m.patent === o.vehiclePatent);
-                      const cap = selectedMachine?.capacityM3 ?? o.bucketCapacityM3 ?? 0;
-                      oMachineryM3 = (o.fleetTripsCount || 0) * cap;
-                    }
-                    if (o.hasManualLabor !== false && o.hasEquipment === false) {
-                      oManualM3 = o.cubicMetersRemoved || oManualM3;
-                    } else if (o.hasEquipment !== false && o.hasManualLabor === false) {
-                      oMachineryM3 = o.cubicMetersRemoved || oMachineryM3;
-                    }
+                    const breakdown = getOrderBreakdown(o);
+                    const flags = getResourceFlags(o);
 
                     return (
                       <div key={o.id} style={{ padding: '12px 14px', borderRadius: '14px', backgroundColor: 'var(--slate-50)', border: '1px solid var(--slate-200)', fontSize: '13px' }}>
@@ -834,14 +1021,14 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                         </div>
 
                         <div style={{ display: 'flex', gap: '6px', margin: '4px 0', flexWrap: 'wrap' }}>
-                          {o.hasManualLabor !== false && (
+                          {flags.manual && (
                             <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '6px', backgroundColor: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: 800 }}>
-                              👷 Manual: {oManualM3.toFixed(1)} m³ ({o.headcount || 1} pers)
+                              👷 Manual: {breakdown.manualM3.toFixed(1)} m³ · {breakdown.totalHH.toFixed(1)} HH
                             </span>
                           )}
-                          {o.hasEquipment !== false && (
+                          {flags.equipment && (
                             <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '6px', backgroundColor: '#F0F9FF', color: '#0369A1', border: '1px solid #7DD3FC', fontWeight: 800 }}>
-                              🚜 Maquinaria: {oMachineryM3.toFixed(1)} m³ ({o.fleetTripsCount || 0} vueltas)
+                              🚜 Maquinaria: {breakdown.machineryM3.toFixed(1)} m³ · {breakdown.totalHM.toFixed(1)} HM
                             </span>
                           )}
                         </div>
