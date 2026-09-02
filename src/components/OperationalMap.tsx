@@ -112,7 +112,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   const DIAGRAMS: DiagramConfig[] = [
     {
       id: 'primario',
-      title: '1. Chancado Primario & Secundario',
+      title: '1. Chancado Primario',
       w: 1200,
       h: 620,
       nodes: [
