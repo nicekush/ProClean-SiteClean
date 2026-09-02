@@ -33,6 +33,28 @@ interface PersonnelCoverageModuleProps {
   userEmail?: string;
 }
 
+interface WizardSlotAssignment {
+  personId: string;
+  personName: string;
+  personSource?: 'ROSTER' | 'MANUAL_ENTRY';
+}
+
+const normalizePersonName = (value: string) => value.trim().replace(/\s+/g, ' ');
+
+const getComparablePersonName = (value: string) => normalizePersonName(value)
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLocaleLowerCase('es-CL');
+
+const getManualPersonId = (name: string) => {
+  const comparableName = getComparablePersonName(name);
+  let hash = 5381;
+  for (let i = 0; i < comparableName.length; i += 1) {
+    hash = ((hash << 5) + hash) ^ comparableName.charCodeAt(i);
+  }
+  return `manual_${(hash >>> 0).toString(36)}`;
+};
+
 export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = ({
   personnel = [],
   cargos = [],
@@ -54,7 +76,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   const [wizardCargoCounts, setWizardCargoCounts] = useState<Record<string, number>>({});
   
   // Slot Assignments Map in Wizard: key = `${cargoId}_${slotIndex}` -> personId
-  const [wizardSlotAssignments, setWizardSlotAssignments] = useState<Record<string, { personId: string; personName: string }>>({});
+  const [wizardSlotAssignments, setWizardSlotAssignments] = useState<Record<string, WizardSlotAssignment>>({});
   const [slotSearchQuery, setSlotSearchQuery] = useState<Record<string, string>>({});
 
   // Active Date string
@@ -139,12 +161,16 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
     if (existing.length > 0) {
       const cargoIds = Array.from(new Set(existing.map(a => a.cargoId)));
       const counts: Record<string, number> = {};
-      const slots: Record<string, { personId: string; personName: string }> = {};
+      const slots: Record<string, WizardSlotAssignment> = {};
 
       existing.forEach(a => {
         counts[a.cargoId] = (counts[a.cargoId] || 0) + 1;
         const slotIdx = a.slotIndex || 0;
-        slots[`${a.cargoId}_${slotIdx}`] = { personId: a.personId || '', personName: a.personName || '' };
+        slots[`${a.cargoId}_${slotIdx}`] = {
+          personId: a.personId || '',
+          personName: a.personName || '',
+          personSource: a.personSource || (a.personId?.startsWith('manual_') ? 'MANUAL_ENTRY' : 'ROSTER')
+        };
       });
 
       setWizardSelectedCargoIds(cargoIds);
@@ -217,9 +243,34 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
     const key = `${cargoId}_${slotIdx}`;
     setWizardSlotAssignments(prev => ({
       ...prev,
-      [key]: { personId: person.id, personName: person.nombre }
+      [key]: { personId: person.id, personName: person.nombre, personSource: 'ROSTER' }
     }));
     // Clear search query for this slot
+    setSlotSearchQuery(prev => ({ ...prev, [key]: '' }));
+  };
+
+  // Assign a typed name without silently adding it to the official personnel roster.
+  const handleAssignTypedPersonToSlot = (cargoId: string, slotIdx: number, rawName: string) => {
+    const personName = normalizePersonName(rawName);
+    if (personName.length < 2) return;
+
+    const comparableName = getComparablePersonName(personName);
+    const rosterMatch = personnel.find(person => getComparablePersonName(person.nombre) === comparableName);
+    if (rosterMatch) {
+      if (!assignedPersonIdsSet.has(rosterMatch.id)) {
+        handleAssignPersonToSlot(cargoId, slotIdx, rosterMatch);
+      }
+      return;
+    }
+
+    const personId = getManualPersonId(personName);
+    if (assignedPersonIdsSet.has(personId)) return;
+
+    const key = `${cargoId}_${slotIdx}`;
+    setWizardSlotAssignments(prev => ({
+      ...prev,
+      [key]: { personId, personName, personSource: 'MANUAL_ENTRY' }
+    }));
     setSlotSearchQuery(prev => ({ ...prev, [key]: '' }));
   };
 
@@ -265,6 +316,9 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
           shiftId: assignmentShift,
           personId: slotData.personId,
           personName: slotData.personName,
+          ...(slotData.personId ? {
+            personSource: slotData.personSource || (slotData.personId.startsWith('manual_') ? 'MANUAL_ENTRY' : 'ROSTER')
+          } : {}),
           userEmail
         });
       }
@@ -1065,12 +1119,22 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                       const slotKey = `${cargoId}_${slotIdx}`;
                       const currentAssigned = wizardSlotAssignments[slotKey];
                       const query = slotSearchQuery[slotKey] || '';
+                      const normalizedQuery = normalizePersonName(query);
+                      const comparableQuery = getComparablePersonName(normalizedQuery);
 
                       const matchingPeople = groupPersonnel.filter(p => {
                         if (assignedPersonIdsSet.has(p.id) && currentAssigned?.personId !== p.id) return false;
                         if (!query) return true;
                         return p.nombre.toLowerCase().includes(query.toLowerCase());
                       });
+                      const exactRosterMatch = normalizedQuery.length >= 2
+                        ? personnel.find(p => getComparablePersonName(p.nombre) === comparableQuery)
+                        : undefined;
+                      const typedPersonId = normalizedQuery.length >= 2 ? getManualPersonId(normalizedQuery) : '';
+                      const typedNameAlreadyAssigned = Boolean(typedPersonId && assignedPersonIdsSet.has(typedPersonId));
+                      const rosterMatchAlreadyAssigned = Boolean(exactRosterMatch && assignedPersonIdsSet.has(exactRosterMatch.id));
+                      const rosterMatchAvailableInGroup = Boolean(exactRosterMatch && matchingPeople.some(p => p.id === exactRosterMatch.id));
+                      const canAssignTypedName = normalizedQuery.length >= 2 && !exactRosterMatch && !typedNameAlreadyAssigned;
 
                       return (
                         <div 
@@ -1104,9 +1168,14 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                           </div>
 
                           {currentAssigned?.personId ? (
-                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#166534', backgroundColor: '#DCFCE7', padding: '10px 14px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#166534', backgroundColor: '#DCFCE7', padding: '10px 14px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               <span style={{ fontSize: '18px' }}>✅</span>
                               <span>{currentAssigned.personName}</span>
+                              {currentAssigned.personSource === 'MANUAL_ENTRY' && (
+                                <span style={{ marginLeft: 'auto', color: '#9A3412', backgroundColor: '#FFEDD5', padding: '3px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: 900 }}>
+                                  NOMBRE INGRESADO
+                                </span>
+                              )}
                             </div>
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1117,6 +1186,13 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                                 onChange={e => {
                                   const val = e.target.value;
                                   setSlotSearchQuery(prev => ({ ...prev, [slotKey]: val }));
+                                }}
+                                onKeyDown={event => {
+                                  if (event.key !== 'Enter') return;
+                                  event.preventDefault();
+                                  if (canAssignTypedName || (rosterMatchAvailableInGroup && !rosterMatchAlreadyAssigned)) {
+                                    handleAssignTypedPersonToSlot(cargoId, slotIdx, normalizedQuery);
+                                  }
                                 }}
                                 style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '2px solid #CBD5E1', fontSize: '13px', fontWeight: 900, color: '#0F172A', backgroundColor: '#FFF', outline: 'none', boxSizing: 'border-box' }}
                               />
@@ -1146,6 +1222,28 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                                   </button>
                                 ))}
                               </div>
+
+                              {canAssignTypedName && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAssignTypedPersonToSlot(cargoId, slotIdx, normalizedQuery)}
+                                  style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1.5px dashed #F97316', backgroundColor: '#FFF7ED', color: '#C2410C', fontSize: '12px', fontWeight: 900, cursor: 'pointer', textAlign: 'left' }}
+                                >
+                                  ➕ Usar “{normalizedQuery}” como nombre ingresado
+                                </button>
+                              )}
+
+                              {(typedNameAlreadyAssigned || rosterMatchAlreadyAssigned) && normalizedQuery.length >= 2 && (
+                                <div style={{ color: '#B45309', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '8px 10px', fontSize: '11px', fontWeight: 800 }}>
+                                  Esta persona ya está asignada en otro cargo.
+                                </div>
+                              )}
+
+                              {exactRosterMatch && !rosterMatchAlreadyAssigned && !rosterMatchAvailableInGroup && (
+                                <div style={{ color: '#475569', backgroundColor: '#F8FAFC', borderRadius: '10px', padding: '8px 10px', fontSize: '11px', fontWeight: 800 }}>
+                                  El nombre ya existe en la nómina de otro grupo. Selecciona el grupo correspondiente para asignarlo.
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

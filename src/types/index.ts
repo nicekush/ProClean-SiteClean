@@ -267,6 +267,7 @@ export interface DailyPersonnelAssignment {
   shiftId: string;
   personId: string;
   personName: string;
+  personSource?: 'ROSTER' | 'MANUAL_ENTRY';
   userEmail?: string;
   createdAt?: string;
 }
