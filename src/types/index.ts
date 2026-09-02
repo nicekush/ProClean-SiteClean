@@ -10,6 +10,7 @@ export interface UserAccount {
   email: string;
   password?: string;
   role: UserRole;
+  tenantId?: string;
   contractId?: string;
   active: boolean;
   avatarColor?: string;
@@ -217,6 +218,7 @@ export interface WhiteLabelConfig {
 
 export interface PersonnelMember {
   id: string;
+  tenantId?: string;
   nombre: string;
   rut?: string;
   grupo: 'A' | 'B' | 'AMBOS';
@@ -228,6 +230,7 @@ export interface PersonnelMember {
 
 export interface CargoConfig {
   id: string;
+  tenantId?: string;
   nombre: string;
   code?: string;
   restrictedAreaIds?: string[];
@@ -243,6 +246,7 @@ export interface AreaCargoTarget {
 
 export interface CoverageArea {
   id: string;
+  tenantId?: string;
   name: string;
   code: string;
   turnoId: 't_dia' | 't_noche' | 't_ambos' | 't_4x3';
@@ -251,6 +255,7 @@ export interface CoverageArea {
 
 export interface DailyPersonnelAssignment {
   id: string;
+  tenantId?: string;
   areaId: string;
   cargoReqId?: string;
   cargoId: string;
@@ -264,4 +269,3 @@ export interface DailyPersonnelAssignment {
   userEmail?: string;
   createdAt?: string;
 }
-

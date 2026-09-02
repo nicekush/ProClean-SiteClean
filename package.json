@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:rules": "firebase emulators:exec --only firestore \"node --test tests/firestore.rules.test.mjs\"",
+    "backup:firestore": "node scripts/backup-firestore.mjs",
+    "diagnose:firebase": "node scripts/check-firebase-cloud-status.mjs",
+    "migrate:auth": "node scripts/migrate-firebase-auth.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
@@ -22,10 +26,13 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "firebase-admin": "^14.3.0",
+    "firebase-tools": "^15.28.2",
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"

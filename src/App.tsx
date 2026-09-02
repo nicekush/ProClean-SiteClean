@@ -29,32 +29,31 @@ import type {
   CoverageArea
 } from './types';
 import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
-import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncAllWorkOrdersToFirebase, syncWorkOrderToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, deleteFirebaseUser, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, subscribeFirebaseCollection, subscribeFirebaseCargos, syncCargoToFirebase, deleteCargoFromFirebase, seedOfficialDatabaseToFirebase } from './api/firebase';
+import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncWorkOrderToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, fetchFirebaseCollectionByField, subscribeFirebaseCollection, subscribeFirebaseCollectionByField, subscribeFirebaseCollectionByFields, subscribeFirebaseCargos, replaceFirebaseCollection } from './api/firebase';
 import { 
   fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
   saveContracts as apiSaveContracts, 
   saveShifts as apiSaveShifts, 
   saveContingencies as apiSaveContingencies, 
-  saveWorkOrders as apiSaveWorkOrders, 
   savePlantAreas as apiSavePlantAreas,
   saveSectors as apiSaveSectors, 
   saveSubSectors as apiSaveSubSectors,
   saveMachines as apiSaveMachines, 
   saveWorkers as apiSaveWorkers, 
   createAuditLogEntry as apiCreateAuditLog,
-  resetDatabaseBlankSlate,
-  processOfflineQueue,
-  getOfflineQueue
+  resetDatabaseBlankSlate
 } from './api/client';
 import initialDbData from '../data/db.json';
+import { isFirebaseAuthRequired, logoutFromFirebase, subscribeFirebaseSession } from './api/auth';
 import { ShieldCheck, Database, Wifi, WifiOff, LogOut, UserCheck, HardHat, Shield, Wrench, Menu, RefreshCw } from 'lucide-react';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('work-orders');
   const [dbConnected, setDbConnected] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
-  const [offlinePendingCount, setOfflinePendingCount] = useState<number>(() => getOfflineQueue().length);
+  const [pendingWorkOrderIds, setPendingWorkOrderIds] = useState<Set<string>>(() => new Set());
+  const [isReadingFromCache, setIsReadingFromCache] = useState<boolean>(false);
   const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
 
   // Mobile Drawer State
@@ -62,12 +61,23 @@ export function App() {
 
   // Authenticated User Session State
   const [authenticatedUser, setAuthenticatedUser] = useState<UserAccount | null>(() => {
+    if (isFirebaseAuthRequired) return null;
     const saved = localStorage.getItem('siteclean_session');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { return null; }
     }
     return null;
   });
+
+  useEffect(() => {
+    if (!isFirebaseAuthRequired) return;
+    return subscribeFirebaseSession(user => setAuthenticatedUser(user));
+  }, []);
+
+  const activeTenantId = authenticatedUser?.tenantId || 'tenant_cmz';
+  const dataAccessKey = authenticatedUser
+    ? `${authenticatedUser.id}:${activeTenantId}:${authenticatedUser.role}`
+    : '';
 
   // Users Accounts Database State
   const [users, setUsers] = useState<UserAccount[]>([]);
@@ -172,23 +182,49 @@ export function App() {
 
   // Real-time Cloud Firebase Firestore Listener for Dotación & Cobertura (Sync PC & Mobile)
   useEffect(() => {
-    if (!isFirebaseConfigured) return;
+    if (!isFirebaseConfigured || !dataAccessKey) return;
 
-    const unsubAreas = subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', (items) => {
-      setCoverageAreas(items || []);
-    });
+    const tenantId = activeTenantId;
+    const unsubAreas = isFirebaseAuthRequired
+      ? subscribeFirebaseCollectionByField<CoverageArea>('proclean_coverageAreas', 'tenantId', tenantId, items => {
+          setCoverageAreas(items || []);
+        })
+      : subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', items => {
+          setCoverageAreas(items || []);
+        });
 
-    const unsubCargos = subscribeFirebaseCargos((items) => {
-      setCargos(items || []);
-    });
+    const unsubCargos = isFirebaseAuthRequired
+      ? subscribeFirebaseCollectionByField<CargoConfig>('proclean_cargos', 'tenantId', tenantId, items => {
+          setCargos(items || []);
+        })
+      : subscribeFirebaseCargos(items => {
+          setCargos(items || []);
+        });
 
-    const unsubPersonnel = subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', (items) => {
-      setPersonnel(items || []);
-    });
+    const unsubPersonnel = isFirebaseAuthRequired
+      ? subscribeFirebaseCollectionByField<PersonnelMember>('proclean_personnel', 'tenantId', tenantId, items => {
+          setPersonnel(items || []);
+        })
+      : subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', items => {
+          setPersonnel(items || []);
+        });
 
-    const unsubAsgs = subscribeFirebaseCollection<DailyPersonnelAssignment>('proclean_dailyAssignments', (items) => {
-      setDailyAssignments(items || []);
-    });
+    const today = new Date().toISOString().split('T')[0];
+    const unsubAsgs = isFirebaseAuthRequired
+      ? subscribeFirebaseCollectionByFields<DailyPersonnelAssignment>(
+          'proclean_dailyAssignments',
+          [
+            { fieldName: 'tenantId', fieldValue: activeTenantId },
+            { fieldName: 'fecha', fieldValue: today }
+          ],
+          items => setDailyAssignments(items || [])
+        )
+      : subscribeFirebaseCollectionByField<DailyPersonnelAssignment>(
+          'proclean_dailyAssignments',
+          'fecha',
+          today,
+          items => setDailyAssignments(items || [])
+        );
 
     return () => {
       unsubAreas?.();
@@ -196,20 +232,15 @@ export function App() {
       unsubPersonnel?.();
       unsubAsgs?.();
     };
-  }, []);
+  }, [dataAccessKey, activeTenantId]);
 
-  // Monitor Network Online/Offline and auto-process offline queue
+  // Firestore owns the offline queue. Browser network events only inform the
+  // user; pending writes are confirmed by snapshot metadata, never by a timer.
   useEffect(() => {
-    const handleOnline = async () => {
+    const handleOnline = () => {
       setIsOnline(true);
-      const pendingCount = getOfflineQueue().length;
-      if (pendingCount > 0) {
-        setSyncToastMessage(`📶 Re-conectado. Sincronizando ${pendingCount} registro(s) pendiente(s) de terreno...`);
-        const synced = await processOfflineQueue();
-        setOfflinePendingCount(getOfflineQueue().length);
-        setSyncToastMessage(`✅ Sincronización exitosa: ${synced} registro(s) enviados a la base de datos.`);
-        setTimeout(() => setSyncToastMessage(null), 4000);
-      }
+      setSyncToastMessage('📶 Conexión recuperada. Firebase está enviando las OT pendientes...');
+      setTimeout(() => setSyncToastMessage(null), 4000);
     };
 
     const handleOffline = () => {
@@ -227,69 +258,64 @@ export function App() {
     };
   }, []);
 
-  // Sync Queue interval check
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setOfflinePendingCount(getOfflineQueue().length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
   const [equipments, setEquipments] = useState<PlantEquipment[]>([]);
 
   // Load from Local REST DB on mount with Vercel production fallback & Real-time Firebase Sync
   useEffect(() => {
+    if (!dataAccessKey) return;
     let firebaseUnsub: (() => void) | null = null;
+    let firebaseUsersUnsub: (() => void) | null = null;
 
     const processDbData = async (db: any) => {
       // 1. Check Cloud DB (Firebase or Supabase) for Work Orders
       let cloudOrders: WorkOrder[] | null = null;
       if (isFirebaseConfigured) {
-        cloudOrders = await fetchFirebaseWorkOrders();
+        const scopedTenantId = isFirebaseAuthRequired ? activeTenantId : undefined;
+        cloudOrders = await fetchFirebaseWorkOrders(scopedTenantId);
         
-        // Seed initial work orders to Firebase ONLY if cloud DB is completely empty (first time)
-        const isSeeded = localStorage.getItem('proclean_seeded_firebase');
-        if ((!cloudOrders || cloudOrders.length === 0) && !isSeeded && db.workOrders && db.workOrders.length > 0) {
-          await syncAllWorkOrdersToFirebase(db.workOrders);
-          localStorage.setItem('proclean_seeded_firebase', 'true');
-          cloudOrders = await fetchFirebaseWorkOrders();
-        }
-
         // Subscribe to real-time changes from Firestore on ALL devices
-        firebaseUnsub = subscribeFirebaseWorkOrders((liveOrders) => {
+        firebaseUnsub = subscribeFirebaseWorkOrders((liveOrders, metadata) => {
           setWorkOrders(liveOrders);
-          try {
-            localStorage.setItem('proclean_work_orders', JSON.stringify(liveOrders));
-          } catch (e) {
-            console.warn('LocalStorage error:', e);
-          }
-        });
+          setPendingWorkOrderIds(new Set(metadata.pendingIds));
+          setIsReadingFromCache(metadata.fromCache);
+          if (metadata.pendingIds.length === 0 && !metadata.fromCache) setDbConnected(true);
+        }, (error) => {
+          console.error('Firestore work-order listener failed:', error);
+          setSyncToastMessage('❌ No fue posible escuchar las OT en Firebase. Revisa permisos y conexión.');
+        }, scopedTenantId);
       } else if (isSupabaseConfigured) {
         cloudOrders = await fetchSupabaseWorkOrders();
       }
 
       if (cloudOrders && Array.isArray(cloudOrders) && cloudOrders.length > 0) {
         setWorkOrders(cloudOrders);
-        localStorage.setItem('proclean_work_orders', JSON.stringify(cloudOrders));
-      } else {
-        // Fallback to localStorage
-        const localOrders = localStorage.getItem('proclean_work_orders');
-        if (localOrders) {
-          try {
-            const parsed = JSON.parse(localOrders);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setWorkOrders(parsed);
-            } else if (db.workOrders) {
-              setWorkOrders(db.workOrders);
-            }
-          } catch {
-            if (db.workOrders) setWorkOrders(db.workOrders);
-          }
-        } else if (db.workOrders) {
-          setWorkOrders(db.workOrders);
+      } else if (!isFirebaseConfigured && db.workOrders) {
+        // Local seed data is a development-only fallback. Production Firebase
+        // never resurrects work orders from localStorage or bundled JSON.
+        setWorkOrders(db.workOrders);
+      }
+
+      // Firebase Auth mode loads only the signed-in profile for operational
+      // users. Tenant administrators receive the tenant-scoped directory.
+      if (isFirebaseAuthRequired && authenticatedUser) {
+        const canListTenantUsers = ['ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'].includes(authenticatedUser.role);
+        if (isFirebaseConfigured && canListTenantUsers) {
+          const cloudUsers = await fetchFirebaseCollectionByField<UserAccount>('users', 'tenantId', activeTenantId);
+          setUsers(cloudUsers || []);
+          firebaseUsersUnsub = subscribeFirebaseCollectionByField<UserAccount>(
+            'users',
+            'tenantId',
+            activeTenantId,
+            liveUsers => setUsers(liveUsers || [])
+          );
+        } else {
+          setUsers([authenticatedUser]);
         }
       }
 
+      // Load legacy user accounts only while the staged Firebase Auth rollout
+      // is disabled. Authenticated production never exposes the bundled list.
+      if (!isFirebaseAuthRequired) {
       // Load Users: Cloud Firebase -> LocalStorage -> Seed JSON
       let cloudUsers: UserAccount[] | null = null;
       if (isFirebaseConfigured) {
@@ -298,13 +324,13 @@ export function App() {
         // Seed initial users to Firebase ONLY if cloud DB has no users (first time)
         const isUsersSeeded = localStorage.getItem('proclean_seeded_users_firebase');
         if ((!cloudUsers || cloudUsers.length === 0) && !isUsersSeeded && db.users && db.users.length > 0) {
-          await syncAllUsersToFirebase(db.users);
+          await syncAllUsersToFirebase(db.users, { preserveLegacyPassword: true });
           localStorage.setItem('proclean_seeded_users_firebase', 'true');
           cloudUsers = await fetchFirebaseUsers();
         }
 
         // Subscribe to real-time users sync on ALL devices
-        subscribeFirebaseUsers((liveUsers) => {
+        firebaseUsersUnsub = subscribeFirebaseUsers((liveUsers) => {
           if (liveUsers && liveUsers.length > 0) {
             setUsers(liveUsers);
             try {
@@ -336,8 +362,12 @@ export function App() {
           setUsers(db.users);
         }
       }
+      }
 
-      // Generic loader function for ALL remaining ERP Entities (Cloud Firebase -> LocalStorage -> Seed JSON)
+      // Master catalogues are cache-first and refreshed at most every six
+      // hours per device. Operational data (OT and staffing) keeps dedicated
+      // real-time listeners; avoiding permanent listeners over hundreds of
+      // catalogue documents protects the Firestore free-tier read quota.
       const loadEntity = async <T,>(
         storageKey: string,
         colName: string,
@@ -347,72 +377,55 @@ export function App() {
       ) => {
         let cloud: T | null = null;
         if (isFirebaseConfigured) {
+          let hasCachedValue = false;
+          const cached = localStorage.getItem(storageKey);
+          if (cached) {
+            try {
+              setter(JSON.parse(cached));
+              hasCachedValue = true;
+            } catch {
+              // Ignore corrupt browser cache and refresh it from Firestore.
+            }
+          }
+
+          const refreshKey = `${storageKey}_cloud_refreshed_at`;
+          const refreshedAt = Number(localStorage.getItem(refreshKey) || 0);
+          const refreshIntervalMs = 6 * 60 * 60 * 1000;
+          if (hasCachedValue && Date.now() - refreshedAt < refreshIntervalMs) return;
+
           if (isSingleDoc) {
             cloud = await fetchSingleDocFromFirebase<T>(colName, 'config');
           } else {
-            cloud = await fetchFirebaseCollection(colName) as unknown as T;
-            const isSeededKey = `proclean_seeded_${colName}`;
-            if ((!cloud || (Array.isArray(cloud) && cloud.length === 0)) && !localStorage.getItem(isSeededKey) && Array.isArray(seedData) && seedData.length > 0) {
-              await syncArrayToFirebase(colName, seedData as any[]);
-              localStorage.setItem(isSeededKey, 'true');
-              cloud = await fetchFirebaseCollection(colName) as unknown as T;
-            }
-
-            subscribeFirebaseCollection(colName, (liveItems) => {
-              if (liveItems && liveItems.length > 0) {
-                setter(liveItems as unknown as T);
-                try { localStorage.setItem(storageKey, JSON.stringify(liveItems)); } catch (e) {}
-              }
-            });
+            const tenantId = activeTenantId;
+            cloud = (isFirebaseAuthRequired
+              ? await fetchFirebaseCollectionByField(colName, 'tenantId', tenantId)
+              : await fetchFirebaseCollection(colName)) as unknown as T;
           }
+
+          if (cloud !== null) {
+            setter(cloud);
+            localStorage.setItem(storageKey, JSON.stringify(cloud));
+            localStorage.setItem(refreshKey, String(Date.now()));
+          }
+          return;
         }
 
-        if (cloud && ((Array.isArray(cloud) && cloud.length > 0) || (!Array.isArray(cloud) && cloud))) {
-          setter(cloud);
-          localStorage.setItem(storageKey, JSON.stringify(cloud));
-        } else {
-          const local = localStorage.getItem(storageKey);
-          if (local) {
-            try {
-              const parsed = JSON.parse(local);
-              if (parsed && ((Array.isArray(parsed) && parsed.length > 0) || !Array.isArray(parsed))) {
-                setter(parsed);
-              } else if (seedData) {
-                setter(seedData);
-              }
-            } catch {
-              if (seedData) setter(seedData);
+        const local = localStorage.getItem(storageKey);
+        if (local) {
+          try {
+            const parsed = JSON.parse(local);
+            if (parsed && ((Array.isArray(parsed) && parsed.length > 0) || !Array.isArray(parsed))) {
+              setter(parsed);
+            } else if (seedData) {
+              setter(seedData);
             }
-          } else if (seedData) {
-            setter(seedData);
+          } catch {
+            if (seedData) setter(seedData);
           }
+        } else if (seedData) {
+          setter(seedData);
         }
       };
-
-      if (isFirebaseConfigured) {
-        // Fetch Cloud Firestore Collections on initial load (F5 refresh)
-        const cloudCovAreas = await fetchFirebaseCollection<CoverageArea>('proclean_coverageAreas');
-        if (cloudCovAreas) setCoverageAreas(cloudCovAreas);
-
-        const cloudCargos = await fetchFirebaseCollection<CargoConfig>('proclean_cargos');
-        if (cloudCargos) setCargos(cloudCargos);
-
-        const cloudPersonnel = await fetchFirebaseCollection<PersonnelMember>('proclean_personnel');
-        if (cloudPersonnel) setPersonnel(cloudPersonnel);
-
-        // Real-Time Cloud Firestore Subscriptions across all devices
-        subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', (items) => {
-          if (items) setCoverageAreas(items);
-        });
-
-        subscribeFirebaseCollection<CargoConfig>('proclean_cargos', (items) => {
-          if (items) setCargos(items);
-        });
-
-        subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', (items) => {
-          if (items) setPersonnel(items);
-        });
-      }
 
       if (db.whiteLabel) await loadEntity('proclean_whitelabel', 'whitelabel', setWhiteLabel, db.whiteLabel, true);
       if (db.contracts) await loadEntity('proclean_contracts', 'contracts', setContracts, db.contracts);
@@ -434,19 +447,20 @@ export function App() {
         processDbData(db);
       })
       .catch(err => {
-        console.warn('Servidor de Base de Datos local no detectado en 3001. Cargando datos de respaldo para producción Vercel.', err);
+        console.info('REST API opcional no configurada. Firebase permanece como fuente cloud y se cargan defaults sólo para entidades aún no migradas.', err);
         processDbData(initialDbData as any);
       });
 
     return () => {
       if (firebaseUnsub) firebaseUnsub();
+      if (firebaseUsersUnsub) firebaseUsersUnsub();
     };
-  }, []);
+  }, [dataAccessKey, activeTenantId, authenticatedUser]);
 
   // Login & Logout Handlers
   const handleLoginSuccess = (user: UserAccount) => {
     setAuthenticatedUser(user);
-    localStorage.setItem('siteclean_session', JSON.stringify(user));
+    if (!isFirebaseAuthRequired) localStorage.setItem('siteclean_session', JSON.stringify(user));
     addAuditLog('CREACION', 'Sesión de Usuario', user.email, `Inicio de sesión exitoso como ${user.name}`, `Rol: ${user.role}`);
   };
 
@@ -456,6 +470,7 @@ export function App() {
     }
     setAuthenticatedUser(null);
     localStorage.removeItem('siteclean_session');
+    if (isFirebaseAuthRequired) void logoutFromFirebase();
   };
 
   // Helper for logging audit events with Diff Engine
@@ -483,9 +498,20 @@ export function App() {
   };
 
   // Update Wrappers (All ERP Entities -> Cloud Firebase + LocalStorage Persistence)
+  const stampCurrentTenant = <T,>(value: T): T => {
+    const tenantId = activeTenantId;
+    if (Array.isArray(value)) {
+      return value.map(item => (
+        item && typeof item === 'object' ? { ...item, tenantId } : item
+      )) as T;
+    }
+    if (value && typeof value === 'object') return { ...value, tenantId } as T;
+    return value;
+  };
+
   const updateWhiteLabel = (val: React.SetStateAction<WhiteLabelConfig>) => {
     setWhiteLabel(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_whitelabel', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncSingleDocToFirebase('whitelabel', 'config', next);
       apiSaveWhiteLabel(next);
@@ -496,14 +522,14 @@ export function App() {
 
   const updateUsers = (val: React.SetStateAction<UserAccount[]>) => {
     setUsers(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try {
         localStorage.setItem('proclean_users', JSON.stringify(next));
       } catch (e) {
         console.warn('LocalStorage error:', e);
       }
       if (isFirebaseConfigured) {
-        syncAllUsersToFirebase(next);
+        syncAllUsersToFirebase(next, { preserveLegacyPassword: !isFirebaseAuthRequired });
       }
       addAuditLog('EDICION', 'Cuentas de Usuario', 'Users', 'Actualización de usuarios y roles fijos asignados');
       return next;
@@ -512,7 +538,7 @@ export function App() {
 
   const updateContracts = (val: React.SetStateAction<ClientContract[]>) => {
     setContracts(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_contracts', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncArrayToFirebase('contracts', next);
       apiSaveContracts(next);
@@ -523,7 +549,7 @@ export function App() {
 
   const updateShifts = (val: React.SetStateAction<ShiftType[]>) => {
     setShifts(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_shifts', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncArrayToFirebase('shifts', next);
       apiSaveShifts(next);
@@ -534,7 +560,7 @@ export function App() {
 
   const updateContingencies = (val: React.SetStateAction<ContingencyReasonConfig[]>) => {
     setContingencies(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_contingencies', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncArrayToFirebase('contingencies', next);
       apiSaveContingencies(next);
@@ -545,7 +571,7 @@ export function App() {
 
   const updatePlantAreas = (val: React.SetStateAction<PlantArea[]>) => {
     setPlantAreas(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_plant_areas', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncArrayToFirebase('plant_areas', next);
       apiSavePlantAreas(next);
@@ -555,7 +581,7 @@ export function App() {
 
   const updateSectors = (val: React.SetStateAction<Sector[]>) => {
     setSectors(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_sectors', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncArrayToFirebase('sectors', next);
       apiSaveSectors(next);
@@ -565,7 +591,7 @@ export function App() {
 
   const updateSubSectors = (val: React.SetStateAction<SubSector[]>) => {
     setSubSectors(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_sub_sectors', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncArrayToFirebase('sub_sectors', next);
       apiSaveSubSectors(next);
@@ -575,7 +601,7 @@ export function App() {
 
   const updateEquipments = (val: React.SetStateAction<PlantEquipment[]>) => {
     setEquipments(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_equipments', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncArrayToFirebase('equipments', next);
       return next;
@@ -584,7 +610,7 @@ export function App() {
 
   const updateMachines = (val: React.SetStateAction<Machine[]>) => {
     setMachines(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_machines', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncArrayToFirebase('machines', next);
       apiSaveMachines(next);
@@ -594,7 +620,7 @@ export function App() {
 
   const updateWorkers = (val: React.SetStateAction<Worker[]>) => {
     setWorkers(prev => {
-      const next = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_workers', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncArrayToFirebase('workers', next);
       apiSaveWorkers(next);
@@ -606,26 +632,43 @@ export function App() {
 
   const activeContract = contracts.find(c => c.id === activeContractId) || contracts[0];
 
+  const monitorWorkOrderWrite = (operation: Promise<boolean>, action: string) => {
+    void operation.then(ok => {
+      if (!ok) {
+        setSyncToastMessage(`❌ Firebase rechazó ${action}. El registro no quedó confirmado en la nube.`);
+      }
+    }).catch(error => {
+      console.error(`Unexpected Firebase error while ${action}:`, error);
+      setSyncToastMessage(`❌ Error inesperado al ${action}.`);
+    });
+  };
+
   const handleAddWorkOrder = (newOrder: Omit<WorkOrder, 'id'>) => {
     const order: WorkOrder = {
       ...newOrder,
-      id: Date.now().toString(),
-      tenantId: 'tenant_cmz'
+      id: globalThis.crypto?.randomUUID?.() || Date.now().toString(),
+      tenantId: authenticatedUser?.tenantId || 'tenant_cmz'
     };
     const updated = [order, ...workOrders];
     setWorkOrders(updated);
-    if (isFirebaseConfigured) syncWorkOrderToFirebase(order);
-    apiSaveWorkOrders(updated);
+    if (isFirebaseConfigured) {
+      monitorWorkOrderWrite(syncWorkOrderToFirebase(order), 'crear la orden de trabajo');
+    }
     addAuditLog('CREACION', 'Orden de Trabajo', order.sapCode, `Creación de OT en ${order.equipoCorrea} (${order.areaName || 'General'}) por ${authenticatedUser?.name}`, `HH Est: ${order.estimatedHours}h | Real: ${order.realHours}h`);
   };
 
   const handleUpdateWorkOrder = (id: string, updatedFields: Partial<WorkOrder>) => {
+    if (!navigator.onLine) {
+      setSyncToastMessage('⚠️ Sin conexión sólo se permite crear nuevas OT. La edición requiere conexión.');
+      return;
+    }
     const target = workOrders.find(o => o.id === id);
     const updatedObj = target ? { ...target, ...updatedFields } : null;
     const updated = workOrders.map(o => o.id === id ? { ...o, ...updatedFields } : o);
     setWorkOrders(updated);
-    if (isFirebaseConfigured && updatedObj) syncWorkOrderToFirebase(updatedObj);
-    apiSaveWorkOrders(updated);
+    if (isFirebaseConfigured && updatedObj) {
+      monitorWorkOrderWrite(syncWorkOrderToFirebase(updatedObj), 'actualizar la orden de trabajo');
+    }
     
     let diffStr = undefined;
     if (target && updatedFields.realHours && target.realHours !== updatedFields.realHours) {
@@ -636,6 +679,10 @@ export function App() {
   };
 
   const handleItoApproveWorkOrder = (id: string, approverName: string, comments?: string, signatureDataUrl?: string) => {
+    if (!navigator.onLine) {
+      setSyncToastMessage('⚠️ La aprobación ITO requiere conexión para evitar conflictos.');
+      return;
+    }
     const target = workOrders.find(o => o.id === id);
     const approvalDate = new Date().toLocaleString('es-CL');
     const updatedObj = target ? { 
@@ -650,20 +697,53 @@ export function App() {
     const updated = workOrders.map(o => o.id === id ? (updatedObj || o) : o);
 
     setWorkOrders(updated);
-    if (isFirebaseConfigured && updatedObj) syncWorkOrderToFirebase(updatedObj);
-    apiSaveWorkOrders(updated);
+    if (isFirebaseConfigured && updatedObj) {
+      monitorWorkOrderWrite(syncWorkOrderToFirebase(updatedObj), 'aprobar la orden de trabajo');
+    }
     addAuditLog('APROBACION_ITO', 'Orden de Trabajo', target?.sapCode || id, `Conformidad ITO otorgada por ${approverName || authenticatedUser?.name}`, `Estado: PENDIENTE ➔ APROBADO_MANDANTE ${signatureDataUrl ? '(Firma Digital Estampada)' : ''}`);
   };
 
   const handleDeleteWorkOrder = (id: string) => {
+    if (!navigator.onLine) {
+      setSyncToastMessage('⚠️ La eliminación de una OT requiere conexión.');
+      return;
+    }
     const target = workOrders.find(o => o.id === id);
     const updated = workOrders.filter(o => o.id !== id);
     setWorkOrders(updated);
     if (isFirebaseConfigured) {
-      deleteFirebaseWorkOrder(id);
+      monitorWorkOrderWrite(deleteFirebaseWorkOrder(id), 'eliminar la orden de trabajo');
     }
-    apiSaveWorkOrders(updated);
     addAuditLog('ELIMINACION', 'Orden de Trabajo', target?.sapCode || id, `Eliminación de la OT por ${authenticatedUser?.name}`);
+  };
+
+  const handleSaveDailyAssignments = async (newAssignments: DailyPersonnelAssignment[]) => {
+    if (!navigator.onLine) {
+      setSyncToastMessage('⚠️ La dotación requiere conexión. No se aplicaron cambios.');
+      return;
+    }
+
+    const previousAssignments = dailyAssignments;
+    const tenantAssignments = newAssignments.map(assignment => ({
+      ...assignment,
+      tenantId: authenticatedUser?.tenantId || 'tenant_cmz'
+    }));
+    setDailyAssignments(tenantAssignments);
+    setSyncToastMessage('Guardando dotación en Firebase...');
+
+    const saved = await replaceFirebaseCollection(
+      'proclean_dailyAssignments',
+      previousAssignments,
+      tenantAssignments
+    );
+
+    if (saved) {
+      setSyncToastMessage('✅ Dotación confirmada en Firebase.');
+    } else {
+      setDailyAssignments(previousAssignments);
+      setSyncToastMessage('❌ No fue posible guardar la dotación. Se restauró el estado anterior.');
+    }
+    setTimeout(() => setSyncToastMessage(null), 4000);
   };
 
   const handleResetBlankSlate = () => {
@@ -675,15 +755,6 @@ export function App() {
       setAuditLogs([]);
       alert('¡Base de Datos Local vaciada a Lienzo en Blanco!');
     });
-  };
-
-  const handleManualSyncQueue = async () => {
-    setSyncToastMessage('📶 Sincronizando cola offline de terreno...');
-    const synced = await processOfflineQueue();
-    localStorage.removeItem('siteclean_offline_queue');
-    setOfflinePendingCount(0);
-    setSyncToastMessage(`✅ Sincronización exitosa: ${synced || 26} registro(s) procesados.`);
-    setTimeout(() => setSyncToastMessage(null), 3000);
   };
 
   const getRoleIcon = (role: UserAccount['role']) => {
@@ -747,18 +818,17 @@ export function App() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             
-            {/* Network Online / Offline Status Badge with Pending Queue count */}
+            {/* Network and Firestore-confirmed pending write status */}
             <div className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, color: isOnline ? '#047857' : '#B91C1C', backgroundColor: isOnline ? '#ECFDF5' : '#FEF2F2', padding: '4px 10px', borderRadius: '16px' }}>
               {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
-              <span>{isOnline ? 'En Línea' : 'Modo Terreno'}</span>
-              {offlinePendingCount > 0 && (
-                <button 
-                  onClick={handleManualSyncQueue}
-                  style={{ backgroundColor: '#F59E0B', color: '#FFF', border: 'none', borderRadius: '10px', padding: '1px 6px', fontSize: '10px', cursor: 'pointer', marginLeft: '4px' }}
-                  title="Sincronizar cambios offline pendientes"
+              <span>{isOnline ? (isReadingFromCache ? 'Conectando a Firebase' : 'En línea') : 'Modo Terreno'}</span>
+              {pendingWorkOrderIds.size > 0 && (
+                <span
+                  style={{ backgroundColor: '#F59E0B', color: '#FFF', borderRadius: '10px', padding: '1px 6px', fontSize: '10px', marginLeft: '4px' }}
+                  title="OT almacenadas por Firebase y pendientes de confirmación del servidor"
                 >
-                  {offlinePendingCount} pend.
-                </button>
+                  {pendingWorkOrderIds.size} OT pend.
+                </span>
               )}
             </div>
 
@@ -806,6 +876,7 @@ export function App() {
           {activeTab === 'work-orders' && (
             <WorkOrdersGrid 
               workOrders={workOrders}
+              pendingWorkOrderIds={pendingWorkOrderIds}
               onAddWorkOrder={handleAddWorkOrder}
               onUpdateWorkOrder={handleUpdateWorkOrder}
               onDeleteWorkOrder={handleDeleteWorkOrder}
@@ -830,7 +901,7 @@ export function App() {
               cargos={cargos}
               coverageAreas={coverageAreas}
               assignments={dailyAssignments}
-              onSaveAssignments={(newAsgs) => setDailyAssignments(newAsgs)}
+              onSaveAssignments={handleSaveDailyAssignments}
               shifts={shifts}
               currentRole={currentRole}
               userEmail={authenticatedUser?.email}
@@ -855,6 +926,7 @@ export function App() {
 
           {activeTab === 'parameters' && (
             <OperationalParameters 
+              tenantId={authenticatedUser?.tenantId || 'tenant_cmz'}
               plantAreas={plantAreas}
               setPlantAreas={updatePlantAreas}
               sectors={sectors}

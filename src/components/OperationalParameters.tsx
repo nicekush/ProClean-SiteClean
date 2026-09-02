@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { PlantArea, Sector, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
-import { syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase, seedOfficialDatabaseToFirebase } from '../api/firebase';
+import { syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase } from '../api/firebase';
 import { 
   Plus, 
   Trash2, 
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 interface OperationalParametersProps {
+  tenantId?: string;
   plantAreas: PlantArea[];
   setPlantAreas: React.Dispatch<React.SetStateAction<PlantArea[]>>;
   sectors: Sector[];
@@ -41,6 +42,7 @@ interface OperationalParametersProps {
 }
 
 export const OperationalParameters: React.FC<OperationalParametersProps> = ({
+  tenantId = 'tenant_cmz',
   plantAreas,
   setPlantAreas,
   sectors,
@@ -93,6 +95,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     if (!newCovArea.name || !setCoverageAreas) return;
     const newAreaObj: CoverageArea = {
       id: `cov_a_${Date.now()}`,
+      tenantId,
       name: newCovArea.name,
       code: newCovArea.code || `AREA-${coverageAreas.length + 1}`,
       turnoId: newCovArea.turnoId,
@@ -114,8 +117,9 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleUpdateCovArea = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCovArea || !setCoverageAreas) return;
-    setCoverageAreas(prev => prev.map(ca => ca.id === editingCovArea.id ? editingCovArea : ca));
-    syncSingleDocToFirebase('proclean_coverageAreas', editingCovArea.id, editingCovArea);
+    const updatedArea = { ...editingCovArea, tenantId };
+    setCoverageAreas(prev => prev.map(ca => ca.id === editingCovArea.id ? updatedArea : ca));
+    syncSingleDocToFirebase('proclean_coverageAreas', updatedArea.id, updatedArea);
     setEditingCovArea(null);
   };
 
@@ -125,6 +129,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     if (!newCargo.nombre || !setCargos) return;
     const newCargoObj: CargoConfig = {
       id: `c_${Date.now()}`,
+      tenantId,
       nombre: newCargo.nombre,
       code: newCargo.code || 'CARGO',
       restrictedAreaIds: newCargo.restrictedAreaIds.length > 0 ? newCargo.restrictedAreaIds : undefined
@@ -145,8 +150,9 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleUpdateCargo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCargo || !setCargos) return;
-    setCargos(prev => prev.map(c => c.id === editingCargo.id ? editingCargo : c));
-    syncCargoToFirebase(editingCargo);
+    const updatedCargo = { ...editingCargo, tenantId };
+    setCargos(prev => prev.map(c => c.id === editingCargo.id ? updatedCargo : c));
+    syncCargoToFirebase(updatedCargo);
     setEditingCargo(null);
   };
 
@@ -156,6 +162,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     if (!newPersonnel.nombre || !setPersonnel) return;
     const newMember: PersonnelMember = {
       id: `p_${Date.now()}`,
+      tenantId,
       nombre: newPersonnel.nombre.toUpperCase(),
       rut: newPersonnel.rut || '15.482.910-K',
       grupo: newPersonnel.grupo,
@@ -178,8 +185,9 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const handleUpdatePersonnel = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPersonnel || !setPersonnel) return;
-    setPersonnel(prev => prev.map(p => p.id === editingPersonnel.id ? editingPersonnel : p));
-    syncSingleDocToFirebase('proclean_personnel', editingPersonnel.id, editingPersonnel);
+    const updatedMember = { ...editingPersonnel, tenantId };
+    setPersonnel(prev => prev.map(p => p.id === editingPersonnel.id ? updatedMember : p));
+    syncSingleDocToFirebase('proclean_personnel', updatedMember.id, updatedMember);
     setEditingPersonnel(null);
   };
 
@@ -197,7 +205,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       try { localStorage.setItem('proclean_plant_areas', JSON.stringify(updated)); } catch(e) {}
       return updated;
     });
-    syncSingleDocToFirebase('plant_areas', newObj.id, newObj);
+    syncSingleDocToFirebase('plant_areas', newObj.id, { ...newObj, tenantId });
     setNewArea({ name: '', code: '' });
   };
 
@@ -232,7 +240,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       try { localStorage.setItem('proclean_sectors', JSON.stringify(updated)); } catch(e) {}
       return updated;
     });
-    syncSingleDocToFirebase('sectors', newObj.id, newObj);
+    syncSingleDocToFirebase('sectors', newObj.id, { ...newObj, tenantId });
     setNewSector({ areaId: '', name: '', code: '', description: '' });
   };
 
@@ -266,7 +274,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       try { localStorage.setItem('proclean_sub_sectors', JSON.stringify(updated)); } catch(e) {}
       return updated;
     });
-    syncSingleDocToFirebase('sub_sectors', newObj.id, newObj);
+    syncSingleDocToFirebase('sub_sectors', newObj.id, { ...newObj, tenantId });
     setNewSubSector({ sectorId: '', name: '', code: '' });
   };
 
@@ -301,7 +309,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       try { localStorage.setItem('proclean_machines', JSON.stringify(updated)); } catch(e) {}
       return updated;
     });
-    syncSingleDocToFirebase('machines', newObj.id, newObj);
+    syncSingleDocToFirebase('machines', newObj.id, { ...newObj, tenantId });
     setNewMachine({ name: '', patent: '', type: '', capacity: '', capacityM3: undefined });
   };
 
@@ -313,7 +321,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             m.status === 'DISPONIBLE' ? 'MANTENCION' :
             m.status === 'MANTENCION' ? 'FUERA_SERVICIO' : 'DISPONIBLE';
           const newMachineObj = { ...m, status: nextStatus };
-          syncSingleDocToFirebase('machines', m.id, newMachineObj);
+          syncSingleDocToFirebase('machines', m.id, { ...newMachineObj, tenantId });
           return newMachineObj;
         }
         return m;
@@ -338,7 +346,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       try { localStorage.setItem('proclean_machines', JSON.stringify(updated)); } catch(e) {}
       return updated;
     });
-    syncSingleDocToFirebase('machines', updatedObj.id, updatedObj);
+    syncSingleDocToFirebase('machines', updatedObj.id, { ...updatedObj, tenantId });
     setEditingMachine(null);
   };
 
@@ -370,7 +378,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       try { localStorage.setItem('proclean_workers', JSON.stringify(updated)); } catch(e) {}
       return updated;
     });
-    syncSingleDocToFirebase('workers', newObj.id, newObj);
+    syncSingleDocToFirebase('workers', newObj.id, { ...newObj, tenantId });
     setNewWorker({ name: '', rut: '', role: 'OPERADOR_HIDRO' });
   };
 

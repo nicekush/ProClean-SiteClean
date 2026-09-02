@@ -1,17 +1,25 @@
 import { initializeApp } from 'firebase/app';
 import { 
-  getFirestore, 
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection, 
   getDocs, 
   doc, 
   setDoc, 
   deleteDoc,
-  onSnapshot
+  onSnapshot,
+  serverTimestamp,
+  writeBatch,
+  query,
+  where
 } from 'firebase/firestore';
+import type { Firestore } from 'firebase/firestore';
 import type { WorkOrder, UserAccount } from '../types';
 
 // Official Firebase Config for proclean-siteclean Cloud DB
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCyRmnH6xKA41-lVm5jzb56qCsED1gpWsI",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "proclean-siteclean.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "proclean-siteclean",
@@ -25,17 +33,37 @@ export const isFirebaseConfigured = Boolean(
   firebaseConfig.projectId
 );
 
-const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
-export const db = app ? getFirestore(app) : null;
+export const firebaseApp = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
+
+// Firestore owns the durable offline queue. On supported browsers, pending
+// work-order writes survive refreshes and are shared safely across tabs.
+let firestoreDb: Firestore | null = null;
+if (firebaseApp) {
+  try {
+    firestoreDb = initializeFirestore(firebaseApp, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+  } catch (err) {
+    // initializeFirestore can only configure an app once. Reuse the existing
+    // instance if another module initialized it first.
+    console.warn('Using existing Firestore instance:', err);
+    firestoreDb = getFirestore(firebaseApp);
+  }
+}
+
+export const db = firestoreDb;
 
 const COLLECTION_WORK_ORDERS = 'work_orders';
 const COLLECTION_USERS = 'users';
 
-export async function fetchFirebaseWorkOrders(): Promise<WorkOrder[] | null> {
+export async function fetchFirebaseWorkOrders(tenantId?: string): Promise<WorkOrder[] | null> {
   if (!db) return null;
   try {
     const colRef = collection(db, COLLECTION_WORK_ORDERS);
-    const snapshot = await getDocs(colRef);
+    const workOrdersQuery = tenantId ? query(colRef, where('tenantId', '==', tenantId)) : colRef;
+    const snapshot = await getDocs(workOrdersQuery);
 
     if (!snapshot.empty) {
       const orders: WorkOrder[] = [];
@@ -57,12 +85,23 @@ export async function fetchFirebaseWorkOrders(): Promise<WorkOrder[] | null> {
   }
 }
 
-export function subscribeFirebaseWorkOrders(onUpdate: (orders: WorkOrder[]) => void): (() => void) | null {
+export interface WorkOrderSyncMetadata {
+  pendingIds: string[];
+  fromCache: boolean;
+}
+
+export function subscribeFirebaseWorkOrders(
+  onUpdate: (orders: WorkOrder[], metadata: WorkOrderSyncMetadata) => void,
+  onError?: (error: unknown) => void,
+  tenantId?: string
+): (() => void) | null {
   if (!db) return null;
   try {
     const colRef = collection(db, COLLECTION_WORK_ORDERS);
-    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+    const workOrdersQuery = tenantId ? query(colRef, where('tenantId', '==', tenantId)) : colRef;
+    const unsubscribe = onSnapshot(workOrdersQuery, { includeMetadataChanges: true }, (snapshot) => {
       const orders: WorkOrder[] = [];
+      const pendingIds: string[] = [];
       if (!snapshot.empty) {
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
@@ -71,12 +110,14 @@ export function subscribeFirebaseWorkOrders(onUpdate: (orders: WorkOrder[]) => v
           } else if (data.status || data.equipoCorrea) {
             orders.push({ ...data, id: docSnap.id } as WorkOrder);
           }
+          if (docSnap.metadata.hasPendingWrites) pendingIds.push(docSnap.id);
         });
         orders.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
       }
-      onUpdate(orders);
+      onUpdate(orders, { pendingIds, fromCache: snapshot.metadata.fromCache });
     }, (err) => {
       console.warn('Error in Firestore real-time listener:', err);
+      onError?.(err);
     });
     return unsubscribe;
   } catch (err) {
@@ -94,7 +135,8 @@ export async function syncWorkOrderToFirebase(order: WorkOrder): Promise<boolean
       sapCode: order.sapCode || '',
       equipoCorrea: order.equipoCorrea || '',
       status: order.status,
-      updatedAt: new Date().toISOString()
+      tenantId: order.tenantId || 'tenant_cmz',
+      updatedAt: serverTimestamp()
     }, { merge: true });
     return true;
   } catch (err) {
@@ -180,15 +222,26 @@ export function subscribeFirebaseUsers(onUpdate: (users: UserAccount[]) => void)
   }
 }
 
-export async function syncUserToFirebase(user: UserAccount): Promise<boolean> {
+interface UserSyncOptions {
+  preserveLegacyPassword?: boolean;
+}
+
+export async function syncUserToFirebase(
+  user: UserAccount,
+  options: UserSyncOptions = {}
+): Promise<boolean> {
   if (!db) return false;
   try {
     const docRef = doc(db, COLLECTION_USERS, user.id);
+    const safeUser = { ...user };
+    if (!options.preserveLegacyPassword) delete safeUser.password;
     await setDoc(docRef, {
-      payload: user,
+      payload: safeUser,
       email: user.email,
       name: user.name,
       role: user.role,
+      tenantId: user.tenantId || 'tenant_cmz',
+      active: user.active !== false,
       updatedAt: new Date().toISOString()
     }, { merge: true });
     return true;
@@ -198,7 +251,10 @@ export async function syncUserToFirebase(user: UserAccount): Promise<boolean> {
   }
 }
 
-export async function syncAllUsersToFirebase(users: UserAccount[]): Promise<boolean> {
+export async function syncAllUsersToFirebase(
+  users: UserAccount[],
+  options: UserSyncOptions = {}
+): Promise<boolean> {
   if (!db) return false;
   try {
     const colRef = collection(db, COLLECTION_USERS);
@@ -214,7 +270,7 @@ export async function syncAllUsersToFirebase(users: UserAccount[]): Promise<bool
     }
 
     for (const user of users) {
-      await syncUserToFirebase(user);
+      await syncUserToFirebase(user, options);
     }
     return true;
   } catch (err) {
@@ -275,6 +331,7 @@ export async function syncCargoToFirebase(cargo: any): Promise<boolean> {
       id: cargo.id,
       nombre: cargo.nombre,
       code: cargo.code || '',
+      tenantId: cargo.tenantId || 'tenant_cmz',
       restrictedAreaIds: cargo.restrictedAreaIds || [],
       updatedAt: new Date().toISOString()
     });
@@ -402,11 +459,58 @@ export async function syncArrayToFirebase(collectionName: string, items: any[]):
   try {
     for (const item of items) {
       const docId = item.id || 'singleton';
-      await syncSingleDocToFirebase(collectionName, docId, item);
+      const saved = await syncSingleDocToFirebase(collectionName, docId, item);
+      if (!saved) return false;
     }
     return true;
   } catch (err) {
     console.error(`Failed array sync to Firebase (${collectionName}):`, err);
+    return false;
+  }
+}
+
+/**
+ * Reconciles a collection from a known previous snapshot to its desired next
+ * snapshot. Unlike syncArrayToFirebase, removed IDs are deleted from Firestore.
+ * Intended for online-only operational forms such as daily staffing coverage.
+ */
+export async function replaceFirebaseCollection<T extends { id: string }>(
+  collectionName: string,
+  previousItems: T[],
+  nextItems: T[]
+): Promise<boolean> {
+  if (!db) return false;
+
+  try {
+    const nextIds = new Set(nextItems.map(item => item.id));
+    const deletions = previousItems.filter(item => !nextIds.has(item.id));
+    const operations: Array<{ type: 'set'; item: T } | { type: 'delete'; id: string }> = [
+      ...deletions.map(item => ({ type: 'delete' as const, id: item.id })),
+      ...nextItems.map(item => ({ type: 'set' as const, item }))
+    ];
+
+    // Firestore batches allow at most 500 operations. Keep headroom so this
+    // remains safe if the daily roster grows significantly.
+    for (let offset = 0; offset < operations.length; offset += 450) {
+      const batch = writeBatch(db);
+      for (const operation of operations.slice(offset, offset + 450)) {
+        if (operation.type === 'delete') {
+          batch.delete(doc(db, collectionName, operation.id));
+        } else {
+          batch.set(doc(db, collectionName, operation.item.id), {
+            ...operation.item,
+            payload: operation.item,
+            id: operation.item.id,
+            updatedAt: serverTimestamp()
+          });
+        }
+      }
+      await batch.commit();
+    }
+
+    return true;
+  } catch (err) {
+    console.error(`Failed to replace Firebase collection (${collectionName}):`, err);
     return false;
   }
 }
@@ -432,6 +536,26 @@ export async function fetchFirebaseCollection<T>(collectionName: string): Promis
   }
 }
 
+export async function fetchFirebaseCollectionByField<T>(
+  collectionName: string,
+  fieldName: string,
+  fieldValue: string
+): Promise<T[] | null> {
+  if (!db) return null;
+  try {
+    const filteredQuery = query(collection(db, collectionName), where(fieldName, '==', fieldValue));
+    const snapshot = await getDocs(filteredQuery);
+    return snapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      const payload = data.payload || data;
+      return { ...payload, ...data, id: docSnap.id } as T;
+    });
+  } catch (err) {
+    console.warn(`Error fetching filtered ${collectionName} from Firebase:`, err);
+    return null;
+  }
+}
+
 export function subscribeFirebaseCollection<T>(collectionName: string, onUpdate: (items: T[]) => void): (() => void) | null {
   if (!db) return null;
   try {
@@ -451,6 +575,86 @@ export function subscribeFirebaseCollection<T>(collectionName: string, onUpdate:
     });
   } catch (err) {
     console.warn(`Failed setup listener for ${collectionName}:`, err);
+    return null;
+  }
+}
+
+export function subscribeFirebaseCollectionByField<T>(
+  collectionName: string,
+  fieldName: string,
+  fieldValue: string,
+  onUpdate: (items: T[]) => void,
+  onError?: (error: unknown) => void
+): (() => void) | null {
+  if (!db) return null;
+  try {
+    const filteredQuery = query(collection(db, collectionName), where(fieldName, '==', fieldValue));
+    return onSnapshot(filteredQuery, snapshot => {
+      const items = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        const payload = data.payload || data;
+        return { ...payload, ...data, id: docSnap.id } as T;
+      });
+      onUpdate(items);
+    }, error => {
+      console.warn(`Error in filtered Firestore ${collectionName} listener:`, error);
+      onError?.(error);
+    });
+  } catch (err) {
+    console.warn(`Failed filtered listener for ${collectionName}:`, err);
+    return null;
+  }
+}
+
+export function subscribeFirebaseCollectionByFields<T>(
+  collectionName: string,
+  filters: Array<{ fieldName: string; fieldValue: string }>,
+  onUpdate: (items: T[]) => void,
+  onError?: (error: unknown) => void
+): (() => void) | null {
+  if (!db) return null;
+  try {
+    const clauses = filters.map(filter => where(filter.fieldName, '==', filter.fieldValue));
+    const filteredQuery = query(collection(db, collectionName), ...clauses);
+    return onSnapshot(filteredQuery, snapshot => {
+      const items = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        const payload = data.payload || data;
+        return { ...payload, ...data, id: docSnap.id } as T;
+      });
+      onUpdate(items);
+    }, error => {
+      console.warn(`Error in multi-filter Firestore ${collectionName} listener:`, error);
+      onError?.(error);
+    });
+  } catch (err) {
+    console.warn(`Failed multi-filter listener for ${collectionName}:`, err);
+    return null;
+  }
+}
+
+export function subscribeFirebaseDocument<T>(
+  collectionName: string,
+  docId: string,
+  onUpdate: (item: T | null) => void,
+  onError?: (error: unknown) => void
+): (() => void) | null {
+  if (!db) return null;
+  try {
+    return onSnapshot(doc(db, collectionName, docId), snapshot => {
+      if (!snapshot.exists()) {
+        onUpdate(null);
+        return;
+      }
+      const data = snapshot.data();
+      const payload = data.payload || data;
+      onUpdate({ ...payload, ...data, id: snapshot.id } as T);
+    }, error => {
+      console.warn(`Error in Firestore ${collectionName}/${docId} listener:`, error);
+      onError?.(error);
+    });
+  } catch (err) {
+    console.warn(`Failed setup listener for ${collectionName}/${docId}:`, err);
     return null;
   }
 }

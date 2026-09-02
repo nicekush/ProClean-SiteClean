@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { WhiteLabelConfig, UserAccount } from '../types';
 import { loginUser } from '../api/client';
+import { isFirebaseAuthRequired, requestFirebasePasswordReset } from '../api/auth';
 import { Lock, Mail, Shield, AlertCircle, ArrowRight, HardHat, UserCheck, Wrench, Building } from 'lucide-react';
 
 interface LoginViewProps {
@@ -13,6 +14,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ whiteLabel, onLoginSuccess
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +30,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ whiteLabel, onLoginSuccess
       setErrorMsg(err.message || 'Credenciales inválidas o error de conexión con la base de datos.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    setErrorMsg(null);
+    setInfoMsg(null);
+    try {
+      await requestFirebasePasswordReset(email);
+      setInfoMsg('Si el correo está habilitado, recibirás instrucciones para crear una nueva contraseña.');
+    } catch (error: any) {
+      setErrorMsg(error.message || 'No fue posible solicitar la recuperación de contraseña.');
     }
   };
 
@@ -90,6 +103,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ whiteLabel, onLoginSuccess
             </div>
           )}
 
+          {infoMsg && (
+            <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: '#ECFDF5', color: '#047857', fontSize: '13px', fontWeight: 700 }}>
+              {infoMsg}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-main)', display: 'block', marginBottom: '6px' }}>
@@ -133,6 +152,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ whiteLabel, onLoginSuccess
             >
               {loading ? 'Autenticando...' : 'Ingresar a la Plataforma'} <ArrowRight size={18} />
             </button>
+
+            {isFirebaseAuthRequired && (
+              <button
+                type="button"
+                onClick={handlePasswordReset}
+                style={{ border: 'none', background: 'transparent', color: 'var(--color-action)', fontWeight: 800, cursor: 'pointer', fontSize: '12px' }}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            )}
           </form>
 
         </div>

@@ -249,16 +249,20 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
       for (let i = 0; i < count; i++) {
         const slotKey = `${cargoId}_${i}`;
         const slotData = wizardSlotAssignments[slotKey] || { personId: '', personName: '' };
+        const assignmentGroup = activeGrupoFilter === 'ALL' ? 'A' : activeGrupoFilter;
+        const assignmentShift = activeShiftFilter === 'ALL' ? 't_dia' : activeShiftFilter;
 
         newAreaAssignments.push({
-          id: `asg_${wizardAreaId}_${cargoId}_${i}_${Date.now()}`,
+          // Stable IDs make retries idempotent and prevent duplicate staffing
+          // slots when two devices save the same operational position.
+          id: `asg_${todayStr}_${wizardAreaId}_${assignmentShift}_${assignmentGroup}_${cargoId}_${i}`,
           areaId: wizardAreaId,
           cargoId,
           cargoName: cargoObj ? cargoObj.nombre : 'Cargo',
           slotIndex: i,
           fecha: todayStr,
-          grupo: activeGrupoFilter === 'ALL' ? 'A' : activeGrupoFilter,
-          shiftId: activeShiftFilter === 'ALL' ? 't_dia' : activeShiftFilter,
+          grupo: assignmentGroup,
+          shiftId: assignmentShift,
           personId: slotData.personId,
           personName: slotData.personName,
           userEmail

@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 
 interface WorkOrdersGridProps {
   workOrders: WorkOrder[];
+  pendingWorkOrderIds?: ReadonlySet<string>;
   onAddWorkOrder: (order: Omit<WorkOrder, 'id'>) => void;
   onUpdateWorkOrder: (id: string, updated: Partial<WorkOrder>) => void;
   onDeleteWorkOrder: (id: string) => void;
@@ -24,6 +25,7 @@ interface WorkOrdersGridProps {
 
 export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   workOrders,
+  pendingWorkOrderIds = new Set<string>(),
   onAddWorkOrder,
   onUpdateWorkOrder,
   onDeleteWorkOrder,
@@ -1970,6 +1972,11 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <span className="sap-code-badge">
                         {order.sapCode}
                       </span>
+                      {pendingWorkOrderIds.has(order.id) && (
+                        <div style={{ fontSize: '9px', color: '#B45309', fontWeight: 900, marginTop: '3px', whiteSpace: 'nowrap' }} title="Guardada en este dispositivo; esperando confirmación de Firebase">
+                          ● Pendiente de sincronizar
+                        </div>
+                      )}
                       <div style={{ fontSize: '10px', color: 'var(--slate-500)', marginTop: '2px', fontWeight: 800, whiteSpace: 'nowrap' }}>
                         📅 {order.executionDate || order.dia || 'Hoy'}
                       </div>
@@ -2068,6 +2075,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 <div className="mobile-ot-card-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className="sap-code-badge">{order.sapCode}</span>
+                    {pendingWorkOrderIds.has(order.id) && (
+                      <span style={{ fontSize: '9px', color: '#B45309', fontWeight: 900 }} title="Esperando confirmación de Firebase">● Pendiente</span>
+                    )}
                     {getTaskTypeBadge(order.taskType)}
                   </div>
                   {getStatusBadge(order.status)}

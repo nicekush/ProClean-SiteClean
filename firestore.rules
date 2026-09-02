@@ -1,0 +1,155 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function isActiveMember() {
+      return signedIn()
+        && exists(memberPath())
+        && get(memberPath()).data.active == true;
+    }
+
+    function role() {
+      return get(memberPath()).data.role;
+    }
+
+    function tenantId() {
+      return get(memberPath()).data.tenantId;
+    }
+
+    function isSuperAdmin() {
+      return isActiveMember() && role() == 'SUPER_ADMIN';
+    }
+
+    function isContractAdmin() {
+      return isActiveMember()
+        && (role() == 'ADMINISTRADOR_CONTRATO' || role() == 'SUPER_ADMIN');
+    }
+
+    function canOperateWorkOrders() {
+      return isActiveMember() && role() in [
+        'SUPERVISOR_TERRENO',
+        'ITO_MANDANTE',
+        'ADMINISTRADOR_CONTRATO',
+        'SUPER_ADMIN'
+      ];
+    }
+
+    function sameTenant(data) {
+      return isSuperAdmin() || (isActiveMember() && data.tenantId == tenantId());
+    }
+
+    function validTenantCreate() {
+      return sameTenant(request.resource.data);
+    }
+
+    match /users/{userId} {
+      allow get: if isActiveMember()
+        && (request.auth.uid == userId || (isContractAdmin() && sameTenant(resource.data)));
+      allow list: if isContractAdmin() && sameTenant(resource.data);
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /work_orders/{workOrderId} {
+      allow read: if sameTenant(resource.data);
+      allow create: if canOperateWorkOrders() && validTenantCreate();
+      allow update: if canOperateWorkOrders()
+        && sameTenant(resource.data)
+        && validTenantCreate()
+        && request.resource.data.tenantId == resource.data.tenantId;
+      allow delete: if isContractAdmin() && sameTenant(resource.data);
+    }
+
+    match /proclean_dailyAssignments/{assignmentId} {
+      allow read: if sameTenant(resource.data);
+      allow create: if isContractAdmin() && validTenantCreate();
+      allow update: if isContractAdmin()
+        && sameTenant(resource.data)
+        && validTenantCreate()
+        && request.resource.data.tenantId == resource.data.tenantId;
+      allow delete: if isContractAdmin() && sameTenant(resource.data);
+    }
+
+    match /{collectionName}/{documentId} {
+      allow read: if collectionName in [
+          'proclean_personnel',
+          'proclean_coverageAreas',
+          'proclean_cargos',
+          'contracts',
+          'shifts',
+          'contingencies',
+          'plant_areas',
+          'sectors',
+          'sub_sectors',
+          'equipments',
+          'machines',
+          'workers',
+          'whitelabel'
+        ] && sameTenant(resource.data);
+
+      allow create: if collectionName in [
+          'proclean_personnel',
+          'proclean_coverageAreas',
+          'proclean_cargos',
+          'contracts',
+          'shifts',
+          'contingencies',
+          'plant_areas',
+          'sectors',
+          'sub_sectors',
+          'equipments',
+          'machines',
+          'workers',
+          'whitelabel'
+        ] && isContractAdmin() && validTenantCreate();
+
+      allow update: if collectionName in [
+          'proclean_personnel',
+          'proclean_coverageAreas',
+          'proclean_cargos',
+          'contracts',
+          'shifts',
+          'contingencies',
+          'plant_areas',
+          'sectors',
+          'sub_sectors',
+          'equipments',
+          'machines',
+          'workers',
+          'whitelabel'
+        ] && isContractAdmin()
+          && sameTenant(resource.data)
+          && validTenantCreate()
+          && request.resource.data.tenantId == resource.data.tenantId;
+
+      allow delete: if collectionName in [
+          'proclean_personnel',
+          'proclean_coverageAreas',
+          'proclean_cargos',
+          'contracts',
+          'shifts',
+          'contingencies',
+          'plant_areas',
+          'sectors',
+          'sub_sectors',
+          'equipments',
+          'machines',
+          'workers',
+          'whitelabel'
+        ] && isContractAdmin() && sameTenant(resource.data);
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isContractAdmin() && sameTenant(resource.data);
+      allow create: if isActiveMember() && validTenantCreate();
+      allow update, delete: if false;
+    }
+  }
+}
