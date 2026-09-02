@@ -45,6 +45,7 @@ import {
   resetDatabaseBlankSlate
 } from './api/client';
 import initialDbData from '../data/db.json';
+import { OFFICIAL_PROCLEAN_LOGO_URL } from './config/branding';
 import { isFirebaseAuthRequired, logoutFromFirebase, subscribeFirebaseSession } from './api/auth';
 import { ShieldCheck, Database, Wifi, WifiOff, LogOut, UserCheck, HardHat, Shield, Wrench, Menu, RefreshCw } from 'lucide-react';
 
@@ -98,6 +99,7 @@ export function App() {
   // WhiteLabel & System States
   const [whiteLabel, setWhiteLabel] = useState<WhiteLabelConfig>({
     companyName: 'ProCleanMG',
+    companyLogoUrl: OFFICIAL_PROCLEAN_LOGO_URL,
     brandBadgeText: 'PC',
     primaryColor: '#0F172A',
     actionColor: '#FF7A00',
@@ -511,7 +513,11 @@ export function App() {
 
   const updateWhiteLabel = (val: React.SetStateAction<WhiteLabelConfig>) => {
     setWhiteLabel(prev => {
-      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
+      const requested = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant({
+        ...requested,
+        companyLogoUrl: requested.companyLogoUrl || OFFICIAL_PROCLEAN_LOGO_URL
+      });
       try { localStorage.setItem('proclean_whitelabel', JSON.stringify(next)); } catch (e) {}
       if (isFirebaseConfigured) syncSingleDocToFirebase('whitelabel', 'config', next);
       apiSaveWhiteLabel(next);

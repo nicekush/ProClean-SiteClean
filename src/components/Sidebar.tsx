@@ -1,5 +1,6 @@
 import React from 'react';
 import type { WhiteLabelConfig, ClientContract, UserRole } from '../types';
+import { OFFICIAL_PROCLEAN_LOGO_URL } from '../config/branding';
 import { 
   ClipboardList, 
   Settings, 
@@ -42,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile = false,
   onCloseMobile
 }) => {
+  const companyLogoUrl = whiteLabel.companyLogoUrl || OFFICIAL_PROCLEAN_LOGO_URL;
 
   interface DomainItem {
     id: string;
@@ -103,9 +105,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className={`sidebar ${isOpenMobile ? 'open' : ''}`} 
       >
         <div className="sidebar-header" style={{ position: 'relative', justifyContent: 'center', padding: '24px 20px' }}>
-          {whiteLabel.companyLogoUrl ? (
+          {companyLogoUrl ? (
             <img 
-              src={whiteLabel.companyLogoUrl} 
+              src={companyLogoUrl}
               alt="Logo ProClean" 
               style={{ height: '56px', maxWidth: '210px', objectFit: 'contain' }} 
             />

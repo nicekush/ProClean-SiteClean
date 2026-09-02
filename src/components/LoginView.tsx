@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { WhiteLabelConfig, UserAccount } from '../types';
 import { loginUser } from '../api/client';
 import { isFirebaseAuthRequired, requestFirebasePasswordReset } from '../api/auth';
+import { OFFICIAL_PROCLEAN_LOGO_URL } from '../config/branding';
 import { Lock, Mail, Shield, AlertCircle, ArrowRight, HardHat, UserCheck, Wrench, Building } from 'lucide-react';
 
 interface LoginViewProps {
@@ -10,6 +11,7 @@ interface LoginViewProps {
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ whiteLabel, onLoginSuccess }) => {
+  const companyLogoUrl = whiteLabel.companyLogoUrl || OFFICIAL_PROCLEAN_LOGO_URL;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -57,8 +59,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ whiteLabel, onLoginSuccess
       <div className="login-visual-panel" style={{ backgroundColor: whiteLabel.primaryColor }}>
         <div style={{ position: 'relative', zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-            {whiteLabel.companyLogoUrl ? (
-              <img src={whiteLabel.companyLogoUrl} alt="Logo" style={{ height: '44px', objectFit: 'contain' }} />
+            {companyLogoUrl ? (
+              <img src={companyLogoUrl} alt="Logo ProCleanMG" style={{ height: '44px', maxWidth: '220px', objectFit: 'contain' }} />
             ) : (
               <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: whiteLabel.actionColor, color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px' }}>
                 {whiteLabel.brandBadgeText}
