@@ -86,9 +86,10 @@ export function App() {
   // Derived role strictly from authenticatedUser
   const currentRole = authenticatedUser?.role || 'SUPERVISOR_TERRENO';
 
-  // Lock SUPERVISOR_TERRENO strictly to work-orders tab
+  // Keep supervisors inside the operational views exposed by the sidebar.
   useEffect(() => {
-    if (currentRole === 'SUPERVISOR_TERRENO' && activeTab !== 'work-orders') {
+    const supervisorTabs = ['work-orders', 'personnel-coverage'];
+    if (currentRole === 'SUPERVISOR_TERRENO' && !supervisorTabs.includes(activeTab)) {
       setActiveTab('work-orders');
     }
   }, [currentRole, activeTab]);
