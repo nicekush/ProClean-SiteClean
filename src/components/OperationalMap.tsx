@@ -784,7 +784,11 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
               const cy = n.y + n.h / 2;
               const lines = n.label.split('\n');
               const metricLabel = metrics.totalOTs > 0 ? formatMetricValue(metrics) : '';
-              const textLines = metricLabel ? [...lines, metricLabel] : lines;
+              const badgeWidth = metricLabel ? Math.max(42, metricLabel.length * 6.5 + 14) : 0;
+              const badgeHeight = 18;
+              const verticalLabelOnRight = n.vertical ? cx < currentDiagram.w / 2 : false;
+              const verticalTextX = verticalLabelOnRight ? n.x + n.w + 9 : n.x - 9;
+              const verticalBadgeX = verticalLabelOnRight ? n.x + n.w + 9 : n.x - badgeWidth - 9;
 
               return (
                 <g
@@ -840,30 +844,44 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                     />
                   )}
 
-                  {/* Labels and values stay inside each node to avoid collisions with adjacent equipment. */}
+                  {/* Horizontal labels stay centered; vertical labels remain horizontal beside the belt. */}
                   <text
-                    x={cx}
-                    y={cy - (textLines.length - 1) * 6 + 3}
-                    textAnchor="middle"
+                    x={n.vertical ? verticalTextX : cx}
+                    y={n.vertical ? cy - 7 : cy - (lines.length - 1) * 6 + 3}
+                    textAnchor={n.vertical ? (verticalLabelOnRight ? 'start' : 'end') : 'middle'}
                     fill={colorInfo.text}
-                    fontSize={n.vertical ? 10 : 11}
+                    fontSize={11}
                     fontWeight={900}
-                    transform={n.vertical ? `rotate(-90 ${cx} ${cy})` : undefined}
                     pointerEvents="none"
+                    style={n.vertical ? { paintOrder: 'stroke', stroke: '#FFFFFF', strokeWidth: 4, strokeLinejoin: 'round' } : undefined}
                   >
-                    {textLines.map((line, index) => (
-                      <tspan
-                        key={`${line}-${index}`}
-                        x={cx}
-                        dy={index === 0 ? 0 : 12}
-                        fontSize={metricLabel && index === textLines.length - 1 ? 9 : undefined}
-                        fontWeight={metricLabel && index === textLines.length - 1 ? 800 : 900}
-                        opacity={metricLabel && index === textLines.length - 1 ? 0.82 : 1}
-                      >
+                    {lines.map((line, index) => (
+                      <tspan key={`${line}-${index}`} x={n.vertical ? verticalTextX : cx} dy={index === 0 ? 0 : 12}>
                         {line}
                       </tspan>
                     ))}
                   </text>
+
+                  {/* Floating totals are offset above horizontal nodes and beside vertical belts. */}
+                  {metricLabel && (
+                    <g
+                      transform={`translate(${n.vertical ? verticalBadgeX : cx - badgeWidth / 2}, ${n.vertical ? cy + 3 : n.y - badgeHeight - 5})`}
+                      pointerEvents="none"
+                    >
+                      <rect
+                        width={badgeWidth}
+                        height={badgeHeight}
+                        rx={9}
+                        fill={colorInfo.stroke}
+                        stroke="#FFFFFF"
+                        strokeWidth="1.5"
+                        style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.2))' }}
+                      />
+                      <text x={badgeWidth / 2} y={12} textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="900">
+                        {metricLabel}
+                      </text>
+                    </g>
+                  )}
                 </g>
               );
             })}
