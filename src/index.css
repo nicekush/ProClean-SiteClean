@@ -51,6 +51,11 @@ body,
   min-width: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 img,
 video,
 canvas,
@@ -556,6 +561,10 @@ h1, h2, h3, h4, h5, h6 {
   .responsive-card-grid,
   .responsive-two-column-grid {
     grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .responsive-card-grid > .coverage-breakdown-card {
+    grid-column: 1 / -1 !important;
   }
 
   .desktop-only-table {

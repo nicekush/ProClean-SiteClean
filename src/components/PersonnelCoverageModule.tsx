@@ -328,7 +328,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
               className="btn btn-primary" 
               style={{ fontSize: '13px', padding: '10px 18px', backgroundColor: 'var(--orange)' }}
             >
-              <Plus size={16} /> + Reportar Cobertura de Área
+              <Plus size={16} /> Reportar Cobertura de Área
             </button>
           </div>
         </div>
@@ -366,7 +366,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
           </div>
 
           {/* Card 3: Desglose por Cargos */}
-          <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0', gridColumn: 'span 2' }}>
+          <div className="coverage-breakdown-card" style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0', gridColumn: 'span 2' }}>
             <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-500)', textTransform: 'uppercase', marginBottom: '8px' }}>
               Dotación por Cargo (Cubiertos / Requeridos)
             </div>
