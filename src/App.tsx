@@ -1008,6 +1008,11 @@ export function App() {
           {activeTab === 'dashboard' && (
             <AdherenceDashboard 
               workOrders={workOrders}
+              sectors={sectors}
+              equipments={equipments}
+              whiteLabel={whiteLabel}
+              generatedBy={authenticatedUser?.name || authenticatedUser?.email}
+              contractLabel={activeContract ? `${activeContract.clientName} · Contrato ${activeContract.contractNumber} · ${activeContract.siteLocation}` : undefined}
             />
           )}
 
