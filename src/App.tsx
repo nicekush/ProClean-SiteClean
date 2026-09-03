@@ -977,9 +977,7 @@ export function App() {
 
           {activeTab === 'dashboard' && (
             <AdherenceDashboard 
-              workOrders={workOrders} 
-              whiteLabel={whiteLabel}
-              onUpdateWhiteLabel={updateWhiteLabel}
+              workOrders={workOrders}
             />
           )}
 
