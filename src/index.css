@@ -1499,6 +1499,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .operational-table {
   width: 100%;
+  min-width: 1540px;
   border-collapse: collapse;
   text-align: left;
   font-size: 13px;
@@ -1515,6 +1516,87 @@ h1, h2, h3, h4, h5, h6 {
   white-space: nowrap;
   border-bottom: 1px solid var(--slate-200);
 }
+
+.ot-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.ot-sort-button:hover,
+.ot-sort-button:focus-visible,
+.ot-sort-button.is-active {
+  color: var(--orange);
+}
+
+.ot-sort-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--orange) 35%, transparent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.ot-sort-indicator {
+  font-size: 9px;
+  opacity: .8;
+}
+
+.ot-sort-button small {
+  display: inline-grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 999px;
+  background: #fff1e8;
+  color: var(--orange);
+  font-size: 9px;
+}
+
+.ot-sort-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  background: var(--slate-50);
+  color: var(--slate-600);
+  font-size: 11px;
+}
+
+.ot-sort-help {
+  margin-left: 10px;
+  color: var(--slate-400);
+}
+
+.ot-sort-reset,
+.ot-mobile-sort-controls button,
+.ot-mobile-sort-controls select {
+  padding: 6px 9px;
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--slate-700);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.ot-sort-reset,
+.ot-mobile-sort-controls button { cursor: pointer; }
+.ot-mobile-sort-controls { display: none; gap: 6px; }
+.ot-cell-secondary { display: block; margin-top: 3px; color: var(--slate-500); font-size: 9px; font-weight: 700; }
+.ot-numeric-cell { text-align: center; font-variant-numeric: tabular-nums; }
 
 .operational-table td {
   padding: 14px 16px;
@@ -1721,6 +1803,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 768px) {
+  .ot-sort-summary { align-items: stretch; flex-direction: column; }
+  .ot-sort-help { display: none; }
+  .ot-mobile-sort-controls { display: flex; }
+  .ot-mobile-sort-controls select { flex: 1; min-width: 0; }
+
   :root {
     --header-height: 64px;
   }

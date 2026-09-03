@@ -50,6 +50,59 @@ const getWorkOrderResourceFlags = (order: WorkOrder) => {
   };
 };
 
+type WorkOrderSortKey = 'executionDate' | 'sapCode' | 'taskType' | 'areaName' | 'sectorName' | 'equipmentName' | 'resourceMode' | 'headcount' | 'hh' | 'hm' | 'evidence' | 'volume' | 'status';
+type SortDirection = 'asc' | 'desc';
+type WorkOrderSort = { key: WorkOrderSortKey; direction: SortDirection };
+
+const WORK_ORDER_SORT_STORAGE_KEY = 'proclean-work-orders-sort-v1';
+const DEFAULT_WORK_ORDER_SORT: WorkOrderSort[] = [
+  { key: 'executionDate', direction: 'desc' },
+  { key: 'sapCode', direction: 'desc' },
+];
+const SORTABLE_KEYS = new Set<WorkOrderSortKey>(['executionDate', 'sapCode', 'taskType', 'areaName', 'sectorName', 'equipmentName', 'resourceMode', 'headcount', 'hh', 'hm', 'evidence', 'volume', 'status']);
+const SORT_LABELS: Record<WorkOrderSortKey, string> = {
+  executionDate: 'Fecha', sapCode: 'OT', taskType: 'Tipo', areaName: 'Área', sectorName: 'Sector',
+  equipmentName: 'Equipo', resourceMode: 'Modalidad', headcount: 'Dotación', hh: 'HH', hm: 'HM',
+  evidence: 'Evidencia', volume: 'Volumen', status: 'Estado',
+};
+const statusSortOrder: Record<WorkOrderStatus, number> = {
+  PROGRAMADO: 1, EN_EJECUCION: 2, EN_PROCESO: 3, PENDIENTE_APROBACION_ITO: 4,
+  CONTINGENCIA: 5, RECHAZADO_CONTINGENCIA: 6, APROBADO_MANDANTE: 7, COMPLETADO: 8,
+};
+const textCollator = new Intl.Collator('es-CL', { numeric: true, sensitivity: 'base' });
+
+const getStoredWorkOrderSort = (): WorkOrderSort[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(WORK_ORDER_SORT_STORAGE_KEY) || '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is WorkOrderSort =>
+      Boolean(item) && SORTABLE_KEYS.has(item.key) && (item.direction === 'asc' || item.direction === 'desc')
+    ).slice(0, 4);
+  } catch {
+    return [];
+  }
+};
+
+const getWorkOrderSortValue = (order: WorkOrder, key: WorkOrderSortKey): string | number => {
+  const flags = getWorkOrderResourceFlags(order);
+  switch (key) {
+    case 'executionDate': return order.executionDate || '';
+    case 'sapCode': return order.sapCode || '';
+    case 'taskType': return order.taskType || 'PLANIFICADO';
+    case 'areaName': return order.areaName || '';
+    case 'sectorName': return order.sectorName || '';
+    case 'equipmentName': return order.equipmentName || order.equipoCorrea || '';
+    case 'resourceMode': return flags.manual && flags.equipment ? 'Mixto' : flags.equipment ? 'Maquinaria' : 'Manual';
+    case 'headcount': return Number(order.headcount) || 0;
+    case 'hh': return Math.max(0, Number(order.headcount) || 0) * Math.max(0, Number(order.realHours) || 0);
+    case 'hm': return Math.max(0, Number(order.machineHours) || 0);
+    case 'evidence': return Number(Boolean(order.imageBeforeUrl || order.beforePhotoUrl)) + Number(Boolean(order.imageAfterUrl || order.afterPhotoUrl));
+    case 'volume': return Math.max(0, Number(order.cubicMetersRemoved) || 0);
+    case 'status': return statusSortOrder[order.status] || 0;
+  }
+};
+
 export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   workOrders,
   pendingWorkOrderIds = new Set<string>(),
@@ -88,6 +141,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const [selectedContingencyReason, setSelectedContingencyReason] = useState<string>('');
   const [contingencyComments, setContingencyComments] = useState<string>('');
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [sortSpecs, setSortSpecs] = useState<WorkOrderSort[]>(getStoredWorkOrderSort);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(WORK_ORDER_SORT_STORAGE_KEY, JSON.stringify(sortSpecs));
+    } catch {
+      // El orden sigue funcionando durante la sesión aunque el navegador bloquee el almacenamiento local.
+    }
+  }, [sortSpecs]);
 
   // ITO Sign-off modal & Canvas Signature state
   const [itoApprovingOrder, setItoApprovingOrder] = useState<WorkOrder | null>(null);
@@ -531,7 +593,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const pendingCount = workOrders.filter(o => o.status === 'PENDIENTE_APROBACION_ITO').length;
   const approvedCount = workOrders.filter(o => o.status === 'APROBADO_MANDANTE' || o.status === 'COMPLETADO').length;
 
-  const filteredOrders = workOrders.filter(order => {
+  const matchingOrders = workOrders.filter(order => {
     // Quick Filter Status (A prueba de niños)
     if (quickFilterStatus === 'PENDING' && order.status !== 'PENDIENTE_APROBACION_ITO') return false;
     if (quickFilterStatus === 'APPROVED' && order.status !== 'APROBADO_MANDANTE' && order.status !== 'COMPLETADO') return false;
@@ -582,6 +644,50 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
     return matchesSearch && matchesShift && matchesStatus && matchesArea && matchesTaskType && matchesDate;
   });
+
+  const effectiveSortSpecs = sortSpecs.length > 0 ? sortSpecs : DEFAULT_WORK_ORDER_SORT;
+  const filteredOrders = [...matchingOrders].sort((left, right) => {
+    for (const spec of effectiveSortSpecs) {
+      const leftValue = getWorkOrderSortValue(left, spec.key);
+      const rightValue = getWorkOrderSortValue(right, spec.key);
+      const emptyLeft = leftValue === '';
+      const emptyRight = rightValue === '';
+      if (emptyLeft !== emptyRight) return emptyLeft ? 1 : -1;
+      const comparison = typeof leftValue === 'number' && typeof rightValue === 'number'
+        ? leftValue - rightValue
+        : textCollator.compare(String(leftValue), String(rightValue));
+      if (comparison !== 0) return spec.direction === 'asc' ? comparison : -comparison;
+    }
+    return textCollator.compare(left.sapCode || left.id, right.sapCode || right.id);
+  });
+
+  const handleSort = (key: WorkOrderSortKey, additive = false) => {
+    setSortSpecs((current): WorkOrderSort[] => {
+      const existingIndex = current.findIndex(spec => spec.key === key);
+      if (!additive) {
+        if (existingIndex === -1 || current.length > 1) return [{ key, direction: 'asc' }];
+        if (current[0].direction === 'asc') return [{ key, direction: 'desc' }];
+        return [];
+      }
+      if (existingIndex === -1) return [...current, { key, direction: 'asc' } as WorkOrderSort].slice(0, 4);
+      if (current[existingIndex].direction === 'asc') {
+        return current.map((spec, index): WorkOrderSort => index === existingIndex ? { ...spec, direction: 'desc' } : spec);
+      }
+      return current.filter((_, index) => index !== existingIndex);
+    });
+  };
+
+  const SortableHeader = ({ sortKey, children }: { sortKey: WorkOrderSortKey; children: React.ReactNode }) => {
+    const explicitIndex = sortSpecs.findIndex(spec => spec.key === sortKey);
+    const defaultIndex = sortSpecs.length === 0 ? DEFAULT_WORK_ORDER_SORT.findIndex(spec => spec.key === sortKey) : -1;
+    const index = explicitIndex >= 0 ? explicitIndex : defaultIndex;
+    const direction = explicitIndex >= 0 ? sortSpecs[explicitIndex].direction : defaultIndex >= 0 ? DEFAULT_WORK_ORDER_SORT[defaultIndex].direction : undefined;
+    return <th aria-sort={index === 0 ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" className={`ot-sort-button ${index >= 0 ? 'is-active' : ''}`} onClick={(event) => handleSort(sortKey, event.shiftKey)} title="Clic para ordenar. Shift + clic para combinar criterios.">
+        <span>{children}</span><span className="ot-sort-indicator" aria-hidden="true">{direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '↕'}</span>{index >= 0 && effectiveSortSpecs.length > 1 && <small>{index + 1}</small>}
+      </button>
+    </th>;
+  };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -786,11 +892,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       'Modalidad Recursos': o.hasManualLabor && o.hasEquipment ? 'Manual + Equipos' : o.hasEquipment ? 'Solo Equipos' : 'Solo Manual',
       'Turno': o.shiftName,
       'N° OT / SAP': o.sapCode,
+      'Fecha de Ejecución': o.executionDate || '',
       'Operación / Detalle': o.operationDetail,
       'Patente / Vehículo': o.vehiclePatent || '-',
       'N° Personas': o.headcount,
       'HH Estimadas': o.estimatedHours,
-      'Trabajo Real (HH)': o.realHours,
+      'Duración Real (h)': o.realHours,
+      'HH Ejecutadas': (Number(o.headcount) || 0) * (Number(o.realHours) || 0),
+      'HM Ejecutadas': Number(o.machineHours) || 0,
+      'Volumen Removido (m³)': Number(o.cubicMetersRemoved) || 0,
       'Brecha HH': o.realHours - o.estimatedHours,
       'Fotos Registradas': o.beforePhotoUrl && o.afterPhotoUrl ? 'Completo (2/2)' : o.beforePhotoUrl ? 'Pendiente Foto Final (1/2)' : 'Sin Fotos (0/2)',
       'Estado Conformidad': o.status,
@@ -1999,27 +2109,52 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
         )}
       </div>
 
+      <div className="ot-sort-summary">
+        <div>
+          <strong>Orden:</strong>{' '}
+          {effectiveSortSpecs.map((spec, index) => `${index + 1}. ${SORT_LABELS[spec.key]} ${spec.direction === 'asc' ? '↑' : '↓'}`).join(' · ')}
+          <span className="ot-sort-help">En escritorio: clic en un encabezado; Shift + clic para combinar.</span>
+        </div>
+        <div className="ot-mobile-sort-controls">
+          <select
+            aria-label="Columna para ordenar las órdenes"
+            value={effectiveSortSpecs[0].key}
+            onChange={(event) => setSortSpecs([{ key: event.target.value as WorkOrderSortKey, direction: effectiveSortSpecs[0].direction }])}
+          >
+            {Object.entries(SORT_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+          <button type="button" onClick={() => setSortSpecs([{ key: effectiveSortSpecs[0].key, direction: effectiveSortSpecs[0].direction === 'asc' ? 'desc' : 'asc' }])}>
+            {effectiveSortSpecs[0].direction === 'asc' ? 'Ascendente ↑' : 'Descendente ↓'}
+          </button>
+        </div>
+        {sortSpecs.length > 0 && <button type="button" className="ot-sort-reset" onClick={() => setSortSpecs([])}>Restablecer orden</button>}
+      </div>
+
       {/* DESKTOP TABLE VIEW (> 768px) */}
       <div className="desktop-only-table grid-table-container">
         <table className="operational-table">
           <thead>
             <tr>
-              <th>Tipo de Tarea</th>
-              <th>Área de Planta</th>
-              <th>Sector / Proceso</th>
-              <th>{labels.sapCode}</th>
-              <th>Equipo & Componentes (Nivel 3/4)</th>
-              <th>Recursos Operativos</th>
-              <th>Evidencia Visual</th>
-              <th>Volumen Removido (m³)</th>
-              <th>Estado Conformidad</th>
+              <SortableHeader sortKey="executionDate">Fecha</SortableHeader>
+              <SortableHeader sortKey="sapCode">{labels.sapCode}</SortableHeader>
+              <SortableHeader sortKey="taskType">Tipo de Tarea</SortableHeader>
+              <SortableHeader sortKey="areaName">Área de Planta</SortableHeader>
+              <SortableHeader sortKey="sectorName">Sector / Proceso</SortableHeader>
+              <SortableHeader sortKey="equipmentName">Equipo & Componentes</SortableHeader>
+              <SortableHeader sortKey="resourceMode">Modalidad</SortableHeader>
+              <SortableHeader sortKey="headcount">Dotación</SortableHeader>
+              <SortableHeader sortKey="hh">HH</SortableHeader>
+              <SortableHeader sortKey="hm">HM</SortableHeader>
+              <SortableHeader sortKey="evidence">Evidencia</SortableHeader>
+              <SortableHeader sortKey="volume">Volumen (m³)</SortableHeader>
+              <SortableHeader sortKey="status">Estado</SortableHeader>
               <th>Certificación ITO / Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: '40px', color: 'var(--slate-400)' }}>
+                <td colSpan={14} style={{ textAlign: 'center', padding: '40px', color: 'var(--slate-400)' }}>
                   No hay órdenes de trabajo coincidentes con los filtros aplicados.
                 </td>
               </tr>
@@ -2027,16 +2162,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               filteredOrders.map((order) => {
                 return (
                   <tr key={order.id}>
-                    <td>
-                      {getTaskTypeBadge(order.taskType)}
-                    </td>
-                    <td>
-                      <span className="pill pill-complete" style={{ backgroundColor: '#E0F2FE', color: '#0369A1', border: '1px solid #7DD3FC' }}>
-                        {order.areaName || 'General'}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '12px', fontWeight: 700, color: 'var(--slate-800)' }}>
-                      {order.sectorName || 'Sector'}
+                    <td className="ot-numeric-cell" style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
+                      {order.executionDate || 'Sin fecha'}
+                      <small className="ot-cell-secondary">{order.shiftName}</small>
                     </td>
                     <td>
                       <span className="sap-code-badge">
@@ -2047,28 +2175,23 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                           ● Pendiente de sincronizar
                         </div>
                       )}
-                      <div style={{ fontSize: '10px', color: 'var(--slate-500)', marginTop: '2px', fontWeight: 800, whiteSpace: 'nowrap' }}>
-                        📅 {order.executionDate || order.dia || 'Hoy'}
-                      </div>
                     </td>
-                    <td style={{ fontWeight: 800, color: 'var(--orange)' }}>{order.equipoCorrea}</td>
+                    <td>{getTaskTypeBadge(order.taskType)}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                        {getWorkOrderResourceFlags(order).manual && (
-                          <span className="pill pill-complete" style={{ fontSize: '10px', padding: '2px 6px' }}>
-                            👷 {order.headcount} pers.
-                          </span>
-                        )}
-                        {getWorkOrderResourceFlags(order).equipment && order.vehiclePatent && (
-                          <span className="pill pill-pending" style={{ fontSize: '10px', padding: '2px 6px', backgroundColor: '#F1F5F9', color: '#334155' }}>
-                            🚜 {order.vehiclePatent}
-                          </span>
-                        )}
-                      </div>
+                      <span className="pill pill-complete" style={{ backgroundColor: '#E0F2FE', color: '#0369A1', border: '1px solid #7DD3FC' }}>
+                        {order.areaName || 'General'}
+                      </span>
                     </td>
+                    <td style={{ fontSize: '12px', fontWeight: 700, color: 'var(--slate-800)' }}>{order.sectorName || 'Sector'}</td>
+                    <td style={{ fontWeight: 800, color: 'var(--orange)' }}>{order.equipmentName || order.equipoCorrea}</td>
                     <td>
-                      {getEvidenceProgressBadge(order)}
+                      {getWorkOrderResourceFlags(order).manual && getWorkOrderResourceFlags(order).equipment ? 'Mixto' : getWorkOrderResourceFlags(order).equipment ? 'Maquinaria' : 'Manual'}
+                      {order.vehiclePatent && <small className="ot-cell-secondary">🚜 {order.vehiclePatent}</small>}
                     </td>
+                    <td className="ot-numeric-cell">{getWorkOrderResourceFlags(order).manual ? Number(order.headcount) || 0 : '—'}</td>
+                    <td className="ot-numeric-cell">{getWorkOrderResourceFlags(order).manual ? ((Number(order.headcount) || 0) * (Number(order.realHours) || 0)).toLocaleString('es-CL') : '—'}</td>
+                    <td className="ot-numeric-cell">{getWorkOrderResourceFlags(order).equipment ? (Number(order.machineHours) || 0).toLocaleString('es-CL') : '—'}</td>
+                    <td>{getEvidenceProgressBadge(order)}</td>
                     <td style={{ textAlign: 'center', fontWeight: 900, color: 'var(--orange)', fontSize: '15px' }}>
                       {order.cubicMetersRemoved || 0} m³
                     </td>
