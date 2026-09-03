@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { WorkOrder, PlantArea, Sector, PlantEquipment, SubSector, WhiteLabelConfig, Machine } from '../types';
-import { Layers, Box, Clock, X, Filter, Activity, Cpu, Truck, HardHat, Edit, MapPin, ChevronDown } from 'lucide-react';
+import { Layers, Box, Clock, X, Filter, Activity, Cpu, Truck, HardHat, Edit, MapPin, ChevronDown, CalendarDays, RotateCcw } from 'lucide-react';
 
 interface OperationalMapProps {
   workOrders: WorkOrder[];
@@ -15,7 +15,7 @@ interface OperationalMapProps {
 
 type MetricType = 'VOLUME_M3' | 'RESOURCE_HOURS' | 'OT_COUNT';
 type ResourceFilterType = 'MANUAL' | 'EQUIPMENT';
-type TimeFilterType = 'ACTIVE_WEEK' | 'MONTH' | 'ALL';
+type TimeFilterType = 'TODAY' | 'YESTERDAY' | 'ACTIVE_WEEK' | 'LAST_7' | 'LAST_14' | 'LAST_30' | 'MONTH' | 'PREVIOUS_MONTH' | 'YEAR' | 'ALL' | 'CUSTOM';
 type StatusFilterType = 'ALL' | 'PENDING' | 'APPROVED' | 'CONTINGENCY';
 
 interface BeltNode {
@@ -78,6 +78,26 @@ const getLocalDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const addLocalDays = (date: Date, days: number) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+const getLocalWeekStart = (date: Date) => {
+  const result = new Date(date);
+  const mondayOffset = result.getDay() === 0 ? -6 : 1 - result.getDay();
+  result.setDate(result.getDate() + mondayOffset);
+  return result;
+};
+
+const formatDateLabel = (dateKey?: string) => {
+  if (!dateKey) return 'sin límite';
+  const date = new Date(`${dateKey}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateKey;
+  return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+};
+
 const getIsoWeek = (date: Date) => {
   const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const day = utcDate.getUTCDay() || 7;
@@ -100,13 +120,21 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   const [activeMetric, setActiveMetric] = useState<MetricType>('RESOURCE_HOURS');
   const [resourceFilter, setResourceFilter] = useState<ResourceFilterType>('MANUAL');
   const [timeFilter, setTimeFilter] = useState<TimeFilterType>('ALL');
+  const [customStartDate, setCustomStartDate] = useState<string>(() => getLocalDateKey(addLocalDays(new Date(), -6)));
+  const [customEndDate, setCustomEndDate] = useState<string>(() => getLocalDateKey(new Date()));
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
   const [selectedBeltLabel, setSelectedBeltLabel] = useState<string | null>(null);
   const [expandedWetSectorId, setExpandedWetSectorId] = useState<string | null>(null);
 
   const now = new Date();
   const activeWeek = getIsoWeek(now);
+  const todayKey = getLocalDateKey(now);
   const currentMonth = getLocalDateKey(now).slice(0, 7);
+  const weekStartKey = getLocalDateKey(getLocalWeekStart(now));
+  const weekEndKey = getLocalDateKey(addLocalDays(getLocalWeekStart(now), 6));
+  const currentYear = String(now.getFullYear());
+  const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const previousMonth = getLocalDateKey(previousMonthDate).slice(0, 7);
 
   // Zaldívar Operational Diagrams Definition
   const DIAGRAMS: DiagramConfig[] = [
@@ -269,14 +297,21 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
 
   const orderMatchesPeriod = (order: WorkOrder) => {
     if (timeFilter === 'ALL') return true;
-    const executionDate = order.executionDate ? new Date(`${order.executionDate}T12:00:00`) : null;
-    if (timeFilter === 'MONTH') {
-      return Boolean(order.executionDate?.startsWith(currentMonth));
+    const date = order.executionDate;
+    if (!date) return timeFilter === 'ACTIVE_WEEK' && order.semana === activeWeek;
+    if (timeFilter === 'TODAY') return date === todayKey;
+    if (timeFilter === 'YESTERDAY') return date === getLocalDateKey(addLocalDays(now, -1));
+    if (timeFilter === 'ACTIVE_WEEK') return date >= weekStartKey && date <= weekEndKey;
+    if (timeFilter === 'LAST_7') return date >= getLocalDateKey(addLocalDays(now, -6)) && date <= todayKey;
+    if (timeFilter === 'LAST_14') return date >= getLocalDateKey(addLocalDays(now, -13)) && date <= todayKey;
+    if (timeFilter === 'LAST_30') return date >= getLocalDateKey(addLocalDays(now, -29)) && date <= todayKey;
+    if (timeFilter === 'MONTH') return date.startsWith(currentMonth);
+    if (timeFilter === 'PREVIOUS_MONTH') return date.startsWith(previousMonth);
+    if (timeFilter === 'YEAR') return date.startsWith(currentYear);
+    if (timeFilter === 'CUSTOM') {
+      return (!customStartDate || date >= customStartDate) && (!customEndDate || date <= customEndDate);
     }
-    if (executionDate && !Number.isNaN(executionDate.getTime())) {
-      return executionDate.getFullYear() === now.getFullYear() && getIsoWeek(executionDate) === activeWeek;
-    }
-    return order.semana === activeWeek;
+    return true;
   };
 
   const orderMatchesStatus = (order: WorkOrder) => {
@@ -292,6 +327,20 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
     const flags = getResourceFlags(order);
     return resourceFilter === 'MANUAL' ? flags.manual : flags.equipment;
   });
+
+  const periodDescription = (() => {
+    if (timeFilter === 'ALL') return 'Histórico consolidado';
+    if (timeFilter === 'TODAY') return `Hoy · ${formatDateLabel(todayKey)}`;
+    if (timeFilter === 'YESTERDAY') return `Ayer · ${formatDateLabel(getLocalDateKey(addLocalDays(now, -1)))}`;
+    if (timeFilter === 'ACTIVE_WEEK') return `${formatDateLabel(weekStartKey)} — ${formatDateLabel(weekEndKey)}`;
+    if (timeFilter === 'LAST_7') return `${formatDateLabel(getLocalDateKey(addLocalDays(now, -6)))} — ${formatDateLabel(todayKey)}`;
+    if (timeFilter === 'LAST_14') return `${formatDateLabel(getLocalDateKey(addLocalDays(now, -13)))} — ${formatDateLabel(todayKey)}`;
+    if (timeFilter === 'LAST_30') return `${formatDateLabel(getLocalDateKey(addLocalDays(now, -29)))} — ${formatDateLabel(todayKey)}`;
+    if (timeFilter === 'MONTH') return new Intl.DateTimeFormat('es-CL', { month: 'long', year: 'numeric' }).format(now);
+    if (timeFilter === 'PREVIOUS_MONTH') return new Intl.DateTimeFormat('es-CL', { month: 'long', year: 'numeric' }).format(previousMonthDate);
+    if (timeFilter === 'YEAR') return `Año ${currentYear}`;
+    return `${formatDateLabel(customStartDate)} — ${formatDateLabel(customEndDate)}`;
+  })();
 
   const getOrderBreakdown = (order: WorkOrder) => {
     const flags = getResourceFlags(order);
@@ -597,18 +646,35 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800 }}>
-            <Filter size={14} style={{ color: 'var(--slate-400)' }} />
-            <span>Periodo:</span>
-            <select
-              value={timeFilter}
-              onChange={e => setTimeFilter(e.target.value as TimeFilterType)}
-              style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--slate-200)', fontSize: '11px', fontWeight: 800 }}
-            >
-              <option value="ALL">Histórico Consolidado</option>
-              <option value="ACTIVE_WEEK">Semana Activa (W{activeWeek})</option>
-              <option value="MONTH">Mes actual</option>
-            </select>
+          <div className="operational-time-filter">
+            <div className="operational-time-filter__select">
+              <CalendarDays size={14} style={{ color: 'var(--slate-400)' }} />
+              <span>Período:</span>
+              <select
+                aria-label="Filtrar mapa por período"
+                value={timeFilter}
+                onChange={e => setTimeFilter(e.target.value as TimeFilterType)}
+                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--slate-200)', fontSize: '11px', fontWeight: 800 }}
+              >
+                <option value="TODAY">Hoy</option>
+                <option value="YESTERDAY">Ayer</option>
+                <option value="LAST_7">Últimos 7 días</option>
+                <option value="LAST_14">Últimos 14 días</option>
+                <option value="LAST_30">Últimos 30 días</option>
+                <option value="ACTIVE_WEEK">Semana actual (W{activeWeek})</option>
+                <option value="MONTH">Mes actual</option>
+                <option value="PREVIOUS_MONTH">Mes anterior</option>
+                <option value="YEAR">Año actual</option>
+                <option value="ALL">Histórico Consolidado</option>
+                <option value="CUSTOM">Rango personalizado</option>
+              </select>
+            </div>
+            {timeFilter === 'CUSTOM' && (
+              <div className="operational-custom-range">
+                <label><span>Desde</span><input aria-label="Fecha inicial del mapa" type="date" value={customStartDate} max={customEndDate || undefined} onChange={event => setCustomStartDate(event.target.value)} /></label>
+                <label><span>Hasta</span><input aria-label="Fecha final del mapa" type="date" value={customEndDate} min={customStartDate || undefined} onChange={event => setCustomEndDate(event.target.value)} /></label>
+              </div>
+            )}
           </div>
           <select
             aria-label="Filtrar por estado de orden"
@@ -621,7 +687,26 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             <option value="APPROVED">Aprobadas / completadas</option>
             <option value="CONTINGENCY">Contingencias</option>
           </select>
+          <button
+            type="button"
+            className="operational-filter-reset"
+            onClick={() => {
+              setTimeFilter('ALL');
+              setCustomStartDate(getLocalDateKey(addLocalDays(new Date(), -6)));
+              setCustomEndDate(getLocalDateKey(new Date()));
+              setStatusFilter('ALL');
+            }}
+            title="Restablecer filtros temporales y de estado"
+          >
+            <RotateCcw size={13} /> Restablecer
+          </button>
         </div>
+      </div>
+
+      <div className="operational-period-summary">
+        <Filter size={14} />
+        <span>Período visible: <strong>{periodDescription}</strong></span>
+        <b>{filteredOrders.length} {filteredOrders.length === 1 ? 'OT incluida' : 'OT incluidas'}</b>
       </div>
 
       {/* HEATMAP LEGEND BAR */}

@@ -635,6 +635,101 @@
   box-shadow: none !important;
 }
 
+.operational-time-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.operational-time-filter__select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.operational-custom-range {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.operational-custom-range label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--slate-500);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.operational-custom-range input {
+  min-width: 126px;
+  padding: 6px 7px;
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--slate-700);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.operational-filter-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 31px;
+  padding: 6px 9px;
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--slate-600);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.operational-filter-reset:hover {
+  border-color: #fdba74;
+  color: var(--orange);
+}
+
+.operational-period-summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  margin: -7px 0 14px;
+  padding: 8px 12px;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  background: #f0f9ff;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.operational-period-summary span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.operational-period-summary strong,
+.operational-period-summary b {
+  color: #075985;
+}
+
+.operational-period-summary b {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .wet-area-dashboard {
   min-width: 0;
   display: flex;
@@ -946,6 +1041,46 @@
 
   .operational-map-filters > * {
     max-width: 100%;
+  }
+
+  .operational-time-filter,
+  .operational-time-filter__select,
+  .operational-custom-range {
+    width: 100%;
+  }
+
+  .operational-time-filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .operational-time-filter__select select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .operational-custom-range label {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .operational-custom-range input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .operational-filter-reset {
+    flex: 1;
+  }
+
+  .operational-period-summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .operational-period-summary b {
+    width: 100%;
+    margin-left: 21px;
   }
 
   .operational-resource-toggle {
