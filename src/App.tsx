@@ -237,6 +237,38 @@ export function App() {
     };
   }, [dataAccessKey, activeTenantId]);
 
+  // Plant hierarchy is shared configuration: changes made by an administrator
+  // must reach every open OT creator without requiring a reload.
+  useEffect(() => {
+    if (!isFirebaseConfigured || !dataAccessKey || !dbConnected) return;
+
+    const subscribeCatalog = <T,>(
+      collectionName: string,
+      storageKey: string,
+      setter: React.Dispatch<React.SetStateAction<T[]>>
+    ) => isFirebaseAuthRequired
+      ? subscribeFirebaseCollectionByField<T>(collectionName, 'tenantId', activeTenantId, items => {
+          setter(items || []);
+          try { localStorage.setItem(storageKey, JSON.stringify(items || [])); } catch (e) {}
+        })
+      : subscribeFirebaseCollection<T>(collectionName, items => {
+          setter(items || []);
+          try { localStorage.setItem(storageKey, JSON.stringify(items || [])); } catch (e) {}
+        });
+
+    const unsubPlantAreas = subscribeCatalog<PlantArea>('plant_areas', 'proclean_plant_areas', setPlantAreas);
+    const unsubSectors = subscribeCatalog<Sector>('sectors', 'proclean_sectors', setSectors);
+    const unsubEquipments = subscribeCatalog<PlantEquipment>('equipments', 'proclean_equipments', setEquipments);
+    const unsubSubSectors = subscribeCatalog<SubSector>('sub_sectors', 'proclean_sub_sectors', setSubSectors);
+
+    return () => {
+      unsubPlantAreas?.();
+      unsubSectors?.();
+      unsubEquipments?.();
+      unsubSubSectors?.();
+    };
+  }, [dataAccessKey, activeTenantId, dbConnected]);
+
   // Firestore owns the offline queue. Browser network events only inform the
   // user; pending writes are confirmed by snapshot metadata, never by a timer.
   useEffect(() => {
@@ -580,7 +612,6 @@ export function App() {
     setPlantAreas(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_plant_areas', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('plant_areas', next);
       apiSavePlantAreas(next);
       return next;
     });
@@ -590,7 +621,6 @@ export function App() {
     setSectors(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_sectors', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('sectors', next);
       apiSaveSectors(next);
       return next;
     });
@@ -600,7 +630,6 @@ export function App() {
     setSubSectors(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_sub_sectors', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('sub_sectors', next);
       apiSaveSubSectors(next);
       return next;
     });
@@ -939,6 +968,7 @@ export function App() {
               setPlantAreas={updatePlantAreas}
               sectors={sectors}
               setSectors={updateSectors}
+              equipments={equipments}
               subSectors={subSectors}
               setSubSectors={updateSubSectors}
               machines={machines}

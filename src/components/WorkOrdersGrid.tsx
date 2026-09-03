@@ -210,23 +210,23 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     const equipObj = (equipments || []).find(e => e.id === equipId);
     const sectorObj = (sectors || []).find(s => s.id === sectorId);
 
-    // 1. Direct match by equipmentId or equipmentName in DB
-    let matched = (subSectors || []).filter(sub => {
-      if (equipId && (sub.equipmentId === equipId || (equipObj && sub.equipmentName === equipObj.name))) return true;
-      return false;
+    // Equipment-specific components and sector-wide components must coexist.
+    // A component created only under a sector is intentionally available to
+    // every equipment in that sector, while components from sibling equipment
+    // remain excluded.
+    const matched = (subSectors || []).filter(sub => {
+      const equipmentMatch = Boolean(equipId) && (
+        sub.equipmentId === equipId
+        || Boolean(equipObj && sub.equipmentName === equipObj.name)
+      );
+      const hasEquipmentScope = Boolean(sub.equipmentId || sub.equipmentName);
+      const sectorMatch = Boolean(sectorId) && (
+        sub.sectorId === sectorId
+        || Boolean(sectorObj && sub.sectorName === sectorObj.name)
+      );
+      const isUnscopedLegacyComponent = !sub.sectorId && !sub.sectorName && !hasEquipmentScope;
+      return equipmentMatch || (sectorMatch && !hasEquipmentScope) || isUnscopedLegacyComponent;
     });
-
-    // 2. Match by sectorId or sectorName in DB
-    if (matched.length === 0 && sectorId) {
-      matched = (subSectors || []).filter(sub => {
-        return sub.sectorId === sectorId || (sectorObj && sub.sectorName === sectorObj.name);
-      });
-    }
-
-    // 3. Fallback to official DB subSectors if no specific association is set
-    if (matched.length === 0) {
-      matched = (subSectors || []);
-    }
 
     // Strict deduplication by component name to eliminate repeated badges
     const uniqueMap = new Map<string, SubSector>();

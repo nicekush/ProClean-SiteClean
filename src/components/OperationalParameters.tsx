@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { PlantArea, Sector, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
+import type { PlantArea, Sector, PlantEquipment, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
 import { syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase } from '../api/firebase';
 import { 
   Plus, 
@@ -24,6 +24,7 @@ interface OperationalParametersProps {
   setPlantAreas: React.Dispatch<React.SetStateAction<PlantArea[]>>;
   sectors: Sector[];
   setSectors: React.Dispatch<React.SetStateAction<Sector[]>>;
+  equipments: PlantEquipment[];
   subSectors: SubSector[];
   setSubSectors: React.Dispatch<React.SetStateAction<SubSector[]>>;
   machines: Machine[];
@@ -47,6 +48,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   setPlantAreas,
   sectors,
   setSectors,
+  equipments,
   subSectors,
   setSubSectors,
   machines,
@@ -75,7 +77,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   // New Items Forms
   const [newArea, setNewArea] = useState({ name: '', code: '' });
   const [newSector, setNewSector] = useState({ areaId: '', name: '', code: '', description: '' });
-  const [newSubSector, setNewSubSector] = useState({ sectorId: '', name: '', code: '' });
+  const [newSubSector, setNewSubSector] = useState({ sectorId: '', equipmentId: '', name: '', code: '' });
   const [newMachine, setNewMachine] = useState<{ name: string; patent: string; type: string; capacity: string; capacityM3?: number }>({ name: '', patent: '', type: '', capacity: '', capacityM3: undefined });
   const [newWorker, setNewWorker] = useState({ name: '', rut: '', role: 'OPERADOR_HIDRO' });
 
@@ -260,11 +262,14 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     e.preventDefault();
     if (!newSubSector.name || !newSubSector.sectorId) return;
     const linkedSector = sectors.find(s => s.id === newSubSector.sectorId);
+    const linkedEquipment = equipments.find(item => item.id === newSubSector.equipmentId);
 
     const newObj: SubSector = {
       id: `sub-${Date.now()}`,
       sectorId: newSubSector.sectorId,
       sectorName: linkedSector ? linkedSector.name : 'Sector',
+      equipmentId: linkedEquipment?.id,
+      equipmentName: linkedEquipment?.name,
       name: newSubSector.name,
       code: newSubSector.code || `SUB-${subSectors.length + 1}`
     };
@@ -275,7 +280,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       return updated;
     });
     syncSingleDocToFirebase('sub_sectors', newObj.id, { ...newObj, tenantId });
-    setNewSubSector({ sectorId: '', name: '', code: '' });
+    setNewSubSector({ sectorId: '', equipmentId: '', name: '', code: '' });
   };
 
   const handleDeleteSubSector = (id: string) => {
@@ -646,7 +651,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           <form className="responsive-form-grid" onSubmit={handleAddSubSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <select
               value={newSubSector.sectorId}
-              onChange={e => setNewSubSector({ ...newSubSector, sectorId: e.target.value })}
+              onChange={e => setNewSubSector({ ...newSubSector, sectorId: e.target.value, equipmentId: '' })}
               style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9', fontWeight: 700 }}
               required
             >
@@ -654,6 +659,19 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               {sectors.map(s => (
                 <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
               ))}
+            </select>
+
+            <select
+              value={newSubSector.equipmentId}
+              onChange={e => setNewSubSector({ ...newSubSector, equipmentId: e.target.value })}
+              disabled={!newSubSector.sectorId}
+              title="Opcional: limita el subsector a un equipo específico"
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9', fontWeight: 700 }}
+            >
+              <option value="">Disponible en todo el sector</option>
+              {equipments
+                .filter(item => item.sectorId === newSubSector.sectorId || item.sectorName === sectors.find(sector => sector.id === newSubSector.sectorId)?.name)
+                .map(item => <option key={item.id} value={item.id}>Sólo en: {item.name}</option>)}
             </select>
 
             <input
@@ -683,6 +701,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               <thead>
                 <tr>
                   <th>Sector Perteneciente</th>
+                  <th>Alcance en OT</th>
                   <th>Código</th>
                   <th>Sub-Sector / Equipo</th>
                   <th>Acciones</th>
@@ -691,12 +710,16 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               <tbody>
                 {subSectors.map(sub => {
                   const linkedSector = sectors.find(s => s.id === sub.sectorId);
+                  const linkedEquipment = equipments.find(item => item.id === sub.equipmentId);
                   return (
                     <tr key={sub.id}>
                       <td>
                         <span className="pill pill-complete">
                           {linkedSector ? linkedSector.name : sub.sectorName || 'Sector'}
                         </span>
+                      </td>
+                      <td style={{ fontSize: '11px', fontWeight: 750, color: 'var(--slate-600)' }}>
+                        {linkedEquipment?.name || sub.equipmentName || 'Todos los equipos del sector'}
                       </td>
                       <td><span style={{ fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#F1F5F9', padding: '4px 8px', borderRadius: '4px' }}>{sub.code}</span></td>
                       <td style={{ fontWeight: 800, color: 'var(--color-forest-teal)' }}>{sub.name}</td>
