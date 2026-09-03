@@ -25,6 +25,7 @@ interface OperationalParametersProps {
   sectors: Sector[];
   setSectors: React.Dispatch<React.SetStateAction<Sector[]>>;
   equipments: PlantEquipment[];
+  setEquipments: React.Dispatch<React.SetStateAction<PlantEquipment[]>>;
   subSectors: SubSector[];
   setSubSectors: React.Dispatch<React.SetStateAction<SubSector[]>>;
   machines: Machine[];
@@ -49,6 +50,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   sectors,
   setSectors,
   equipments,
+  setEquipments,
   subSectors,
   setSubSectors,
   machines,
@@ -77,6 +79,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   // New Items Forms
   const [newArea, setNewArea] = useState({ name: '', code: '' });
   const [newSector, setNewSector] = useState({ areaId: '', name: '', code: '', description: '' });
+  const [hierarchyEntryType, setHierarchyEntryType] = useState<'equipment' | 'component'>('equipment');
   const [newSubSector, setNewSubSector] = useState({ sectorId: '', equipmentId: '', name: '', code: '' });
   const [newMachine, setNewMachine] = useState<{ name: string; patent: string; type: string; capacity: string; capacityM3?: number }>({ name: '', patent: '', type: '', capacity: '', capacityM3: undefined });
   const [newWorker, setNewWorker] = useState({ name: '', rut: '', role: 'OPERADOR_HIDRO' });
@@ -257,11 +260,28 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     }
   };
 
-  // Sub-Sectors CRUD (Direct Cloud DB & LocalStorage Sync)
+  // Level 3 equipment and level 4 component CRUD.
   const handleAddSubSector = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSubSector.name || !newSubSector.sectorId) return;
     const linkedSector = sectors.find(s => s.id === newSubSector.sectorId);
+
+    if (hierarchyEntryType === 'equipment') {
+      const newObj: PlantEquipment = {
+        id: `eq-${Date.now()}`,
+        sectorId: newSubSector.sectorId,
+        sectorName: linkedSector ? linkedSector.name : 'Sector',
+        name: newSubSector.name,
+        code: newSubSector.code || `EQ-${equipments.length + 1}`
+      };
+
+      setEquipments(prev => [...prev, newObj]);
+      syncSingleDocToFirebase('equipments', newObj.id, { ...newObj, tenantId });
+      setNewSubSector({ sectorId: '', equipmentId: '', name: '', code: '' });
+      return;
+    }
+
+    if (!newSubSector.equipmentId) return;
     const linkedEquipment = equipments.find(item => item.id === newSubSector.equipmentId);
 
     const newObj: SubSector = {
@@ -284,7 +304,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeleteSubSector = (id: string) => {
-    if (confirm('¿Deseas eliminar este sub-sector / equipo?')) {
+    if (confirm('¿Deseas eliminar este componente?')) {
       setSubSectors(prev => {
         const updated = prev.filter(s => s.id !== id);
         try { localStorage.setItem('proclean_sub_sectors', JSON.stringify(updated)); } catch(e) {}
@@ -292,6 +312,58 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       });
       deleteSingleDocFromFirebase('sub_sectors', id);
     }
+  };
+
+  const handleDeleteEquipment = (id: string) => {
+    const hasComponents = subSectors.some(item => item.equipmentId === id);
+    if (hasComponents) {
+      alert('Este equipo tiene componentes asociados. Elimina o reasigna esos componentes antes de eliminarlo.');
+      return;
+    }
+    if (confirm('¿Deseas eliminar este equipo principal?')) {
+      setEquipments(prev => prev.filter(item => item.id !== id));
+      deleteSingleDocFromFirebase('equipments', id);
+    }
+  };
+
+  const handlePromoteSubSectorToEquipment = async (sub: SubSector) => {
+    const normalizedName = sub.name.trim().toLocaleLowerCase();
+    const alreadyExists = equipments.some(item =>
+      item.name.trim().toLocaleLowerCase() === normalizedName
+      && (item.sectorId === sub.sectorId || item.sectorName === sub.sectorName)
+    );
+    if (alreadyExists) {
+      alert('Este equipo principal ya existe en el sector seleccionado.');
+      return;
+    }
+
+    const duplicateLegacyRecords = subSectors.filter(item =>
+      item.name.trim().toLocaleLowerCase() === normalizedName
+      && item.sectorId === sub.sectorId
+      && !item.equipmentId
+      && !item.equipmentName
+    );
+    if (!confirm(`¿Convertir "${sub.name}" en equipo principal? Aparecerá en el paso 4 del creador de OT.`)) return;
+
+    const newObj: PlantEquipment = {
+      id: `eq-${Date.now()}`,
+      sectorId: sub.sectorId,
+      sectorName: sub.sectorName,
+      name: sub.name,
+      code: sub.code?.replace(/^SUB-/i, 'EQ-') || `EQ-${equipments.length + 1}`
+    };
+
+    const created = await syncSingleDocToFirebase('equipments', newObj.id, { ...newObj, tenantId });
+    if (!created) {
+      alert('No fue posible convertir el registro. No se eliminó ningún dato; revisa la conexión e inténtalo nuevamente.');
+      return;
+    }
+
+    setEquipments(prev => [...prev, newObj]);
+    for (const item of duplicateLegacyRecords) {
+      await deleteSingleDocFromFirebase('sub_sectors', item.id);
+    }
+    setSubSectors(prev => prev.filter(item => !duplicateLegacyRecords.some(duplicate => duplicate.id === item.id)));
   };
 
   // Machines CRUD (Direct Cloud DB & LocalStorage Sync)
@@ -417,7 +489,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           ⚙️ Parametrización de Jerarquía de Planta, Flota y Nómina
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '2px' }}>
-          Configuración en 3 Niveles: Áreas de Planta ➔ Sectores ➔ Sub-Sectores / Equipos
+          Configuración en 4 niveles: Áreas de Planta ➔ Sectores ➔ Equipos principales ➔ Componentes
         </p>
       </div>
 
@@ -444,7 +516,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           onClick={() => setActiveTab('subsectors')}
           style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
         >
-          <Grid size={16} /> 3. Sub-Sectores ({subSectors.length})
+          <Grid size={16} /> 3-4. Equipos y Componentes ({equipments.length}/{subSectors.length})
         </button>
 
         <button
@@ -605,14 +677,14 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                   <th>Área Perteneciente</th>
                   <th>Código</th>
                   <th>Nombre del Sector</th>
-                  <th>Sub-Sectores Vincualdos</th>
+                  <th>Equipos Vinculados</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {sectors.map(sector => {
                   const linkedArea = plantAreas.find(a => a.id === sector.areaId);
-                  const sectorSubSectors = subSectors.filter(sub => sub.sectorId === sector.id);
+                  const sectorEquipments = equipments.filter(item => item.sectorId === sector.id || item.sectorName === sector.name);
                   return (
                     <tr key={sector.id}>
                       <td>
@@ -624,7 +696,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       <td style={{ fontWeight: 800, color: 'var(--color-primary-dark)' }}>{sector.name}</td>
                       <td>
                         <span className="pill pill-complete">
-                          {sectorSubSectors.length} sub-sector(es)
+                          {sectorEquipments.length} equipo(s)
                         </span>
                       </td>
                       <td>
@@ -641,12 +713,32 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
         </div>
       )}
 
-      {/* TAB 3: SUB-SECTORS / EQUIPOS */}
+      {/* TAB 3-4: EQUIPMENT / COMPONENTS */}
       {activeTab === 'subsectors' && (
         <div className="card">
           <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '16px' }}>
-            Nivel 3: Sub-Sectores / Equipos Vincualdos a un Sector
+            Niveles 3 y 4: Equipos principales y sus componentes
           </h3>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+            <button
+              type="button"
+              className={`btn ${hierarchyEntryType === 'equipment' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => {
+                setHierarchyEntryType('equipment');
+                setNewSubSector(prev => ({ ...prev, equipmentId: '' }));
+              }}
+            >
+              Equipo principal (aparece en paso 4 de OT)
+            </button>
+            <button
+              type="button"
+              className={`btn ${hierarchyEntryType === 'component' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setHierarchyEntryType('component')}
+            >
+              Componente (aparece en paso 5 de OT)
+            </button>
+          </div>
 
           <form className="responsive-form-grid" onSubmit={handleAddSubSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <select
@@ -661,22 +753,24 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               ))}
             </select>
 
-            <select
-              value={newSubSector.equipmentId}
-              onChange={e => setNewSubSector({ ...newSubSector, equipmentId: e.target.value })}
-              disabled={!newSubSector.sectorId}
-              title="Opcional: limita el subsector a un equipo específico"
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9', fontWeight: 700 }}
-            >
-              <option value="">Disponible en todo el sector</option>
-              {equipments
-                .filter(item => item.sectorId === newSubSector.sectorId || item.sectorName === sectors.find(sector => sector.id === newSubSector.sectorId)?.name)
-                .map(item => <option key={item.id} value={item.id}>Sólo en: {item.name}</option>)}
-            </select>
+            {hierarchyEntryType === 'component' && (
+              <select
+                value={newSubSector.equipmentId}
+                onChange={e => setNewSubSector({ ...newSubSector, equipmentId: e.target.value })}
+                disabled={!newSubSector.sectorId}
+                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9', fontWeight: 700 }}
+                required
+              >
+                <option value="">Selecciona equipo principal...</option>
+                {equipments
+                  .filter(item => item.sectorId === newSubSector.sectorId || item.sectorName === sectors.find(sector => sector.id === newSubSector.sectorId)?.name)
+                  .map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            )}
 
             <input
               type="text"
-              placeholder="Nombre Sub-Sector / Equipo (Ej: Correa 002-CV-001)"
+              placeholder={hierarchyEntryType === 'equipment' ? 'Nombre del equipo principal (Ej: Tripper Sennet)' : 'Nombre del componente (Ej: Pasillo lateral)'}
               value={newSubSector.name}
               onChange={e => setNewSubSector({ ...newSubSector, name: e.target.value })}
               style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
@@ -685,17 +779,52 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
             <input
               type="text"
-              placeholder="Código SAP / Identificador (Ej: CV-001)"
+              placeholder={hierarchyEntryType === 'equipment' ? 'Código del equipo (Ej: TR-SEN)' : 'Código del componente'}
               value={newSubSector.code}
               onChange={e => setNewSubSector({ ...newSubSector, code: e.target.value })}
               style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D2D2D9' }}
             />
 
             <button type="submit" className="btn btn-primary">
-              <Plus size={16} /> Crear Sub-Sector
+              <Plus size={16} /> Crear {hierarchyEntryType === 'equipment' ? 'Equipo Principal' : 'Componente'}
             </button>
           </form>
 
+          <h4 style={{ margin: '8px 0 10px', color: 'var(--color-primary-dark)' }}>Equipos principales (Paso 4 de OT)</h4>
+          <div className="grid-table-container" style={{ marginBottom: '24px' }}>
+            <table className="operational-table">
+              <thead>
+                <tr>
+                  <th>Sector Perteneciente</th>
+                  <th>Código</th>
+                  <th>Equipo principal</th>
+                  <th>Componentes</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {equipments.map(item => {
+                  const linkedSector = sectors.find(sector => sector.id === item.sectorId);
+                  const componentCount = subSectors.filter(sub => sub.equipmentId === item.id || sub.equipmentName === item.name).length;
+                  return (
+                    <tr key={item.id}>
+                      <td><span className="pill pill-complete">{linkedSector?.name || item.sectorName || 'Sector'}</span></td>
+                      <td><span style={{ fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#F1F5F9', padding: '4px 8px', borderRadius: '4px' }}>{item.code}</span></td>
+                      <td style={{ fontWeight: 800, color: 'var(--color-forest-teal)' }}>{item.name}</td>
+                      <td>{componentCount}</td>
+                      <td>
+                        <button onClick={() => handleDeleteEquipment(item.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                          <Trash2 size={14} /> Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <h4 style={{ margin: '8px 0 10px', color: 'var(--color-primary-dark)' }}>Componentes (Paso 5 de OT)</h4>
           <div className="grid-table-container">
             <table className="operational-table">
               <thead>
@@ -703,7 +832,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                   <th>Sector Perteneciente</th>
                   <th>Alcance en OT</th>
                   <th>Código</th>
-                  <th>Sub-Sector / Equipo</th>
+                  <th>Componente</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -724,6 +853,11 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       <td><span style={{ fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#F1F5F9', padding: '4px 8px', borderRadius: '4px' }}>{sub.code}</span></td>
                       <td style={{ fontWeight: 800, color: 'var(--color-forest-teal)' }}>{sub.name}</td>
                       <td>
+                        {!sub.equipmentId && !sub.equipmentName && (
+                          <button onClick={() => handlePromoteSubSectorToEquipment(sub)} className="btn" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #93C5FD', padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}>
+                            Convertir a equipo
+                          </button>
+                        )}
                         <button onClick={() => handleDeleteSubSector(sub.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>

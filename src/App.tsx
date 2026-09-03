@@ -639,7 +639,6 @@ export function App() {
     setEquipments(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_equipments', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('equipments', next);
       return next;
     });
   };
@@ -969,6 +968,7 @@ export function App() {
               sectors={sectors}
               setSectors={updateSectors}
               equipments={equipments}
+              setEquipments={updateEquipments}
               subSectors={subSectors}
               setSubSectors={updateSubSectors}
               machines={machines}
