@@ -293,12 +293,40 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
   const handleOpenEditModal = (order: WorkOrder) => {
     const resourceFlags = getWorkOrderResourceFlags(order);
+    const areaMatch = (plantAreas || []).find(area => area.id === order.areaId)
+      || (plantAreas || []).find(area => area.name.trim().toLocaleLowerCase() === order.areaName?.trim().toLocaleLowerCase());
+    const resolvedAreaId = areaMatch?.id || order.areaId || '';
+    const sectorMatch = getSectorsForArea(resolvedAreaId).find(sector => sector.id === order.sectorId)
+      || getSectorsForArea(resolvedAreaId).find(sector => sector.name.trim().toLocaleLowerCase() === order.sectorName?.trim().toLocaleLowerCase());
+    const resolvedSectorId = sectorMatch?.id || order.sectorId || '';
+    const equipmentMatch = getEquipmentsForSector(resolvedSectorId).find(equipment => equipment.id === order.equipmentId)
+      || getEquipmentsForSector(resolvedSectorId).find(equipment => equipment.name.trim().toLocaleLowerCase() === order.equipmentName?.trim().toLocaleLowerCase())
+      || getEquipmentsForSector(resolvedSectorId).find(equipment => order.equipoCorrea?.trim().toLocaleLowerCase().startsWith(equipment.name.trim().toLocaleLowerCase()));
+    const resolvedEquipmentId = equipmentMatch?.id || order.equipmentId || '';
+    const shiftMatch = shifts.find(shift => shift.id === order.shiftId)
+      || shifts.find(shift => shift.name.trim().toLocaleLowerCase() === order.shiftName?.trim().toLocaleLowerCase());
+    const selectedNames = order.selectedSubSectorNames?.length
+      ? order.selectedSubSectorNames
+      : order.subSectorName ? [order.subSectorName] : [];
+
     setCurrentEditStep(1);
-    setEditingOrder({ ...order, hasManualLabor: resourceFlags.manual, hasEquipment: resourceFlags.equipment });
-    setEditSelectedAreaId(order.areaId || '');
-    setEditSelectedSectorId(order.sectorId || '');
-    setEditSelectedEquipmentId(order.equipmentId || '');
-    setEditSelectedSubSectorNames(order.selectedSubSectorNames || []);
+    setEditingOrder({
+      ...order,
+      areaId: resolvedAreaId,
+      areaName: areaMatch?.name || order.areaName,
+      sectorId: resolvedSectorId,
+      sectorName: sectorMatch?.name || order.sectorName,
+      equipmentId: resolvedEquipmentId,
+      equipmentName: equipmentMatch?.name || order.equipmentName,
+      shiftId: shiftMatch?.id || order.shiftId,
+      shiftName: shiftMatch?.name || order.shiftName,
+      hasManualLabor: resourceFlags.manual,
+      hasEquipment: resourceFlags.equipment
+    });
+    setEditSelectedAreaId(resolvedAreaId);
+    setEditSelectedSectorId(resolvedSectorId);
+    setEditSelectedEquipmentId(resolvedEquipmentId);
+    setEditSelectedSubSectorNames(selectedNames);
   };
 
   // Initialize Canvas Signature Context when modal opens
@@ -1587,11 +1615,11 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               </div>
             )}
 
-            {/* PASO 10: DETALLE / OBSERVACIONES (OPCIONAL) */}
-            {currentEditStep === 10 && (
+            {/* PASO 9: DETALLE / OBSERVACIONES (OPCIONAL) */}
+            {currentEditStep === 9 && (
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                  📝 Paso 10: Descripción u Observaciones de la Operación (Opcional)
+                  📝 Paso 9: Descripción u Observaciones de la Operación (Opcional)
                 </h4>
 
                 <div>
@@ -1612,7 +1640,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     <button 
                       type="button" 
                       className="btn btn-secondary" 
-                      onClick={() => setCurrentEditStep(9)}
+                      onClick={() => {
+                        if (editingOrder.hasEquipment !== false) {
+                          setCurrentEditStep(8);
+                        } else if (editingOrder.hasManualLabor !== false) {
+                          setCurrentEditStep(7);
+                        } else {
+                          setCurrentEditStep(6);
+                        }
+                      }}
                     >
                       ◄ Atrás
                     </button>
