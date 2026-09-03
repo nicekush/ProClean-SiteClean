@@ -189,6 +189,18 @@ export const KpiPdfReport: React.FC<Props> = ({
     missingEvidence: orders.filter(order => !hasEvidence(order)).length,
     pendingIto: orders.filter(order => !isApproved(order)).length,
   };
+  const timelineChart = timeline.slice(-12);
+  const areaChart = areaRows.slice(0, 10);
+  const timelineMax = {
+    volume: Math.max(1, ...timelineChart.map(row => row.volume)),
+    hh: Math.max(1, ...timelineChart.map(row => row.hh)),
+    hm: Math.max(1, ...timelineChart.map(row => row.hm)),
+  };
+  const areaMax = {
+    volume: Math.max(1, ...areaChart.map(row => row.volume)),
+    hh: Math.max(1, ...areaChart.map(row => row.hh)),
+    hm: Math.max(1, ...areaChart.map(row => row.hm)),
+  };
 
   const Header = ({ title, subtitle }: { title: string; subtitle: string }) => <header className="kpi-pdf-header">
     <div className="kpi-pdf-brand">
@@ -224,7 +236,30 @@ export const KpiPdfReport: React.FC<Props> = ({
     </article>
 
     <article className="kpi-pdf-page">
-      <Header title="Evolución y distribución operacional" subtitle="Valores exactos por período y área operativa" />
+      <Header title="Evolución gráfica del período" subtitle="Comparación visual de volumen, horas hombre y horas máquina" />
+      <div className="kpi-pdf-chart-legend"><span><i className="is-volume" /> Volumen m³</span><span><i className="is-hh" /> Horas hombre</span><span><i className="is-hm" /> Horas máquina</span></div>
+      <div className="kpi-pdf-chart-layout">
+        <section className="kpi-pdf-chart-panel">
+          <div className="kpi-pdf-chart-title"><div><span>EVOLUCIÓN TEMPORAL</span><h2>Resultados por {grain === 'DAY' ? 'día' : grain === 'WEEK' ? 'semana' : 'mes'}</h2></div><small>{timelineChart.length === timeline.length ? `${timeline.length} períodos` : `Últimos 12 de ${timeline.length} períodos`}</small></div>
+          <div className="kpi-pdf-bars">{timelineChart.map(row => <div className="kpi-pdf-bar-row" key={row.key}>
+            <div className="kpi-pdf-bar-label"><strong>{grain === 'MONTH' ? row.key : dateLabel(row.key)}</strong><span>{row.ots} OT</span></div>
+            <div className="kpi-pdf-bar-tracks"><div><i className="is-volume" style={{ width: `${Math.max(1, row.volume / timelineMax.volume * 100)}%` }} /><b>{num(row.volume)} m³</b></div><div><i className="is-hh" style={{ width: `${Math.max(1, row.hh / timelineMax.hh * 100)}%` }} /><b>{num(row.hh)} HH</b></div><div><i className="is-hm" style={{ width: `${Math.max(1, row.hm / timelineMax.hm * 100)}%` }} /><b>{num(row.hm)} HM</b></div></div>
+          </div>)}</div>
+        </section>
+        <section className="kpi-pdf-chart-panel">
+          <div className="kpi-pdf-chart-title"><div><span>DISTRIBUCIÓN OPERACIONAL</span><h2>Principales áreas y sectores</h2></div><small>{areaChart.length === areaRows.length ? `${areaRows.length} áreas` : `Top 10 de ${areaRows.length}`}</small></div>
+          <div className="kpi-pdf-bars">{areaChart.map(row => <div className="kpi-pdf-bar-row" key={row.name}>
+            <div className="kpi-pdf-bar-label"><strong>{row.name}</strong><span>{row.ots} OT</span></div>
+            <div className="kpi-pdf-bar-tracks"><div><i className="is-volume" style={{ width: `${Math.max(1, row.volume / areaMax.volume * 100)}%` }} /><b>{num(row.volume)} m³</b></div><div><i className="is-hh" style={{ width: `${Math.max(1, row.hh / areaMax.hh * 100)}%` }} /><b>{num(row.hh)} HH</b></div><div><i className="is-hm" style={{ width: `${Math.max(1, row.hm / areaMax.hm * 100)}%` }} /><b>{num(row.hm)} HM</b></div></div>
+          </div>)}</div>
+        </section>
+      </div>
+      <div className="kpi-pdf-note"><strong>Lectura de las barras:</strong> cada indicador utiliza su propia escala máxima para conservar legibilidad. Los valores exactos aparecen en la página siguiente.</div>
+      <Footer />
+    </article>
+
+    <article className="kpi-pdf-page">
+      <Header title="Detalle temporal y distribución operacional" subtitle="Valores exactos por período y área operativa" />
       <div className="kpi-pdf-two-tables">
         <section><h2>Evolución {grain === 'DAY' ? 'diaria' : grain === 'WEEK' ? 'semanal' : 'mensual'}</h2><table><thead><tr><th>Período</th><th>OT</th><th>m³</th><th>HH</th><th>HM</th><th>Aprob.</th><th>Evid.</th></tr></thead><tbody>{timeline.map(row => <tr key={row.key}><td>{grain === 'MONTH' ? row.key : dateLabel(row.key)}</td><td>{row.ots}</td><td>{num(row.volume)}</td><td>{num(row.hh)}</td><td>{num(row.hm)}</td><td>{row.approved}</td><td>{row.evidence}</td></tr>)}</tbody></table></section>
         <section><h2>Resultados por área operativa</h2><table><thead><tr><th>Área / sector</th><th>OT</th><th>m³</th><th>HH</th><th>HM</th><th>Aprob.</th><th>Evid.</th></tr></thead><tbody>{areaRows.map(row => <tr key={row.name}><td>{row.name}</td><td>{row.ots}</td><td>{num(row.volume)}</td><td>{num(row.hh)}</td><td>{num(row.hm)}</td><td>{row.approved}</td><td>{row.evidence}</td></tr>)}</tbody></table></section>

@@ -155,7 +155,15 @@ export const AdherenceDashboard: React.FC<Props> = ({ workOrders, sectors = [], 
 
   const printReport = () => {
     setPrintGeneratedAt(new Date());
-    window.setTimeout(() => window.print(), 50);
+    const previousOverride = document.getElementById('kpi-print-page-override');
+    previousOverride?.remove();
+    const pageOverride = document.createElement('style');
+    pageOverride.id = 'kpi-print-page-override';
+    pageOverride.media = 'print';
+    pageOverride.textContent = '@page { size: 297mm 210mm; margin: 8mm; }';
+    document.head.appendChild(pageOverride);
+    window.addEventListener('afterprint', () => pageOverride.remove(), { once: true });
+    window.setTimeout(() => window.print(), 75);
   };
 
   const reset = () => {
