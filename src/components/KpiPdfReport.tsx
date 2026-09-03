@@ -37,17 +37,6 @@ const resourceMode = (order: WorkOrder) => {
   const machinery = order.hasEquipment ?? Boolean(order.vehiclePatent || order.fleetTripsCount || hmOf(order));
   return manual && machinery ? 'Mixto' : machinery ? 'Maquinaria' : 'Manual';
 };
-const statusLabel = (status: WorkOrder['status']) => ({
-  PROGRAMADO: 'Programado',
-  EN_EJECUCION: 'En ejecución',
-  EN_PROCESO: 'En proceso',
-  PENDIENTE_APROBACION_ITO: 'Pendiente ITO',
-  APROBADO_MANDANTE: 'Aprobado ITO',
-  RECHAZADO_CONTINGENCIA: 'Rechazado',
-  CONTINGENCIA: 'Contingencia',
-  COMPLETADO: 'Completado',
-}[status] || status);
-
 const weekStart = (date: Date) => {
   const result = new Date(date);
   result.setDate(result.getDate() - (result.getDay() === 0 ? 6 : result.getDay() - 1));
@@ -180,15 +169,6 @@ export const KpiPdfReport: React.FC<Props> = ({
     return 'is-critical';
   };
 
-  const quality = {
-    missingDate: orders.filter(order => !order.executionDate).length,
-    missingLocation: orders.filter(order => !order.sectorName && !order.areaName).length,
-    zeroVolume: orders.filter(order => volumeOf(order) === 0).length,
-    machineryWithoutHm: orders.filter(order => resourceMode(order) !== 'Manual' && hmOf(order) === 0).length,
-    manualWithoutHh: orders.filter(order => resourceMode(order) !== 'Maquinaria' && hhOf(order) === 0).length,
-    missingEvidence: orders.filter(order => !hasEvidence(order)).length,
-    pendingIto: orders.filter(order => !isApproved(order)).length,
-  };
   const timelineChart = timeline.slice(-12);
   const areaChart = areaRows.slice(0, 10);
   const timelineMax = {
@@ -282,26 +262,5 @@ export const KpiPdfReport: React.FC<Props> = ({
       </article>;
     })}
 
-    <article className="kpi-pdf-page">
-      <Header title="Control y calidad del registro" subtitle="Excepciones que afectan la interpretación del período" />
-      <div className="kpi-pdf-quality-grid">
-        <div className={quality.pendingIto ? 'has-warning' : ''}><span>Pendientes de aprobación/cierre</span><strong>{quality.pendingIto}</strong><small>OT no aprobadas ni completadas</small></div>
-        <div className={quality.missingEvidence ? 'has-warning' : ''}><span>Sin evidencia completa</span><strong>{quality.missingEvidence}</strong><small>Falta fotografía antes o después</small></div>
-        <div className={quality.zeroVolume ? 'has-warning' : ''}><span>Volumen igual a cero</span><strong>{quality.zeroVolume}</strong><small>Revisar ejecución o registro</small></div>
-        <div className={quality.machineryWithoutHm ? 'has-warning' : ''}><span>Maquinaria sin HM</span><strong>{quality.machineryWithoutHm}</strong><small>OT con recurso mecánico sin horas máquina</small></div>
-        <div className={quality.manualWithoutHh ? 'has-warning' : ''}><span>Trabajo manual sin HH</span><strong>{quality.manualWithoutHh}</strong><small>OT manual sin dotación o duración</small></div>
-        <div className={quality.missingLocation ? 'has-warning' : ''}><span>Sin ubicación completa</span><strong>{quality.missingLocation}</strong><small>Área o sector no informado</small></div>
-        <div className={quality.missingDate ? 'has-warning' : ''}><span>Sin fecha de ejecución</span><strong>{quality.missingDate}</strong><small>No participa correctamente en la serie</small></div>
-      </div>
-      <div className="kpi-pdf-note"><strong>Transparencia del informe:</strong> un valor faltante se informa como excepción; no se interpreta automáticamente como producción o consumo real igual a cero.</div>
-      <Footer />
-    </article>
-
-    <article className="kpi-pdf-page kpi-pdf-page--detail">
-      <Header title="Anexo de trazabilidad de órdenes de trabajo" subtitle={`${orders.length} OT que sustentan los resultados del informe`} />
-      <table className="kpi-pdf-detail-table"><thead><tr><th>Fecha / OT</th><th>Área / equipo</th><th>Trabajo</th><th>Recursos</th><th>m³</th><th>HH</th><th>HM</th><th>Estado</th><th>Evidencia</th></tr></thead><tbody>{[...orders].sort((a, b) => (a.executionDate || '').localeCompare(b.executionDate || '') || a.sapCode.localeCompare(b.sapCode)).map(order => <tr key={order.id}><td><strong>{order.sapCode}</strong><br />{dateLabel(order.executionDate)}<br />{order.shiftName}</td><td><strong>{order.sectorName || order.areaName || 'Sin área'}</strong><br />{order.equipmentName || order.equipoCorrea || 'Sin equipo'}<br /><small>{(order.selectedSubSectorNames || []).join(', ')}</small></td><td>{order.taskType || 'Sin clasificar'}<br /><small>{order.operationDetail || 'Sin detalle'}</small></td><td>{resourceMode(order)}<br /><small>{order.headcount || 0} pers. · {num(Number(order.realHours) || 0)} h{order.vehiclePatent ? ` · ${order.vehiclePatent}` : ''}</small></td><td>{num(volumeOf(order))}</td><td>{num(hhOf(order))}</td><td>{num(hmOf(order))}</td><td>{statusLabel(order.status)}</td><td>{hasEvidence(order) ? 'Completa' : 'Incompleta'}</td></tr>)}</tbody></table>
-      <div className="kpi-pdf-methodology"><strong>Metodología:</strong> volumen = m³ consolidado registrado en cada OT; HH = cantidad de personas × duración real; HM = horas máquina informadas. Las OT mixtas conservan el volumen total registrado y no se reparte artificialmente entre trabajo manual y maquinaria. El estado documental se informa independientemente de los valores operacionales.</div>
-      <Footer />
-    </article>
   </section>;
 };

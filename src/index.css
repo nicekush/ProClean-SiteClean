@@ -706,25 +706,6 @@
   .kpi-pdf-heat-cell.is-high, .kpi-pdf-heat-legend .is-high { border-color: #fb923c; background: #fff7ed; color: #c2410c; }
   .kpi-pdf-heat-cell.is-critical, .kpi-pdf-heat-legend .is-critical { border-color: #fb7185; background: #fff1f2; color: #be123c; }
 
-  .kpi-pdf-quality-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4mm; }
-  .kpi-pdf-quality-grid > div { display: flex; min-height: 30mm; flex-direction: column; justify-content: center; padding: 4mm; border: 1px solid #a7f3d0; border-radius: 3mm; background: #ecfdf5; color: #047857; }
-  .kpi-pdf-quality-grid > div.has-warning { border-color: #fdba74; background: #fff7ed; color: #c2410c; }
-  .kpi-pdf-quality-grid span { font-size: 8px; font-weight: 800; }
-  .kpi-pdf-quality-grid strong { margin: 2mm 0 1mm; font-size: 23px; }
-  .kpi-pdf-quality-grid small { font-size: 7px; }
-
-  .kpi-pdf-page--detail { min-height: 190mm; }
-  .kpi-pdf-detail-table { font-size: 6.4px !important; }
-  .kpi-pdf-detail-table th:nth-child(1) { width: 11%; }
-  .kpi-pdf-detail-table th:nth-child(2) { width: 22%; }
-  .kpi-pdf-detail-table th:nth-child(3) { width: 22%; }
-  .kpi-pdf-detail-table th:nth-child(4) { width: 14%; }
-  .kpi-pdf-detail-table th:nth-child(5), .kpi-pdf-detail-table th:nth-child(6), .kpi-pdf-detail-table th:nth-child(7) { width: 5%; }
-  .kpi-pdf-detail-table th:nth-child(8) { width: 10%; }
-  .kpi-pdf-detail-table th:nth-child(9) { width: 7%; }
-  .kpi-pdf-detail-table td:nth-child(n+5) { text-align: center; }
-  .kpi-pdf-detail-table small { color: #64748b; line-height: 1.3; }
-  .kpi-pdf-methodology { margin-top: 3mm; padding: 3mm; border-radius: 2mm; background: #f1f5f9; color: #475569; font-size: 7px; line-height: 1.45; }
 }
 
 @media (max-width: 1350px) {
