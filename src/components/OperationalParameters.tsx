@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { PlantArea, Sector, PlantEquipment, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
 import { syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase } from '../api/firebase';
 import { 
@@ -15,8 +15,253 @@ import {
   X,
   Save,
   Layers,
-  Grid
+  Grid,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Filter,
+  RotateCcw
 } from 'lucide-react';
+
+// Helper for accent-insensitive search
+const normalizeStr = (str?: string) => 
+  (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+interface SortableThProps {
+  label: string;
+  sortKey: string;
+  currentSortKey: string;
+  currentSortDir: 'asc' | 'desc';
+  onSort: (key: any) => void;
+  align?: 'left' | 'center' | 'right';
+  style?: React.CSSProperties;
+}
+
+const SortableTh: React.FC<SortableThProps> = ({
+  label,
+  sortKey,
+  currentSortKey,
+  currentSortDir,
+  onSort,
+  align = 'left',
+  style
+}) => {
+  const isActive = currentSortKey === sortKey;
+  return (
+    <th
+      onClick={() => onSort(sortKey)}
+      style={{
+        cursor: 'pointer',
+        userSelect: 'none',
+        textAlign: align,
+        transition: 'color 0.15s ease',
+        ...style
+      }}
+      title={`Ordenar por ${label}`}
+    >
+      <div style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+        color: isActive ? 'var(--orange, #FF7A00)' : 'inherit'
+      }}>
+        <span>{label}</span>
+        <span style={{ display: 'inline-flex', opacity: isActive ? 1 : 0.45 }}>
+          {isActive ? (
+            currentSortDir === 'asc' ? <ArrowUp size={13} style={{ color: 'var(--orange, #FF7A00)' }} /> : <ArrowDown size={13} style={{ color: 'var(--orange, #FF7A00)' }} />
+          ) : (
+            <ArrowUpDown size={13} />
+          )}
+        </span>
+      </div>
+    </th>
+  );
+};
+
+interface PaginationControlsProps {
+  currentPage: number;
+  totalPages: number;
+  totalRecords: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  itemLabel?: string;
+}
+
+const PaginationControls: React.FC<PaginationControlsProps> = ({
+  currentPage,
+  totalPages,
+  totalRecords,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  itemLabel = 'registros'
+}) => {
+  if (totalRecords === 0) return null;
+
+  const startRecord = (currentPage - 1) * pageSize + 1;
+  const endRecord = Math.min(currentPage * pageSize, totalRecords);
+
+  const getPaginationRange = () => {
+    const delta = 1;
+    const range: (number | string)[] = [];
+    const rangeWithDots: (number | string)[] = [];
+    let l: number | undefined;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        range.push(i);
+      }
+    }
+
+    for (const i of range) {
+      if (typeof i === 'number') {
+        if (l) {
+          if (i - l === 2) {
+            rangeWithDots.push(l + 1);
+          } else if (i - l !== 1) {
+            rangeWithDots.push('...');
+          }
+        }
+        rangeWithDots.push(i);
+        l = i;
+      }
+    }
+    return rangeWithDots;
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '10px 16px',
+      backgroundColor: '#F8FAFC',
+      borderTop: '1px solid #E2E8F0',
+      borderBottomLeftRadius: '8px',
+      borderBottomRightRadius: '8px',
+      flexWrap: 'wrap',
+      gap: '12px',
+      fontSize: '12px',
+      color: '#475569'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 600 }}>
+          Mostrando <strong style={{ color: '#0F172A' }}>{startRecord}</strong>–<strong style={{ color: '#0F172A' }}>{endRecord}</strong> de <strong style={{ color: '#0F172A' }}>{totalRecords}</strong> {itemLabel}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '11px', color: '#64748B' }}>Por pág:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              onPageSizeChange(Number(e.target.value));
+              onPageChange(1);
+            }}
+            style={{
+              padding: '3px 8px',
+              borderRadius: '6px',
+              border: '1px solid #CBD5E1',
+              backgroundColor: '#FFFFFF',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={15}>15</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className="btn"
+          style={{
+            padding: '4px 10px',
+            fontSize: '11px',
+            fontWeight: 700,
+            backgroundColor: currentPage <= 1 ? '#F1F5F9' : '#FFFFFF',
+            color: currentPage <= 1 ? '#94A3B8' : '#1E293B',
+            border: '1px solid #CBD5E1',
+            borderRadius: '6px',
+            cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px'
+          }}
+          title="Página anterior"
+        >
+          <ChevronLeft size={14} /> Anterior
+        </button>
+
+        {getPaginationRange().map((p, idx) => {
+          if (p === '...') {
+            return (
+              <span key={`dots-${idx}`} style={{ padding: '0 4px', color: '#94A3B8', fontWeight: 700 }}>
+                ...
+              </span>
+            );
+          }
+          const isCurrent = p === currentPage;
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onPageChange(Number(p))}
+              style={{
+                minWidth: '28px',
+                height: '28px',
+                padding: '0 6px',
+                fontSize: '11px',
+                fontWeight: isCurrent ? 800 : 600,
+                backgroundColor: isCurrent ? 'var(--orange, #FF7A00)' : '#FFFFFF',
+                color: isCurrent ? '#FFFFFF' : '#1E293B',
+                border: isCurrent ? '1px solid var(--orange, #FF7A00)' : '1px solid #CBD5E1',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {p}
+            </button>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          className="btn"
+          style={{
+            padding: '4px 10px',
+            fontSize: '11px',
+            fontWeight: 700,
+            backgroundColor: currentPage >= totalPages ? '#F1F5F9' : '#FFFFFF',
+            color: currentPage >= totalPages ? '#94A3B8' : '#1E293B',
+            border: '1px solid #CBD5E1',
+            borderRadius: '6px',
+            cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px'
+          }}
+          title="Página siguiente"
+        >
+          Siguiente <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 interface OperationalParametersProps {
   tenantId?: string;
@@ -71,6 +316,146 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   // Search Filters
   const [searchMachine, setSearchMachine] = useState('');
   const [searchWorker, setSearchWorker] = useState('');
+
+  // Tab 3-4 (Equipos y Componentes) Search, Sort & Pagination States
+  const [searchEquipment, setSearchEquipment] = useState('');
+  const [filterEquipmentSector, setFilterEquipmentSector] = useState('ALL');
+  const [sortEquipmentKey, setSortEquipmentKey] = useState<'sector' | 'code' | 'name' | 'components'>('name');
+  const [sortEquipmentDir, setSortEquipmentDir] = useState<'asc' | 'desc'>('asc');
+  const [pageEquipment, setPageEquipment] = useState(1);
+  const [pageSizeEquipment, setPageSizeEquipment] = useState(10);
+
+  const [searchComponent, setSearchComponent] = useState('');
+  const [filterComponentSector, setFilterComponentSector] = useState('ALL');
+  const [filterComponentEquipment, setFilterComponentEquipment] = useState('ALL');
+  const [sortComponentKey, setSortComponentKey] = useState<'sector' | 'scope' | 'code' | 'name'>('name');
+  const [sortComponentDir, setSortComponentDir] = useState<'asc' | 'desc'>('asc');
+  const [pageComponent, setPageComponent] = useState(1);
+  const [pageSizeComponent, setPageSizeComponent] = useState(15);
+
+  const handleSortEquipment = (key: 'sector' | 'code' | 'name' | 'components') => {
+    if (sortEquipmentKey === key) {
+      setSortEquipmentDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortEquipmentKey(key);
+      setSortEquipmentDir('asc');
+    }
+    setPageEquipment(1);
+  };
+
+  const handleSortComponent = (key: 'sector' | 'scope' | 'code' | 'name') => {
+    if (sortComponentKey === key) {
+      setSortComponentDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortComponentKey(key);
+      setSortComponentDir('asc');
+    }
+    setPageComponent(1);
+  };
+
+  const filteredAndSortedEquipments = useMemo(() => {
+    let list = equipments.map(item => {
+      const linkedSector = sectors.find(sector => sector.id === item.sectorId);
+      const sectorName = linkedSector?.name || item.sectorName || 'Sin Sector';
+      const componentCount = subSectors.filter(sub => sub.equipmentId === item.id || sub.equipmentName === item.name).length;
+      return {
+        ...item,
+        resolvedSectorName: sectorName,
+        componentCount
+      };
+    });
+
+    if (filterEquipmentSector !== 'ALL') {
+      list = list.filter(item => item.sectorId === filterEquipmentSector || item.resolvedSectorName === filterEquipmentSector);
+    }
+
+    if (searchEquipment.trim()) {
+      const term = normalizeStr(searchEquipment);
+      list = list.filter(item => 
+        normalizeStr(item.name).includes(term) ||
+        normalizeStr(item.code).includes(term) ||
+        normalizeStr(item.resolvedSectorName).includes(term)
+      );
+    }
+
+    list.sort((a, b) => {
+      let comp = 0;
+      if (sortEquipmentKey === 'sector') {
+        comp = a.resolvedSectorName.localeCompare(b.resolvedSectorName, 'es', { numeric: true });
+      } else if (sortEquipmentKey === 'code') {
+        comp = (a.code || '').localeCompare(b.code || '', 'es', { numeric: true });
+      } else if (sortEquipmentKey === 'name') {
+        comp = (a.name || '').localeCompare(b.name || '', 'es', { numeric: true });
+      } else if (sortEquipmentKey === 'components') {
+        comp = a.componentCount - b.componentCount;
+      }
+      return sortEquipmentDir === 'asc' ? comp : -comp;
+    });
+
+    return list;
+  }, [equipments, sectors, subSectors, filterEquipmentSector, searchEquipment, sortEquipmentKey, sortEquipmentDir]);
+
+  const totalEquipmentPages = Math.max(1, Math.ceil(filteredAndSortedEquipments.length / pageSizeEquipment));
+  const currentEquipmentPage = Math.min(pageEquipment, totalEquipmentPages);
+  const paginatedEquipments = useMemo(() => {
+    const start = (currentEquipmentPage - 1) * pageSizeEquipment;
+    return filteredAndSortedEquipments.slice(start, start + pageSizeEquipment);
+  }, [filteredAndSortedEquipments, currentEquipmentPage, pageSizeEquipment]);
+
+  const filteredAndSortedComponents = useMemo(() => {
+    let list = subSectors.map(sub => {
+      const linkedSector = sectors.find(s => s.id === sub.sectorId);
+      const linkedEquipment = equipments.find(item => item.id === sub.equipmentId);
+      const sectorName = linkedSector ? linkedSector.name : sub.sectorName || 'Sin Sector';
+      const scopeName = linkedEquipment?.name || sub.equipmentName || 'Todos los equipos del sector';
+      return {
+        ...sub,
+        resolvedSectorName: sectorName,
+        resolvedScopeName: scopeName
+      };
+    });
+
+    if (filterComponentSector !== 'ALL') {
+      list = list.filter(sub => sub.sectorId === filterComponentSector || sub.resolvedSectorName === filterComponentSector);
+    }
+
+    if (filterComponentEquipment !== 'ALL') {
+      list = list.filter(sub => sub.equipmentId === filterComponentEquipment || sub.resolvedScopeName === filterComponentEquipment);
+    }
+
+    if (searchComponent.trim()) {
+      const term = normalizeStr(searchComponent);
+      list = list.filter(sub => 
+        normalizeStr(sub.name).includes(term) ||
+        normalizeStr(sub.code).includes(term) ||
+        normalizeStr(sub.resolvedSectorName).includes(term) ||
+        normalizeStr(sub.resolvedScopeName).includes(term)
+      );
+    }
+
+    list.sort((a, b) => {
+      let comp = 0;
+      if (sortComponentKey === 'sector') {
+        comp = a.resolvedSectorName.localeCompare(b.resolvedSectorName, 'es', { numeric: true });
+      } else if (sortComponentKey === 'scope') {
+        comp = a.resolvedScopeName.localeCompare(b.resolvedScopeName, 'es', { numeric: true });
+      } else if (sortComponentKey === 'code') {
+        comp = (a.code || '').localeCompare(b.code || '', 'es', { numeric: true });
+      } else if (sortComponentKey === 'name') {
+        comp = (a.name || '').localeCompare(b.name || '', 'es', { numeric: true });
+      }
+      return sortComponentDir === 'asc' ? comp : -comp;
+    });
+
+    return list;
+  }, [subSectors, sectors, equipments, filterComponentSector, filterComponentEquipment, searchComponent, sortComponentKey, sortComponentDir]);
+
+  const totalComponentPages = Math.max(1, Math.ceil(filteredAndSortedComponents.length / pageSizeComponent));
+  const currentComponentPage = Math.min(pageComponent, totalComponentPages);
+  const paginatedComponents = useMemo(() => {
+    const start = (currentComponentPage - 1) * pageSizeComponent;
+    return filteredAndSortedComponents.slice(start, start + pageSizeComponent);
+  }, [filteredAndSortedComponents, currentComponentPage, pageSizeComponent]);
 
   // Editing States
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
@@ -790,69 +1175,386 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             </button>
           </form>
 
-          <h4 style={{ margin: '8px 0 10px', color: 'var(--color-primary-dark)' }}>Equipos principales (Paso 4 de OT)</h4>
-          <div className="grid-table-container" style={{ marginBottom: '24px' }}>
+          {/* TOOLBAR: EQUIPOS PRINCIPALES */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h4 style={{ margin: 0, color: 'var(--color-primary-dark)', fontSize: '15px', fontWeight: 800 }}>
+                Equipos principales (Paso 4 de OT)
+              </h4>
+              <span className="pill pill-complete" style={{ backgroundColor: '#FFF7ED', color: 'var(--orange, #EA580C)', border: '1px solid #FFEDD5', fontWeight: 800 }}>
+                {filteredAndSortedEquipments.length} {filteredAndSortedEquipments.length === equipments.length ? 'equipos' : `de ${equipments.length}`}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {/* Sector filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Filter size={14} style={{ color: 'var(--slate-400)' }} />
+                <select
+                  value={filterEquipmentSector}
+                  onChange={e => {
+                    setFilterEquipmentSector(e.target.value);
+                    setPageEquipment(1);
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '12px',
+                    backgroundColor: '#FFFFFF',
+                    fontWeight: 600,
+                    maxWidth: '190px'
+                  }}
+                  title="Filtrar por sector"
+                >
+                  <option value="ALL">Todos los sectores</option>
+                  {sectors.map(s => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search input */}
+              <div style={{ position: 'relative', width: '240px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                <input
+                  type="text"
+                  placeholder="Buscar equipo, código..."
+                  value={searchEquipment}
+                  onChange={e => {
+                    setSearchEquipment(e.target.value);
+                    setPageEquipment(1);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 28px 6px 30px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '12px'
+                  }}
+                />
+                {searchEquipment && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchEquipment('');
+                      setPageEquipment(1);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      color: '#94A3B8'
+                    }}
+                    title="Limpiar búsqueda"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {(searchEquipment || filterEquipmentSector !== 'ALL') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchEquipment('');
+                    setFilterEquipmentSector('ALL');
+                    setPageEquipment(1);
+                  }}
+                  className="btn"
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '11px',
+                    backgroundColor: '#F1F5F9',
+                    color: '#475569',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Restablecer filtros"
+                >
+                  <RotateCcw size={12} /> Limpiar
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid-table-container" style={{ marginBottom: '28px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
             <table className="operational-table">
               <thead>
                 <tr>
-                  <th>Sector Perteneciente</th>
-                  <th>Código</th>
-                  <th>Equipo principal</th>
-                  <th>Componentes</th>
-                  <th>Acciones</th>
+                  <SortableTh label="Sector Perteneciente" sortKey="sector" currentSortKey={sortEquipmentKey} currentSortDir={sortEquipmentDir} onSort={handleSortEquipment} />
+                  <SortableTh label="Código" sortKey="code" currentSortKey={sortEquipmentKey} currentSortDir={sortEquipmentDir} onSort={handleSortEquipment} />
+                  <SortableTh label="Equipo principal" sortKey="name" currentSortKey={sortEquipmentKey} currentSortDir={sortEquipmentDir} onSort={handleSortEquipment} />
+                  <SortableTh label="Componentes" sortKey="components" currentSortKey={sortEquipmentKey} currentSortDir={sortEquipmentDir} onSort={handleSortEquipment} align="center" />
+                  <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {equipments.map(item => {
-                  const linkedSector = sectors.find(sector => sector.id === item.sectorId);
-                  const componentCount = subSectors.filter(sub => sub.equipmentId === item.id || sub.equipmentName === item.name).length;
-                  return (
+                {paginatedEquipments.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '36px 20px', color: '#64748B' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                        <Search size={24} style={{ color: '#CBD5E1' }} />
+                        <span style={{ fontWeight: 700, fontSize: '13px' }}>
+                          No se encontraron equipos coincidentes.
+                        </span>
+                        {(searchEquipment || filterEquipmentSector !== 'ALL') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchEquipment('');
+                              setFilterEquipmentSector('ALL');
+                              setPageEquipment(1);
+                            }}
+                            className="btn btn-secondary"
+                            style={{ fontSize: '11px', marginTop: '6px' }}
+                          >
+                            Limpiar búsqueda y filtros
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedEquipments.map(item => (
                     <tr key={item.id}>
-                      <td><span className="pill pill-complete">{linkedSector?.name || item.sectorName || 'Sector'}</span></td>
+                      <td><span className="pill pill-complete">{item.resolvedSectorName}</span></td>
                       <td><span style={{ fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#F1F5F9', padding: '4px 8px', borderRadius: '4px' }}>{item.code}</span></td>
                       <td style={{ fontWeight: 800, color: 'var(--color-forest-teal)' }}>{item.name}</td>
-                      <td>{componentCount}</td>
-                      <td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          minWidth: '24px',
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          backgroundColor: item.componentCount > 0 ? '#E0F2FE' : '#F1F5F9',
+                          color: item.componentCount > 0 ? '#0369A1' : '#64748B',
+                          fontWeight: 800,
+                          fontSize: '11px'
+                        }}>
+                          {item.componentCount}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
                         <button onClick={() => handleDeleteEquipment(item.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
                       </td>
                     </tr>
-                  );
-                })}
+                  ))
+                )}
               </tbody>
             </table>
+            <PaginationControls
+              currentPage={currentEquipmentPage}
+              totalPages={totalEquipmentPages}
+              totalRecords={filteredAndSortedEquipments.length}
+              pageSize={pageSizeEquipment}
+              onPageChange={setPageEquipment}
+              onPageSizeChange={setPageSizeEquipment}
+              itemLabel="equipos"
+            />
           </div>
 
-          <h4 style={{ margin: '8px 0 10px', color: 'var(--color-primary-dark)' }}>Componentes (Paso 5 de OT)</h4>
-          <div className="grid-table-container">
+          {/* TOOLBAR: COMPONENTES */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h4 style={{ margin: 0, color: 'var(--color-primary-dark)', fontSize: '15px', fontWeight: 800 }}>
+                Componentes (Paso 5 de OT)
+              </h4>
+              <span className="pill pill-complete" style={{ backgroundColor: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: 800 }}>
+                {filteredAndSortedComponents.length} {filteredAndSortedComponents.length === subSectors.length ? 'componentes' : `de ${subSectors.length}`}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {/* Sector filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Filter size={14} style={{ color: 'var(--slate-400)' }} />
+                <select
+                  value={filterComponentSector}
+                  onChange={e => {
+                    setFilterComponentSector(e.target.value);
+                    setFilterComponentEquipment('ALL');
+                    setPageComponent(1);
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '12px',
+                    backgroundColor: '#FFFFFF',
+                    fontWeight: 600,
+                    maxWidth: '170px'
+                  }}
+                  title="Filtrar por sector"
+                >
+                  <option value="ALL">Todos los sectores</option>
+                  {sectors.map(s => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Equipment filter */}
+              <select
+                value={filterComponentEquipment}
+                onChange={e => {
+                  setFilterComponentEquipment(e.target.value);
+                  setPageComponent(1);
+                }}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '12px',
+                  backgroundColor: '#FFFFFF',
+                  fontWeight: 600,
+                  maxWidth: '170px'
+                }}
+                title="Filtrar por equipo principal"
+              >
+                <option value="ALL">Todos los equipos</option>
+                {equipments
+                  .filter(eq => filterComponentSector === 'ALL' || eq.sectorId === filterComponentSector)
+                  .map(eq => (
+                    <option key={eq.id} value={eq.id}>{eq.name}</option>
+                  ))}
+              </select>
+
+              {/* Search input */}
+              <div style={{ position: 'relative', width: '230px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                <input
+                  type="text"
+                  placeholder="Buscar componente, código..."
+                  value={searchComponent}
+                  onChange={e => {
+                    setSearchComponent(e.target.value);
+                    setPageComponent(1);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 28px 6px 30px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '12px'
+                  }}
+                />
+                {searchComponent && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchComponent('');
+                      setPageComponent(1);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      color: '#94A3B8'
+                    }}
+                    title="Limpiar búsqueda"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {(searchComponent || filterComponentSector !== 'ALL' || filterComponentEquipment !== 'ALL') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchComponent('');
+                    setFilterComponentSector('ALL');
+                    setFilterComponentEquipment('ALL');
+                    setPageComponent(1);
+                  }}
+                  className="btn"
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '11px',
+                    backgroundColor: '#F1F5F9',
+                    color: '#475569',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Restablecer filtros"
+                >
+                  <RotateCcw size={12} /> Limpiar
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid-table-container" style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0' }}>
             <table className="operational-table">
               <thead>
                 <tr>
-                  <th>Sector Perteneciente</th>
-                  <th>Alcance en OT</th>
-                  <th>Código</th>
-                  <th>Componente</th>
-                  <th>Acciones</th>
+                  <SortableTh label="Sector Perteneciente" sortKey="sector" currentSortKey={sortComponentKey} currentSortDir={sortComponentDir} onSort={handleSortComponent} />
+                  <SortableTh label="Alcance en OT" sortKey="scope" currentSortKey={sortComponentKey} currentSortDir={sortComponentDir} onSort={handleSortComponent} />
+                  <SortableTh label="Código" sortKey="code" currentSortKey={sortComponentKey} currentSortDir={sortComponentDir} onSort={handleSortComponent} />
+                  <SortableTh label="Componente" sortKey="name" currentSortKey={sortComponentKey} currentSortDir={sortComponentDir} onSort={handleSortComponent} />
+                  <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {subSectors.map(sub => {
-                  const linkedSector = sectors.find(s => s.id === sub.sectorId);
-                  const linkedEquipment = equipments.find(item => item.id === sub.equipmentId);
-                  return (
+                {paginatedComponents.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '36px 20px', color: '#64748B' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                        <Search size={24} style={{ color: '#CBD5E1' }} />
+                        <span style={{ fontWeight: 700, fontSize: '13px' }}>
+                          No se encontraron componentes coincidentes.
+                        </span>
+                        {(searchComponent || filterComponentSector !== 'ALL' || filterComponentEquipment !== 'ALL') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchComponent('');
+                              setFilterComponentSector('ALL');
+                              setFilterComponentEquipment('ALL');
+                              setPageComponent(1);
+                            }}
+                            className="btn btn-secondary"
+                            style={{ fontSize: '11px', marginTop: '6px' }}
+                          >
+                            Limpiar búsqueda y filtros
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedComponents.map(sub => (
                     <tr key={sub.id}>
                       <td>
                         <span className="pill pill-complete">
-                          {linkedSector ? linkedSector.name : sub.sectorName || 'Sector'}
+                          {sub.resolvedSectorName}
                         </span>
                       </td>
                       <td style={{ fontSize: '11px', fontWeight: 750, color: 'var(--slate-600)' }}>
-                        {linkedEquipment?.name || sub.equipmentName || 'Todos los equipos del sector'}
+                        {sub.resolvedScopeName}
                       </td>
                       <td><span style={{ fontFamily: 'monospace', fontWeight: 800, backgroundColor: '#F1F5F9', padding: '4px 8px', borderRadius: '4px' }}>{sub.code}</span></td>
                       <td style={{ fontWeight: 800, color: 'var(--color-forest-teal)' }}>{sub.name}</td>
-                      <td>
+                      <td style={{ textAlign: 'right' }}>
                         {!sub.equipmentId && !sub.equipmentName && (
                           <button onClick={() => handlePromoteSubSectorToEquipment(sub)} className="btn" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #93C5FD', padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}>
                             Convertir a equipo
@@ -863,10 +1565,19 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         </button>
                       </td>
                     </tr>
-                  );
-                })}
+                  ))
+                )}
               </tbody>
             </table>
+            <PaginationControls
+              currentPage={currentComponentPage}
+              totalPages={totalComponentPages}
+              totalRecords={filteredAndSortedComponents.length}
+              pageSize={pageSizeComponent}
+              onPageChange={setPageComponent}
+              onPageSizeChange={setPageSizeComponent}
+              itemLabel="componentes"
+            />
           </div>
         </div>
       )}

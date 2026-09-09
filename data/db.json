@@ -602,19 +602,19 @@
   ],
   "plantAreas": [
     {
-      "id": "pa_2",
-      "name": "Área Seca",
-      "code": "AR-SECA"
-    },
-    {
       "id": "pa_1",
       "name": "Área Húmeda (LIX-SX-EW-RO)",
-      "code": "AR-HUM"
+      "code": "REAH"
+    },
+    {
+      "id": "pa_2",
+      "name": "Área Seca",
+      "code": "REAS"
     },
     {
       "id": "pa_3",
-      "name": "Sectores Complementarios / Mina",
-      "code": "AR-COMP"
+      "name": "Sectores Complementarios",
+      "code": "SECTOR"
     }
   ],
   "sectors": [
@@ -739,6 +739,17 @@
   ],
   "workers": [],
   "auditLogs": [
+    {
+      "tenantId": "tenant_cmz",
+      "timestamp": "03-09-2026, 12:18:28 p. m.",
+      "userName": "Carlos Mendoza (SUPERVISOR_TERRENO)",
+      "userRole": "SUPERVISOR_TERRENO",
+      "action": "ELIMINACION",
+      "entityName": "Sesión de Usuario",
+      "entityId": "cmendoza@contratista.cl",
+      "details": "Cierre de sesión de Carlos Mendoza",
+      "id": "log-1788452308445"
+    },
     {
       "tenantId": "tenant_cmz",
       "timestamp": "27-08-2026, 9:35:11 a. m.",
@@ -1374,7 +1385,7 @@
       "contractId": "c1",
       "active": true,
       "avatarColor": "#05A6A6",
-      "lastLogin": "17-08-2026, 10:39:05 a. m."
+      "lastLogin": "03-09-2026, 12:18:36 p. m."
     },
     {
       "id": "usr-2",
@@ -1428,23 +1439,6 @@
       "active": true,
       "avatarColor": "#05A6A6",
       "lastLogin": "26-08-2026"
-    }
-  ],
-  "plantAreas": [
-    {
-      "id": "pa_1",
-      "name": "Área Húmeda (LIX-SX-EW-RO)",
-      "code": "REAH"
-    },
-    {
-      "id": "pa_2",
-      "name": "Área Seca",
-      "code": "REAS"
-    },
-    {
-      "id": "pa_3",
-      "name": "Sectores Complementarios",
-      "code": "SECTOR"
     }
   ],
   "equipments": [

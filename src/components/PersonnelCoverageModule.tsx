@@ -158,19 +158,12 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   }, [assignments]);
 
   const printAssignments = useMemo(() => {
-    const shiftAliases: Record<typeof activeShiftFilter, string[]> = {
-      ALL: [],
-      DAY: ['DAY', 't_dia'],
-      NIGHT: ['NIGHT', 't_noche'],
-      STAFF: ['STAFF', 't_4x3']
-    };
-
-    return assignments.filter(assignment => {
-      const matchesGroup = activeGrupoFilter === 'ALL' || assignment.grupo === activeGrupoFilter;
-      const matchesShift = activeShiftFilter === 'ALL' || shiftAliases[activeShiftFilter].includes(assignment.shiftId);
-      return matchesGroup && matchesShift;
-    });
-  }, [assignments, activeGrupoFilter, activeShiftFilter]);
+    // The operational cards are filtered by the area's configured shift, not by
+    // assignment metadata. Older Firebase assignments may not have grupo/shiftId,
+    // so filtering those fields here made valid reported areas disappear from PDF.
+    const printableAreaIds = new Set(filteredAreas.map(area => area.id));
+    return assignments.filter(assignment => printableAreaIds.has(assignment.areaId));
+  }, [assignments, filteredAreas]);
 
   const printAreas = useMemo(() => effectiveAreas
     .filter(area => printAssignments.some(assignment => assignment.areaId === area.id))
@@ -212,7 +205,25 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
 
   const handlePrintCoverageReport = () => {
     setPrintGeneratedAt(new Date());
-    window.setTimeout(() => window.print(), 50);
+    const previousTitle = document.title;
+    document.title = `ProCleanMG - Reporte dotación ${formattedReportDate}`;
+
+    let titleRestored = false;
+    const restoreDocumentTitle = () => {
+      if (titleRestored) return;
+      titleRestored = true;
+      document.title = previousTitle;
+      window.removeEventListener('afterprint', restoreDocumentTitle);
+    };
+
+    window.addEventListener('afterprint', restoreDocumentTitle, { once: true });
+
+    window.setTimeout(() => {
+      window.print();
+      // Some embedded browsers do not emit afterprint. In regular browsers,
+      // print() returns only after the dialog closes, so this remains safe.
+      window.setTimeout(restoreDocumentTitle, 0);
+    }, 75);
   };
 
   // Helper to select an area within Step 1 and pre-fill cargos/headcount

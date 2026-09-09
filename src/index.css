@@ -46,6 +46,11 @@
   margin: 8mm;
 }
 
+@page personnel-report {
+  size: A4 landscape;
+  margin: 8mm;
+}
+
 @media print {
   html,
   body {
@@ -96,15 +101,20 @@
     display: flex !important;
     position: absolute;
     inset: 0;
-    width: 194mm;
-    min-height: 281mm;
+    width: 281mm;
+    min-height: 194mm;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     flex-direction: column;
     color: #0f172a;
     background: #ffffff;
+    page: personnel-report;
     font-family: Inter, Arial, sans-serif;
+  }
+
+  .personnel-screen-view {
+    display: none !important;
   }
 
   .personnel-print-header {
@@ -201,9 +211,9 @@
 
   .personnel-print-area-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
-    gap: 3mm;
+    gap: 2.5mm;
   }
 
   .personnel-print-area {
@@ -221,7 +231,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 2mm;
-    padding: 2mm 2.5mm;
+    padding: 1.6mm 2mm;
     border-bottom: 0.25mm solid #cbd5e1;
     background: #f8fafc;
   }
@@ -229,7 +239,7 @@
   .personnel-print-area-header h2 {
     min-width: 0;
     margin: 0;
-    font-size: 9.5pt;
+    font-size: 8.5pt;
     line-height: 1.1;
     font-weight: 950;
     overflow-wrap: anywhere;
@@ -249,12 +259,12 @@
   .personnel-print-area-header strong {
     flex-shrink: 0;
     color: #059669;
-    font-size: 8.5pt;
+    font-size: 7.5pt;
     white-space: nowrap;
   }
 
   .personnel-print-rows {
-    padding: 1.2mm 2.5mm 1.8mm;
+    padding: 0.8mm 2mm 1.2mm;
   }
 
   .personnel-print-row {
@@ -262,11 +272,11 @@
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
     gap: 2mm;
     align-items: baseline;
-    min-height: 5mm;
-    padding: 1mm 0;
+    min-height: 4.1mm;
+    padding: 0.65mm 0;
     border-bottom: 0.2mm dashed #e2e8f0;
-    font-size: 7.4pt;
-    line-height: 1.25;
+    font-size: 6.7pt;
+    line-height: 1.18;
   }
 
   .personnel-print-row:last-child {
@@ -292,7 +302,7 @@
 
   .personnel-print-name small {
     margin-left: 1mm;
-    font-size: 6.4pt;
+    font-size: 5.8pt;
     font-weight: 650;
   }
 
