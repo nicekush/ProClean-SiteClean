@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole, Machine, ContingencyReasonConfig, PlantArea, Sector, SubSector, TaskType, PlantEquipment } from '../types';
+import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole, Machine, ContingencyReasonConfig, PlantArea, Sector, SubSector, TaskType, StaffingType, PlantEquipment } from '../types';
 import { Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -128,12 +128,13 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const [filterShiftId, setFilterShiftId] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterAreaId, setFilterAreaId] = useState<string>('ALL');
+  const [filterStaffingType, setFilterStaffingType] = useState('ALL');
   const [filterTaskType, setFilterTaskType] = useState<string>('ALL');
   const [filterDatePreset, setFilterDatePreset] = useState<string>('ALL');
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [currentAddStep, setCurrentAddStep] = useState<number>(1);
+  const [currentAddStep, setCurrentAddStep] = useState<number>(0);
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
   const [currentEditStep, setCurrentEditStep] = useState<number>(1);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -200,6 +201,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     subSectorName: '',
     hasManualLabor: false,
     hasEquipment: false,
+    staffingType: undefined as StaffingType | undefined,
     taskType: 'PLANIFICADO' as TaskType,
     cubicMetersRemoved: 0,
     fleetTripsCount: 0,
@@ -305,7 +307,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const editAvailableSubSectors = getSubSectorsFromDb(editSelectedEquipmentId, editSelectedSectorId);
 
   const handleOpenAddModal = () => {
-    setCurrentAddStep(1);
+    setCurrentAddStep(0);
     setSelectedAreaId('');
     setSelectedSectorId('');
     setSelectedEquipmentId('');
@@ -335,6 +337,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       subSectorName: '',
       hasManualLabor: false,
       hasEquipment: false,
+      staffingType: undefined as StaffingType | undefined,
       taskType: 'PLANIFICADO',
       cubicMetersRemoved: 0,
       fleetTripsCount: 0,
@@ -346,7 +349,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
   const handleCancelAddModal = () => {
     setShowAddModal(false);
-    setCurrentAddStep(1);
+    setCurrentAddStep(0);
     setSelectedAreaId('');
     setSelectedSectorId('');
     setSelectedEquipmentId('');
@@ -642,7 +645,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       }
     }
 
-    return matchesSearch && matchesShift && matchesStatus && matchesArea && matchesTaskType && matchesDate;
+    return (filterStaffingType === 'ALL' || (order.staffingType || 'UNCLASSIFIED') === filterStaffingType) && matchesSearch && matchesShift && matchesStatus && matchesArea && matchesTaskType && matchesDate;
   });
 
   const effectiveSortSpecs = sortSpecs.length > 0 ? sortSpecs : DEFAULT_WORK_ORDER_SORT;
@@ -691,6 +694,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newOrder.staffingType) { alert('Selecciona el tipo de dotación.'); setCurrentAddStep(0); return; }
+    if (currentAddStep !== 10) return;
     const finalSapCode = newOrder.sapCode || getNextOtCode();
 
     if (!newOrder.hasManualLabor && !newOrder.hasEquipment) {
@@ -722,7 +727,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     });
 
     setShowAddModal(false);
-    setCurrentAddStep(1);
+    setCurrentAddStep(0);
     setSelectedAreaId('');
     setSelectedSectorId('');
     setSelectedEquipmentId('');
@@ -752,6 +757,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       subSectorName: '',
       hasManualLabor: false,
       hasEquipment: false,
+      staffingType: undefined as StaffingType | undefined,
       taskType: 'PLANIFICADO',
       cubicMetersRemoved: 0,
       fleetTripsCount: 0,
@@ -884,6 +890,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     const dataToExport = filteredOrders.map(o => ({
       'Semana': o.semana,
       'Día': o.dia,
+      'Tipo de dotación': o.staffingType || 'Sin clasificar',
       'Tipo de Tarea': o.taskType || 'Planificado',
       'Área de Planta (Nivel 1)': o.areaName || 'General',
       'Sector / Proceso (Nivel 2)': o.sectorName || '-',
@@ -932,7 +939,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   };
 
   const renderStepper = (currentStep: number, totalSteps: number = 10) => {
-    const stepTitles = [
+    const stepTitles = totalSteps === 11 ? ['Tipo de dotación', 'Clasificación Tarea', 'Área de Planta', 'Sector / Proceso', 'Equipo Principal', 'Componentes Intervenidos', 'Selección de Recursos', 'Cuadrilla Manual', 'Maquinaria de Flota', 'Fecha & Turno', 'Detalle & Fotos'] : [
       '1. Clasificación Tarea',
       '2. Área de Planta',
       '3. Sector / Proceso',
@@ -1134,6 +1141,12 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               <button onClick={() => setEditingOrder(null)} className="btn btn-secondary" style={{ padding: '6px 10px' }}><X size={16} /></button>
             </div>
 
+            <label style={{ display: 'grid', gap: '6px', marginBottom: '16px' }}>Tipo de dotación
+              <select value={editingOrder.staffingType || ''} onChange={e => setEditingOrder({ ...editingOrder, staffingType: e.target.value as StaffingType })}>
+                <option value="" disabled>Sin clasificar</option>
+                {['Spot13P', 'Spot72P', 'Base'].map(type => <option key={type} value={type}>{type}</option>)}
+              </select>
+            </label>
             {renderStepper(currentEditStep, 9)}
 
           <form className="responsive-form-grid" onSubmit={handleUpdateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '16px' }}>
@@ -1964,28 +1977,32 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
             />
           </div>
 
+          <span style={{ fontSize: '12px', color: 'var(--slate-600)' }}>
+            {filteredOrders.length} OT · {['Spot13P', 'Spot72P', 'Base'].map(type => `${type}: ${filteredOrders.filter(o => o.staffingType === type).length}`).join(' · ')} · Sin clasificar: {filteredOrders.filter(o => !o.staffingType).length}
+          </span>
           {/* Toggle Filter Menu Button */}
           <button
             type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className={`btn ${showFilters || (filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || filterDatePreset !== 'ALL') ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn ${showFilters || (filterStaffingType !== 'ALL' || filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || filterDatePreset !== 'ALL') ? 'btn-primary' : 'btn-secondary'}`}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 800 }}
           >
             <Filter size={15} />
             <span>{showFilters ? 'Ocultar Filtros' : 'Filtros Avanzados'}</span>
-            {(filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || filterDatePreset !== 'ALL') && (
+            {(filterStaffingType !== 'ALL' || filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || filterDatePreset !== 'ALL') && (
               <span style={{ backgroundColor: '#FFF', color: 'var(--orange)', borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 900 }}>
-                { (filterTaskType !== 'ALL' ? 1 : 0) + (filterAreaId !== 'ALL' ? 1 : 0) + (filterStatus !== 'ALL' ? 1 : 0) + (filterShiftId !== 'ALL' ? 1 : 0) + (filterDatePreset !== 'ALL' ? 1 : 0) }
+                { (filterStaffingType !== 'ALL' ? 1 : 0) + (filterTaskType !== 'ALL' ? 1 : 0) + (filterAreaId !== 'ALL' ? 1 : 0) + (filterStatus !== 'ALL' ? 1 : 0) + (filterShiftId !== 'ALL' ? 1 : 0) + (filterDatePreset !== 'ALL' ? 1 : 0) }
               </span>
             )}
             {showFilters ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
           </button>
 
-          {(filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || filterDatePreset !== 'ALL' || searchTerm) && (
+          {(filterStaffingType !== 'ALL' || filterTaskType !== 'ALL' || filterAreaId !== 'ALL' || filterStatus !== 'ALL' || filterShiftId !== 'ALL' || filterDatePreset !== 'ALL' || searchTerm) && (
             <button
               type="button"
               onClick={() => {
                 setSearchTerm('');
+                setFilterStaffingType('ALL');
                 setFilterTaskType('ALL');
                 setFilterAreaId('ALL');
                 setFilterStatus('ALL');
@@ -2046,6 +2063,14 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               </>
             )}
 
+            <div>
+              <label htmlFor="staffing-filter">Tipo de dotación</label>
+              <select id="staffing-filter" value={filterStaffingType} onChange={e => setFilterStaffingType(e.target.value)} style={{ width: '100%', padding: '8px' }}>
+                <option value="ALL">Todas las dotaciones</option>
+                {['Spot13P', 'Spot72P', 'Base'].map(type => <option key={type} value={type}>{type}</option>)}
+                <option value="UNCLASSIFIED">Sin clasificar</option>
+              </select>
+            </div>
             {/* Task Type Filter */}
             <div>
               <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>Tipo Tarea</label>
@@ -2137,6 +2162,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
             <tr>
               <SortableHeader sortKey="executionDate">Fecha</SortableHeader>
               <SortableHeader sortKey="sapCode">{labels.sapCode}</SortableHeader>
+              <th>Tipo de dotación</th>
               <SortableHeader sortKey="taskType">Tipo de Tarea</SortableHeader>
               <SortableHeader sortKey="areaName">Área de Planta</SortableHeader>
               <SortableHeader sortKey="sectorName">Sector / Proceso</SortableHeader>
@@ -2154,7 +2180,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={14} style={{ textAlign: 'center', padding: '40px', color: 'var(--slate-400)' }}>
+                <td colSpan={15} style={{ textAlign: 'center', padding: '40px', color: 'var(--slate-400)' }}>
                   No hay órdenes de trabajo coincidentes con los filtros aplicados.
                 </td>
               </tr>
@@ -2176,6 +2202,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                         </div>
                       )}
                     </td>
+                    <td>{order.staffingType || 'Sin clasificar'}</td>
                     <td>{getTaskTypeBadge(order.taskType)}</td>
                     <td>
                       <span className="pill pill-complete" style={{ backgroundColor: '#E0F2FE', color: '#0369A1', border: '1px solid #7DD3FC' }}>
@@ -2272,6 +2299,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       <span style={{ fontSize: '9px', color: '#B45309', fontWeight: 900 }} title="Esperando confirmación de Firebase">● Pendiente</span>
                     )}
                     {getTaskTypeBadge(order.taskType)}
+                    <span>Dotación: {order.staffingType || 'Sin clasificar'}</span>
                   </div>
                   {getStatusBadge(order.status)}
                 </div>
@@ -2332,15 +2360,31 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               <button onClick={handleCancelAddModal} className="btn btn-secondary" style={{ padding: '4px 8px' }}><X size={16} /></button>
             </div>
 
-            {renderStepper(currentAddStep, 10)}
+            {renderStepper(currentAddStep + 1, 11)}
 
             <form className="responsive-form-grid" onSubmit={handleCreateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '16px' }}>
               
+              {currentAddStep === 0 && (
+                <div style={{ gridColumn: '1 / -1', display: 'grid', gap: '18px' }}>
+                  <h4>Paso 1: Tipo de dotación</h4>
+                  <div className="responsive-option-grid" role="group" aria-label="Tipo de dotación">
+                    {(['Spot13P', 'Spot72P', 'Base'] as const).map(type => (
+                      <button key={type} type="button" className="btn btn-secondary" aria-pressed={newOrder.staffingType === type}
+                        onClick={() => setNewOrder({ ...newOrder, staffingType: type })}
+                        style={{ padding: '18px', border: newOrder.staffingType === type ? '2px solid var(--orange)' : '1px solid var(--slate-200)', background: newOrder.staffingType === type ? '#FFF3E6' : '#FFF' }}>{type}</button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal}>Cancelar</button>
+                    <button type="button" className="btn btn-primary" disabled={!newOrder.staffingType} onClick={() => setCurrentAddStep(1)}>Siguiente: Clasificación de tarea →</button>
+                  </div>
+                </div>
+              )}
               {/* PASO 1: CLASIFICACIÓN DE TAREA */}
               {currentAddStep === 1 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    📋 Paso 1: ¿Qué tipo de tarea es?
+                    📋 Paso 2: ¿Qué tipo de tarea es?
                   </h4>
                   <div className="responsive-option-grid">
                     <button
@@ -2399,8 +2443,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </div>
 
                   <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={handleCancelAddModal}>
-                      Cancelar
+                    <button type="button" className="btn btn-secondary" onClick={() => setCurrentAddStep(0)}>
+                      Anterior: Tipo de dotación
                     </button>
                     <button type="button" className="btn btn-primary" onClick={() => setCurrentAddStep(2)} style={{ padding: '12px 24px', fontSize: '13px' }}>
                       Siguiente: Área de Planta ➔
@@ -2413,7 +2457,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 2 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    🌐 Paso 2: Selecciona el Área de Planta (Nivel 1)
+                    🌐 Paso 3: Selecciona el Área de Planta (Nivel 1)
                   </h4>
                   <div style={{ backgroundColor: '#F0F9FF', padding: '20px', borderRadius: '18px', border: '2px solid #BAE6FD' }}>
                     <label style={{ fontSize: '12px', fontWeight: 900, color: '#0369A1', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
@@ -2460,7 +2504,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 3 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    📍 Paso 3: Selecciona el Sector o Proceso (Nivel 2)
+                    📍 Paso 4: Selecciona el Sector o Proceso (Nivel 2)
                   </h4>
                   <div style={{ backgroundColor: '#F8FAFC', padding: '20px', borderRadius: '18px', border: '2px solid var(--slate-200)' }}>
                     <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
@@ -2505,7 +2549,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 4 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    ⚙️ Paso 4: Selecciona el Equipo / Correa Principal (Nivel 3)
+                    ⚙️ Paso 5: Selecciona el Equipo / Correa Principal (Nivel 3)
                   </h4>
                   
                   {/* Selector de Sector Nivel 2 */}
@@ -2576,7 +2620,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 5 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    🏷️ Paso 5: Selecciona los Componentes Intervenidos (Nivel 4)
+                    🏷️ Paso 6: Selecciona los Componentes Intervenidos (Nivel 4)
                   </h4>
                   
                   <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: selectedSubSectorNames.length === 0 ? '2px solid #EF4444' : '1px solid var(--slate-200)' }}>
@@ -2648,7 +2692,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 6 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    🚜👷 Paso 6: Selecciona los Recursos Utilizados
+                    🚜👷 Paso 7: Selecciona los Recursos Utilizados
                   </h4>
                   <p style={{ fontSize: '12px', color: 'var(--slate-600)', margin: 0 }}>
                     Haz clic en la(s) opción(es) que requieres para esta Orden de Trabajo:
@@ -2747,7 +2791,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 7 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#047857', margin: 0 }}>
-                    👷 Paso 7: Información de Cuadrilla Manual
+                    👷 Paso 8: Información de Cuadrilla Manual
                   </h4>
 
                   <div style={{ padding: '20px', backgroundColor: '#ECFDF5', borderRadius: '16px', border: '1px solid #6EE7B7', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -2807,7 +2851,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 8 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#0369A1', margin: 0 }}>
-                    🚜 Paso 8: Información de Maquinaria (Equipos)
+                    🚜 Paso 9: Información de Maquinaria (Equipos)
                   </h4>
 
                   <div style={{ padding: '20px', backgroundColor: '#F0F9FF', borderRadius: '16px', border: '1px solid #7DD3FC', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -2879,7 +2923,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 9 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    ⏱️ Paso 9: ¿Cuándo y en qué Turno se ejecutó?
+                    ⏱️ Paso 10: ¿Cuándo y en qué Turno se ejecutó?
                   </h4>
                   
                   <div className="responsive-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '16px' }}>
@@ -2940,7 +2984,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 10 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    📝 Paso 10: Descripción u Observaciones de la Operación (Opcional)
+                    📝 Paso 11: Descripción u Observaciones de la Operación (Opcional)
                   </h4>
 
                   <div>

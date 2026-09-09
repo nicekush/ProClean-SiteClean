@@ -132,6 +132,7 @@ export async function syncWorkOrderToFirebase(order: WorkOrder): Promise<boolean
     const docRef = doc(db, COLLECTION_WORK_ORDERS, order.id);
     await setDoc(docRef, {
       payload: order,
+      staffingType: order.staffingType || null,
       sapCode: order.sapCode || '',
       equipoCorrea: order.equipoCorrea || '',
       status: order.status,
