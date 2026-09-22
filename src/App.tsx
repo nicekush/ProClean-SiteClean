@@ -4,6 +4,8 @@ import { WorkOrdersGrid } from './components/WorkOrdersGrid';
 import { OperationalParameters } from './components/OperationalParameters';
 import { SystemConfig } from './components/SystemConfig';
 import { AdherenceDashboard } from './components/AdherenceDashboard';
+import { ReportingControl } from './components/ReportingControl';
+import { createTrace, editTrace, recoverAuthors } from './utils/reportability';
 import { PhotoEvidence } from './components/PhotoEvidence';
 import { OperationalMap } from './components/OperationalMap';
 import { AuditLogViewer } from './components/AuditLogViewer';
@@ -512,7 +514,9 @@ export function App() {
   const addAuditLog = (action: AuditLogEntry['action'], entityName: string, entityId: string, details: string, diffSummary?: string) => {
     if (!authenticatedUser) return;
     const entry = {
-      tenantId: 'tenant_cmz',
+      tenantId: activeTenantId,
+      userId: authenticatedUser.id,
+      recordedAt: new Date().toISOString(),
       timestamp: new Date().toLocaleString('es-CL'),
       userName: `${authenticatedUser.name} (${authenticatedUser.role})`,
       userRole: currentRole,
@@ -679,8 +683,10 @@ export function App() {
   };
 
   const handleAddWorkOrder = (newOrder: Omit<WorkOrder, 'id'>) => {
+    if (!authenticatedUser) return;
     const order: WorkOrder = {
       ...newOrder,
+      ...createTrace(authenticatedUser),
       id: globalThis.crypto?.randomUUID?.() || Date.now().toString(),
       tenantId: authenticatedUser?.tenantId || 'tenant_cmz'
     };
@@ -689,17 +695,19 @@ export function App() {
     if (isFirebaseConfigured) {
       monitorWorkOrderWrite(syncWorkOrderToFirebase(order), 'crear la orden de trabajo');
     }
-    addAuditLog('CREACION', 'Orden de Trabajo', order.sapCode, `Creación de OT en ${order.equipoCorrea} (${order.areaName || 'General'}) por ${authenticatedUser?.name}`, `HH Est: ${order.estimatedHours}h | Real: ${order.realHours}h`);
+    addAuditLog('CREACION', 'Orden de Trabajo', order.id, `Creación de OT en ${order.equipoCorrea} (${order.areaName || 'General'}) por ${authenticatedUser?.name}`, `HH Est: ${order.estimatedHours}h | Real: ${order.realHours}h`);
   };
 
   const handleUpdateWorkOrder = (id: string, updatedFields: Partial<WorkOrder>) => {
+    if (!authenticatedUser) return;
     if (!navigator.onLine) {
       setSyncToastMessage('⚠️ Sin conexión sólo se permite crear nuevas OT. La edición requiere conexión.');
       return;
     }
     const target = workOrders.find(o => o.id === id);
-    const updatedObj = target ? { ...target, ...updatedFields } : null;
-    const updated = workOrders.map(o => o.id === id ? { ...o, ...updatedFields } : o);
+    if (!target) return;
+    const updatedObj = editTrace(target, updatedFields, authenticatedUser);
+    const updated = workOrders.map(o => o.id === id ? updatedObj : o);
     setWorkOrders(updated);
     if (isFirebaseConfigured && updatedObj) {
       monitorWorkOrderWrite(syncWorkOrderToFirebase(updatedObj), 'actualizar la orden de trabajo');
@@ -710,10 +718,11 @@ export function App() {
       diffStr = `HH Reales: ${target.realHours}h ➔ ${updatedFields.realHours}h`;
     }
     
-    addAuditLog('EDICION', 'Orden de Trabajo', target?.sapCode || id, `Modificación de OT por ${authenticatedUser?.name}`, diffStr);
+    addAuditLog('EDICION', 'Orden de Trabajo', id, `Modificación de OT por ${authenticatedUser?.name}`, diffStr);
   };
 
   const handleItoApproveWorkOrder = (id: string, approverName: string, comments?: string, signatureDataUrl?: string) => {
+    if (!authenticatedUser) return;
     if (!navigator.onLine) {
       setSyncToastMessage('⚠️ La aprobación ITO requiere conexión para evitar conflictos.');
       return;
@@ -722,6 +731,11 @@ export function App() {
     const approvalDate = new Date().toLocaleString('es-CL');
     const updatedObj = target ? { 
       ...target, 
+      updatedById: authenticatedUser.id,
+      updatedByName: authenticatedUser.name,
+      updatedAt: new Date().toISOString(),
+      approvedAt: new Date().toISOString(),
+      approvedById: authenticatedUser.id,
       status: 'APROBADO_MANDANTE' as const,
       itoApprovalDate: approvalDate,
       itoApproverName: approverName || authenticatedUser?.name,
@@ -735,7 +749,7 @@ export function App() {
     if (isFirebaseConfigured && updatedObj) {
       monitorWorkOrderWrite(syncWorkOrderToFirebase(updatedObj), 'aprobar la orden de trabajo');
     }
-    addAuditLog('APROBACION_ITO', 'Orden de Trabajo', target?.sapCode || id, `Conformidad ITO otorgada por ${approverName || authenticatedUser?.name}`, `Estado: PENDIENTE ➔ APROBADO_MANDANTE ${signatureDataUrl ? '(Firma Digital Estampada)' : ''}`);
+    addAuditLog('APROBACION_ITO', 'Orden de Trabajo', id, `Conformidad ITO otorgada por ${approverName || authenticatedUser?.name}`, `Estado: PENDIENTE ➔ APROBADO_MANDANTE ${signatureDataUrl ? '(Firma Digital Estampada)' : ''}`);
   };
 
   const handleDeleteWorkOrder = (id: string) => {
@@ -743,13 +757,12 @@ export function App() {
       setSyncToastMessage('⚠️ La eliminación de una OT requiere conexión.');
       return;
     }
-    const target = workOrders.find(o => o.id === id);
     const updated = workOrders.filter(o => o.id !== id);
     setWorkOrders(updated);
     if (isFirebaseConfigured) {
       monitorWorkOrderWrite(deleteFirebaseWorkOrder(id), 'eliminar la orden de trabajo');
     }
-    addAuditLog('ELIMINACION', 'Orden de Trabajo', target?.sapCode || id, `Eliminación de la OT por ${authenticatedUser?.name}`);
+    addAuditLog('ELIMINACION', 'Orden de Trabajo', id, `Eliminación de la OT por ${authenticatedUser?.name}`);
   };
 
   const handleSaveDailyAssignments = async (newAssignments: DailyPersonnelAssignment[]) => {
@@ -1019,6 +1032,9 @@ export function App() {
           {activeTab === 'audit-logs' && (
             <AuditLogViewer auditLogs={auditLogs} />
           )}
+          {activeTab === 'reporting-control' && ['ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'].includes(currentRole) && (
+            <ReportingControl orders={recoverAuthors(workOrders.filter(o => o.tenantId === activeTenantId), auditLogs, users)} users={users.filter(u => u.tenantId === activeTenantId)} fromCache={isReadingFromCache} pendingIds={pendingWorkOrderIds} onUpdate={handleUpdateWorkOrder} onOpen={o => { setTargetEditOrder(workOrders.find(original => original.id === o.id) || null); setActiveTab('work-orders'); }} />
+          )}
 
           {activeTab === 'evidences' && (
             <PhotoEvidence 
@@ -1033,3 +1049,4 @@ export function App() {
 }
 
 export default App;
+

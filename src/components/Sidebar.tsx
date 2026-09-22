@@ -78,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'],
       items: [
         { id: 'dashboard', label: 'Reporte KPI Operacional', icon: BarChart3, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
+        { id: 'reporting-control', label: 'Control de reportabilidad', icon: ClipboardList, allowedRoles: ['ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
         { id: 'audit-logs', label: 'Historial de Auditoría', icon: History, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] }
       ]
     },

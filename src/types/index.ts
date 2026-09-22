@@ -50,6 +50,18 @@ export type TaskType = 'PLANIFICADO' | 'MANTENIMIENTO_PROGRAMADO' | 'EMERGENTE';
 export type StaffingType = 'Spot13P' | 'Spot72P' | 'Base';
 
 export interface WorkOrder {
+  createdById?: string;
+  authorSource?: 'audit';
+  authorAuditId?: string;
+  createdByName?: string;
+  createdAt?: string; // ISO instant captured at entry, including offline entry
+  updatedById?: string;
+  updatedByName?: string;
+  updatedAt?: string;
+  responsibleSupervisorId?: string;
+  responsibleSupervisorName?: string;
+  approvedAt?: string;
+  approvedById?: string;
   staffingType?: StaffingType;
   id: string;
   tenantId?: string;
@@ -98,6 +110,8 @@ export interface WorkOrder {
 }
 
 export interface AuditLogEntry {
+  userId?: string;
+  recordedAt?: string;
   id: string;
   tenantId?: string;
   timestamp: string;
