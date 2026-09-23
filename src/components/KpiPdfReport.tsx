@@ -30,6 +30,13 @@ const normalize = (value?: string) => (value || '').normalize('NFD').replace(/[\
 const hhOf = (order: WorkOrder) => Math.max(0, Number(order.headcount) || 0) * Math.max(0, Number(order.realHours) || 0);
 const hmOf = (order: WorkOrder) => Math.max(0, Number(order.machineHours) || 0);
 const volumeOf = (order: WorkOrder) => Math.max(0, Number(order.cubicMetersRemoved) || 0);
+const waterOf = (order: WorkOrder) => {
+  if (typeof order.waterVolumeM3 === 'number') return Math.max(0, order.waterVolumeM3);
+  if (order.vehiclePatent === 'TTCX50') {
+    return Math.max(0, Number(((order.machineHours || 0) * (20.0 / 4.5)).toFixed(2)));
+  }
+  return 0;
+};
 const isApproved = (order: WorkOrder) => order.status === 'APROBADO_MANDANTE' || order.status === 'COMPLETADO';
 const hasEvidence = (order: WorkOrder) => Boolean(order.imageBeforeUrl || order.beforePhotoUrl) && Boolean(order.imageAfterUrl || order.afterPhotoUrl);
 const resourceMode = (order: WorkOrder) => {
@@ -73,11 +80,13 @@ export const KpiPdfReport: React.FC<Props> = ({
     const volume = orders.reduce((sum, order) => sum + volumeOf(order), 0);
     const hh = orders.reduce((sum, order) => sum + hhOf(order), 0);
     const hm = orders.reduce((sum, order) => sum + hmOf(order), 0);
+    const water = orders.reduce((sum, order) => sum + waterOf(order), 0);
     const activeDays = new Set(orders.flatMap(order => order.executionDate ? [order.executionDate] : [])).size;
     return {
       volume,
       hh,
       hm,
+      water,
       activeDays,
       approved: orders.filter(isApproved).length,
       evidence: orders.filter(hasEvidence).length,
@@ -88,14 +97,15 @@ export const KpiPdfReport: React.FC<Props> = ({
   }, [orders]);
 
   const timeline = useMemo(() => {
-    const rows = new Map<string, { key: string; volume: number; hh: number; hm: number; ots: number; approved: number; evidence: number }>();
+    const rows = new Map<string, { key: string; volume: number; hh: number; hm: number; water: number; ots: number; approved: number; evidence: number }>();
     orders.forEach(order => {
       if (!order.executionDate) return;
       const key = groupKey(order.executionDate, grain);
-      const row = rows.get(key) || { key, volume: 0, hh: 0, hm: 0, ots: 0, approved: 0, evidence: 0 };
+      const row = rows.get(key) || { key, volume: 0, hh: 0, hm: 0, water: 0, ots: 0, approved: 0, evidence: 0 };
       row.volume += volumeOf(order);
       row.hh += hhOf(order);
       row.hm += hmOf(order);
+      row.water += waterOf(order);
       row.ots += 1;
       row.approved += isApproved(order) ? 1 : 0;
       row.evidence += hasEvidence(order) ? 1 : 0;
@@ -105,13 +115,14 @@ export const KpiPdfReport: React.FC<Props> = ({
   }, [orders, grain]);
 
   const areaRows = useMemo(() => {
-    const rows = new Map<string, { name: string; volume: number; hh: number; hm: number; ots: number; approved: number; evidence: number }>();
+    const rows = new Map<string, { name: string; volume: number; hh: number; hm: number; water: number; ots: number; approved: number; evidence: number }>();
     orders.forEach(order => {
       const name = order.sectorName || order.areaName || 'Sin ubicación informada';
-      const row = rows.get(name) || { name, volume: 0, hh: 0, hm: 0, ots: 0, approved: 0, evidence: 0 };
+      const row = rows.get(name) || { name, volume: 0, hh: 0, hm: 0, water: 0, ots: 0, approved: 0, evidence: 0 };
       row.volume += volumeOf(order);
       row.hh += hhOf(order);
       row.hm += hmOf(order);
+      row.water += waterOf(order);
       row.ots += 1;
       row.approved += isApproved(order) ? 1 : 0;
       row.evidence += hasEvidence(order) ? 1 : 0;
@@ -138,6 +149,7 @@ export const KpiPdfReport: React.FC<Props> = ({
           volume: equipmentOrders.reduce((sum, order) => sum + volumeOf(order), 0),
           hh: equipmentOrders.reduce((sum, order) => sum + hhOf(order), 0),
           hm: equipmentOrders.reduce((sum, order) => sum + hmOf(order), 0),
+          water: equipmentOrders.reduce((sum, order) => sum + waterOf(order), 0),
           ots: equipmentOrders.length,
         };
       });
@@ -150,6 +162,7 @@ export const KpiPdfReport: React.FC<Props> = ({
           volume: matching.reduce((sum, candidate) => sum + volumeOf(candidate), 0),
           hh: matching.reduce((sum, candidate) => sum + hhOf(candidate), 0),
           hm: matching.reduce((sum, candidate) => sum + hmOf(candidate), 0),
+          water: matching.reduce((sum, candidate) => sum + waterOf(candidate), 0),
           ots: matching.length,
         });
         seen.add(normalize(name));
@@ -201,11 +214,12 @@ export const KpiPdfReport: React.FC<Props> = ({
     <article className="kpi-pdf-page">
       <Header title="Resumen ejecutivo del período" subtitle="Producción, recursos y respaldo documental de las OT incluidas" />
       <div className="kpi-pdf-filter-strip"><strong>Alcance aplicado</strong>{filterLabels.map(label => <span key={label}>{label}</span>)}</div>
-      <div className="kpi-pdf-hero-grid">
-        <div><span>VOLUMEN TOTAL</span><strong>{num(metrics.volume)} <small>m³</small></strong><em>{num(metrics.activeDays ? metrics.volume / metrics.activeDays : 0)} m³/día activo</em></div>
-        <div><span>HORAS HOMBRE</span><strong>{num(metrics.hh)} <small>HH</small></strong><em>{num(metrics.activeDays ? metrics.hh / metrics.activeDays : 0)} HH/día activo</em></div>
-        <div><span>HORAS MÁQUINA</span><strong>{num(metrics.hm)} <small>HM</small></strong><em>{num(metrics.activeDays ? metrics.hm / metrics.activeDays : 0)} HM/día activo</em></div>
-        <div><span>ÓRDENES INCLUIDAS</span><strong>{orders.length} <small>OT</small></strong><em>{metrics.activeDays} jornadas con actividad</em></div>
+      <div className="kpi-pdf-hero-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+        <div><span>VOLUMEN TOTAL</span><strong>{num(metrics.volume)} <small>m³</small></strong><em>{num(metrics.activeDays ? metrics.volume / metrics.activeDays : 0)} m³/día</em></div>
+        <div><span>HORAS HOMBRE</span><strong>{num(metrics.hh)} <small>HH</small></strong><em>{num(metrics.activeDays ? metrics.hh / metrics.activeDays : 0)} HH/día</em></div>
+        <div><span>HORAS MÁQUINA</span><strong>{num(metrics.hm)} <small>HM</small></strong><em>{num(metrics.activeDays ? metrics.hm / metrics.activeDays : 0)} HM/día</em></div>
+        <div style={{ borderColor: '#38BDF8', backgroundColor: '#F0F9FF' }}><span style={{ color: '#0284C7' }}>RECURSO HÍDRICO</span><strong style={{ color: '#0369A1' }}>{num(metrics.water)} <small>m³</small></strong><em style={{ color: '#0284C7' }}>{num(metrics.water / 20, 1)} viajes aljibe</em></div>
+        <div><span>ÓRDENES INCLUIDAS</span><strong>{orders.length} <small>OT</small></strong><em>{metrics.activeDays} jornadas activas</em></div>
       </div>
       <div className="kpi-pdf-summary-columns">
         <section><h2>Control documental</h2><div className="kpi-pdf-progress-row"><span>Aprobadas / completadas</span><strong>{metrics.approved}/{orders.length} ({pct(metrics.approved)}%)</strong></div><i><b style={{ width: `${pct(metrics.approved)}%` }} /></i><div className="kpi-pdf-progress-row"><span>Evidencia antes y después</span><strong>{metrics.evidence}/{orders.length} ({pct(metrics.evidence)}%)</strong></div><i><b style={{ width: `${pct(metrics.evidence)}%` }} /></i></section>
@@ -241,8 +255,8 @@ export const KpiPdfReport: React.FC<Props> = ({
     <article className="kpi-pdf-page">
       <Header title="Detalle temporal y distribución operacional" subtitle="Valores exactos por período y área operativa" />
       <div className="kpi-pdf-two-tables">
-        <section><h2>Evolución {grain === 'DAY' ? 'diaria' : grain === 'WEEK' ? 'semanal' : 'mensual'}</h2><table><thead><tr><th>Período</th><th>OT</th><th>m³</th><th>HH</th><th>HM</th><th>Aprob.</th><th>Evid.</th></tr></thead><tbody>{timeline.map(row => <tr key={row.key}><td>{grain === 'MONTH' ? row.key : dateLabel(row.key)}</td><td>{row.ots}</td><td>{num(row.volume)}</td><td>{num(row.hh)}</td><td>{num(row.hm)}</td><td>{row.approved}</td><td>{row.evidence}</td></tr>)}</tbody></table></section>
-        <section><h2>Resultados por área operativa</h2><table><thead><tr><th>Área / sector</th><th>OT</th><th>m³</th><th>HH</th><th>HM</th><th>Aprob.</th><th>Evid.</th></tr></thead><tbody>{areaRows.map(row => <tr key={row.name}><td>{row.name}</td><td>{row.ots}</td><td>{num(row.volume)}</td><td>{num(row.hh)}</td><td>{num(row.hm)}</td><td>{row.approved}</td><td>{row.evidence}</td></tr>)}</tbody></table></section>
+        <section><h2>Evolución {grain === 'DAY' ? 'diaria' : grain === 'WEEK' ? 'semanal' : 'mensual'}</h2><table><thead><tr><th>Período</th><th>OT</th><th>m³</th><th>HH</th><th>HM</th><th>Agua m³</th><th>Aprob.</th><th>Evid.</th></tr></thead><tbody>{timeline.map(row => <tr key={row.key}><td>{grain === 'MONTH' ? row.key : dateLabel(row.key)}</td><td>{row.ots}</td><td>{num(row.volume)}</td><td>{num(row.hh)}</td><td>{num(row.hm)}</td><td style={{ color: '#0284C7', fontWeight: 800 }}>{num(row.water)}</td><td>{row.approved}</td><td>{row.evidence}</td></tr>)}</tbody></table></section>
+        <section><h2>Resultados por área operativa</h2><table><thead><tr><th>Área / sector</th><th>OT</th><th>m³</th><th>HH</th><th>HM</th><th>Agua m³</th><th>Aprob.</th><th>Evid.</th></tr></thead><tbody>{areaRows.map(row => <tr key={row.name}><td>{row.name}</td><td>{row.ots}</td><td>{num(row.volume)}</td><td>{num(row.hh)}</td><td>{num(row.hm)}</td><td style={{ color: '#0284C7', fontWeight: 800 }}>{num(row.water)}</td><td>{row.approved}</td><td>{row.evidence}</td></tr>)}</tbody></table></section>
       </div>
       <Footer />
     </article>
@@ -252,12 +266,13 @@ export const KpiPdfReport: React.FC<Props> = ({
         volume: section.orders.reduce((sum, order) => sum + volumeOf(order), 0),
         hh: section.orders.reduce((sum, order) => sum + hhOf(order), 0),
         hm: section.orders.reduce((sum, order) => sum + hmOf(order), 0),
+        water: section.orders.reduce((sum, order) => sum + waterOf(order), 0),
       };
       return <article className="kpi-pdf-page" key={section.sector.id}>
         <Header title={`Mapa de calor - ${section.sector.name}`} subtitle="Intensidad por equipo según volumen consolidado del período" />
-        <div className="kpi-pdf-sector-totals"><span>{section.orders.length} OT</span><span>{num(totals.volume)} m³</span><span>{num(totals.hh)} HH</span><span>{num(totals.hm)} HM</span></div>
+        <div className="kpi-pdf-sector-totals"><span>{section.orders.length} OT</span><span>{num(totals.volume)} m³</span><span>{num(totals.hh)} HH</span><span>{num(totals.hm)} HM</span><span style={{ color: "#0284C7", fontWeight: 800 }}>{num(totals.water)} m³ Agua</span></div>
         <div className="kpi-pdf-heat-legend"><span className="is-empty">Sin actividad</span><span className="is-low">Baja</span><span className="is-medium">Media</span><span className="is-high">Alta</span><span className="is-critical">Máxima</span><small>Escala relativa al mayor volumen por equipo del informe ({num(globalHeatMax)} m³).</small></div>
-        <div className="kpi-pdf-heat-grid">{section.rows.map(row => <div className={`kpi-pdf-heat-cell ${heatClass(row.volume)}`} key={row.name}><strong>{row.name}</strong><b>{num(row.volume)} m³</b><span>{num(row.hh)} HH · {num(row.hm)} HM · {row.ots} OT</span></div>)}</div>
+        <div className="kpi-pdf-heat-grid">{section.rows.map(row => <div className={`kpi-pdf-heat-cell ${heatClass(row.volume)}`} key={row.name}><strong>{row.name}</strong><b>{num(row.volume)} m³</b><span>{num(row.hh)} HH · {num(row.hm)} HM · {row.ots} OT{row.water > 0 ? ` · ${num(row.water)} m³ H2O` : ""}</span></div>)}</div>
         <Footer />
       </article>;
     })}
