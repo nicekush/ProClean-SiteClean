@@ -106,8 +106,11 @@ export interface WorkOrder {
   fleetTripsCount?: number;
   bucketCapacityM3?: number;
   machineHours?: number; // Horas Máquina (HM) (por equipo)
+  waterVolumeM3?: number; // Recurso Hídrico Utilizado (m³)
   executionDate?: string; // Fecha de Ejecución (YYYY-MM-DD)
 }
+
+export type MetricType = 'VOLUME_M3' | 'WATER_M3' | 'RESOURCE_HOURS' | 'OT_COUNT';
 
 export interface AuditLogEntry {
   userId?: string;

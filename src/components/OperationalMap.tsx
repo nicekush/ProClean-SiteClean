@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { WorkOrder, PlantArea, Sector, PlantEquipment, SubSector, WhiteLabelConfig, Machine } from '../types';
-import { Layers, Box, Clock, X, Filter, Activity, Cpu, Truck, HardHat, Edit, MapPin, ChevronDown, CalendarDays, RotateCcw } from 'lucide-react';
+import { Layers, Box, Clock, X, Filter, Activity, Cpu, Truck, HardHat, Edit, MapPin, ChevronDown, CalendarDays, RotateCcw, Droplets } from 'lucide-react';
 
 interface OperationalMapProps {
   workOrders: WorkOrder[];
@@ -13,7 +13,7 @@ interface OperationalMapProps {
   onEditWorkOrder?: (order: WorkOrder) => void;
 }
 
-type MetricType = 'VOLUME_M3' | 'RESOURCE_HOURS' | 'OT_COUNT';
+type MetricType = 'VOLUME_M3' | 'WATER_M3' | 'RESOURCE_HOURS' | 'OT_COUNT';
 type ResourceFilterType = 'MANUAL' | 'EQUIPMENT';
 type TimeFilterType = 'TODAY' | 'YESTERDAY' | 'ACTIVE_WEEK' | 'LAST_7' | 'LAST_14' | 'LAST_30' | 'MONTH' | 'PREVIOUS_MONTH' | 'YEAR' | 'ALL' | 'CUSTOM';
 type StatusFilterType = 'ALL' | 'PENDING' | 'APPROVED' | 'CONTINGENCY';
@@ -40,6 +40,7 @@ interface DiagramConfig {
 
 interface MapMetrics {
   totalM3: number;
+  totalWaterM3: number;
   totalHH: number;
   totalHM: number;
   totalOTs: number;
@@ -123,6 +124,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   const [customStartDate, setCustomStartDate] = useState<string>(() => getLocalDateKey(addLocalDays(new Date(), -6)));
   const [customEndDate, setCustomEndDate] = useState<string>(() => getLocalDateKey(new Date()));
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
+  const [patentFilter, setPatentFilter] = useState<string>('ALL');
   const [selectedBeltLabel, setSelectedBeltLabel] = useState<string | null>(null);
   const [expandedWetSectorId, setExpandedWetSectorId] = useState<string | null>(null);
 
@@ -324,6 +326,11 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   // Resource flags are the source of truth. Volume and personnel values are metrics, not classifiers.
   const filteredOrders = workOrders.filter(order => {
     if (!orderMatchesPeriod(order) || !orderMatchesStatus(order)) return false;
+    if (patentFilter !== 'ALL' && order.vehiclePatent !== patentFilter) return false;
+    if (activeMetric === 'WATER_M3') {
+      // En modo Recurso Hídrico, incluir todas las operaciones de lavado/alta presión
+      return true;
+    }
     const flags = getResourceFlags(order);
     return resourceFilter === 'MANUAL' ? flags.manual : flags.equipment;
   });
@@ -360,7 +367,14 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
     if (flags.manual && !flags.equipment) manualM3 = order.cubicMetersRemoved ?? manualM3;
     if (flags.equipment && !flags.manual) machineryM3 = order.cubicMetersRemoved ?? machineryM3;
 
-    return { totalHH, totalHM, manualM3, machineryM3 };
+    // Recurso Hídrico (m3): authoritative en la OT o calculado a razón de 4.444 m3/HM para Hidrojet TTCX50
+    const waterM3 = order.waterVolumeM3 ?? (
+      order.vehiclePatent === 'TTCX50'
+        ? Number(((order.machineHours || 0) * (20.0 / 4.5)).toFixed(2))
+        : 0
+    );
+
+    return { totalHH, totalHM, manualM3, machineryM3, waterM3 };
   };
 
   const getMetricsForOrders = (orders: WorkOrder[]): MapMetrics => {
@@ -368,15 +382,18 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
     let totalHM = 0;
     let manualM3 = 0;
     let machineryM3 = 0;
+    let totalWaterM3 = 0;
     orders.forEach(order => {
       const metrics = getOrderBreakdown(order);
       totalHH += metrics.totalHH;
       totalHM += metrics.totalHM;
       manualM3 += metrics.manualM3;
       machineryM3 += metrics.machineryM3;
+      totalWaterM3 += metrics.waterM3;
     });
     return {
       totalM3: resourceFilter === 'MANUAL' ? manualM3 : machineryM3,
+      totalWaterM3,
       totalHH,
       totalHM,
       totalOTs: orders.length,
@@ -422,12 +439,14 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
 
   const getMetricValue = (metrics: MapMetrics) => {
     if (activeMetric === 'VOLUME_M3') return metrics.totalM3;
+    if (activeMetric === 'WATER_M3') return metrics.totalWaterM3;
     if (activeMetric === 'RESOURCE_HOURS') return resourceFilter === 'MANUAL' ? metrics.totalHH : metrics.totalHM;
     return metrics.totalOTs;
   };
 
   const getMetricThresholds = () => {
     if (activeMetric === 'VOLUME_M3') return { medium: 15, critical: 50, unit: 'm³', label: 'Volumen removido' };
+    if (activeMetric === 'WATER_M3') return { medium: 20, critical: 60, unit: 'm³', label: 'Recurso Hídrico (Agua Utilizada)' };
     if (activeMetric === 'RESOURCE_HOURS' && resourceFilter === 'MANUAL') return { medium: 15, critical: 40, unit: 'HH', label: 'Horas hombre' };
     if (activeMetric === 'RESOURCE_HOURS') return { medium: 8, critical: 16, unit: 'HM', label: 'Horas máquina' };
     return { medium: 1, critical: 3, unit: 'OT', label: 'Frecuencia de OT' };
@@ -439,6 +458,15 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
     }
     const value = getMetricValue(metrics);
     const thresholds = getMetricThresholds();
+    if (activeMetric === 'WATER_M3') {
+      if (value >= thresholds.critical) {
+        return { fill: '#EFF6FF', stroke: '#1D4ED8', text: '#1E3A8A', badge: '💧 ALTO CONSUMO (≥60 m³)', pattern: true };
+      }
+      if (value >= thresholds.medium) {
+        return { fill: '#F0F9FF', stroke: '#0284C7', text: '#0369A1', badge: '💧 CONSUMO MEDIO (20-59 m³)', pattern: false };
+      }
+      return { fill: '#F0FDF4', stroke: '#10B981', text: '#047857', badge: '💧 BAJO CONSUMO (<20 m³)', pattern: false };
+    }
     if (value >= thresholds.critical) {
       return { fill: '#FEF2F2', stroke: '#EF4444', text: '#991B1B', badge: '🔴 CRÍTICO', pattern: true };
     }
@@ -529,6 +557,25 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
 
         {/* METRIC CONTROLLER BUTTONS */}
         <div className="operational-map-metrics" style={{ display: 'flex', gap: '8px', backgroundColor: 'var(--slate-100)', padding: '4px', borderRadius: '14px', border: '1px solid var(--slate-200)' }}>
+          <button
+            onClick={() => { setActiveMetric('WATER_M3'); setResourceFilter('EQUIPMENT'); }}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              fontWeight: 900,
+              fontSize: '11px',
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: activeMetric === 'WATER_M3' ? '#0284C7' : 'transparent',
+              color: activeMetric === 'WATER_M3' ? '#FFF' : 'var(--slate-600)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Droplets size={14} /> 💧 Recurso Hídrico (m³)
+          </button>
+
           <button
             onClick={() => setActiveMetric('VOLUME_M3')}
             style={{
@@ -677,6 +724,18 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             )}
           </div>
           <select
+            aria-label="Filtrar por patente de equipo"
+            value={patentFilter}
+            onChange={event => setPatentFilter(event.target.value)}
+            style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--slate-200)', fontSize: '11px', fontWeight: 800 }}
+          >
+            <option value="ALL">🚜 Todos los Equipos</option>
+            <option value="TTCX50">💦 Hidrojet N°1 (TTCX50)</option>
+            <option value="VLZP91">🚛 Camión Aljibe (VLZP91)</option>
+            <option value="SBYF97">🚜 Mini Cargador SS1A (SBYF97)</option>
+            <option value="SKTK35">🚜 Mini Cargador SS1B (SKTK35)</option>
+          </select>
+          <select
             aria-label="Filtrar por estado de orden"
             value={statusFilter}
             onChange={event => setStatusFilter(event.target.value as StatusFilterType)}
@@ -695,6 +754,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
               setCustomStartDate(getLocalDateKey(addLocalDays(new Date(), -6)));
               setCustomEndDate(getLocalDateKey(new Date()));
               setStatusFilter('ALL');
+              setPatentFilter('ALL');
             }}
             title="Restablecer filtros temporales y de estado"
           >
@@ -742,7 +802,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             <div className="wet-area-kpis">
               <div className="wet-kpi-card"><span>OT visibles</span><strong>{wetAreaMetrics.totalOTs}</strong></div>
               <div className="wet-kpi-card"><span>{resourceFilter === 'MANUAL' ? 'Horas hombre' : 'Horas máquina'}</span><strong>{resourceFilter === 'MANUAL' ? wetAreaMetrics.totalHH.toFixed(1) : wetAreaMetrics.totalHM.toFixed(1)}</strong></div>
-              <div className="wet-kpi-card"><span>Volumen {resourceFilter === 'MANUAL' ? 'manual' : 'maquinaria'}</span><strong>{wetAreaMetrics.totalM3.toFixed(1)} m³</strong></div>
+              <div className="wet-kpi-card"><span>{activeMetric === 'WATER_M3' ? 'Recurso hídrico' : `Volumen ${resourceFilter === 'MANUAL' ? 'manual' : 'maquinaria'}`}</span><strong>{activeMetric === 'WATER_M3' ? wetAreaMetrics.totalWaterM3.toFixed(1) : wetAreaMetrics.totalM3.toFixed(1)} m³</strong></div>
               <div className="wet-kpi-card wet-kpi-critical"><span>Ubicaciones críticas</span><strong>{wetCriticalCount}</strong></div>
             </div>
 
@@ -779,7 +839,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                           <span>{metrics.totalOTs} OT</span>
                           <span>{metrics.totalHH.toFixed(1)} HH</span>
                           <span>{metrics.totalHM.toFixed(1)} HM</span>
-                          <span>{metrics.totalM3.toFixed(1)} m³</span>
+                          <span>{activeMetric === 'WATER_M3' ? `${metrics.totalWaterM3.toFixed(1)} m³ H2O` : `${metrics.totalM3.toFixed(1)} m³`}</span>
                         </div>
                         {isExpanded && (
                           <div className="wet-location-list">
@@ -1055,6 +1115,14 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                   {selectedMetrics.totalHM.toFixed(1)} HM
                 </div>
               </div>
+
+              <div style={{ backgroundColor: '#EFF6FF', padding: '12px', borderRadius: '14px', border: '1px solid #BFDBFE' }}>
+                <div style={{ fontSize: '10px', fontWeight: 900, color: '#1D4ED8', textTransform: 'uppercase' }}>💧 Recurso Hídrico</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#2563EB' }}>{selectedMetrics.totalWaterM3.toFixed(1)} m³</div>
+                <div style={{ fontSize: '10px', color: '#1D4ED8', marginTop: '2px', fontWeight: 800 }}>
+                  {(selectedMetrics.totalWaterM3 / 20).toFixed(1)} Estanques Aljibe (20m³)
+                </div>
+              </div>
             </div>
 
             {/* LEVEL 4 SUB-SECTOR / COMPONENT HEATMAP BREAKDOWN */}
@@ -1109,6 +1177,11 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                           {flags.equipment && (
                             <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '6px', backgroundColor: '#F0F9FF', color: '#0369A1', border: '1px solid #7DD3FC', fontWeight: 800 }}>
                               🚜 Maquinaria: {breakdown.machineryM3.toFixed(1)} m³ · {breakdown.totalHM.toFixed(1)} HM
+                            </span>
+                          )}
+                          {breakdown.waterM3 > 0 && (
+                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '6px', backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontWeight: 800 }}>
+                              💧 Agua: {breakdown.waterM3.toFixed(1)} m³ ({(breakdown.waterM3 / 20).toFixed(1)} viajes aljibe)
                             </span>
                           )}
                         </div>
