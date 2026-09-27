@@ -316,9 +316,11 @@ export function App() {
           setPendingWorkOrderIds(new Set(metadata.pendingIds));
           setIsReadingFromCache(metadata.fromCache);
           if (metadata.pendingIds.length === 0 && !metadata.fromCache) setDbConnected(true);
+          setSyncToastMessage(prev => (prev?.includes('No fue posible escuchar') ? null : prev));
         }, (error) => {
           console.error('Firestore work-order listener failed:', error);
           setSyncToastMessage('❌ No fue posible escuchar las OT en Firebase. Revisa permisos y conexión.');
+          setTimeout(() => setSyncToastMessage(prev => (prev?.includes('No fue posible escuchar') ? null : prev)), 6000);
         }, scopedTenantId);
       } else if (isSupabaseConfigured) {
         cloudOrders = await fetchSupabaseWorkOrders();
