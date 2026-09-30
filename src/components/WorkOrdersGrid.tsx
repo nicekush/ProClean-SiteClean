@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole, Machine, ContingencyReasonConfig, PlantArea, Sector, SubSector, TaskType, StaffingType, PlantEquipment } from '../types';
 import { Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { WorkOrderPhotoInput } from './WorkOrderPhotoInput';
 
 interface WorkOrdersGridProps {
   workOrders: WorkOrder[];
@@ -134,6 +135,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [photosProcessing, setPhotosProcessing] = useState(0);
+  const photoBusyChange = (busy: boolean) => setPhotosProcessing(n => Math.max(0, n + (busy ? 1 : -1)));
   const [currentAddStep, setCurrentAddStep] = useState<number>(0);
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
   const [currentEditStep, setCurrentEditStep] = useState<number>(1);
@@ -695,7 +698,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOrder.staffingType) { alert('Selecciona el tipo de dotación.'); setCurrentAddStep(0); return; }
-    if (currentAddStep !== 10) return;
+    if (currentAddStep !== 10 || photosProcessing > 0) return;
     const finalSapCode = newOrder.sapCode || getNextOtCode();
 
     if (!newOrder.hasManualLabor && !newOrder.hasEquipment) {
@@ -2984,7 +2987,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               {currentAddStep === 10 && (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 900, color: 'var(--slate-900)', margin: 0 }}>
-                    📝 Paso 11: Descripción u Observaciones de la Operación (Opcional)
+                    📝 Paso 11: Detalle y fotografías antes / después
                   </h4>
 
                   <div>
@@ -3000,6 +3003,14 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     />
                   </div>
 
+                  <section aria-label="Evidencia fotográfica de la OT">
+                    <p style={{ fontSize: 13, color: '#64748B' }}>Adjunta una fotografía antes y otra después del trabajo (opcional). JPG, PNG o WebP. Las imágenes se optimizan al cargarlas.</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                      <WorkOrderPhotoInput label="Foto antes" value={newOrder.beforePhotoUrl} onChange={value => setNewOrder(prev => ({ ...prev, beforePhotoUrl: value }))} onBusyChange={photoBusyChange} />
+                      <WorkOrderPhotoInput label="Foto después" value={newOrder.afterPhotoUrl} onChange={value => setNewOrder(prev => ({ ...prev, afterPhotoUrl: value }))} onBusyChange={photoBusyChange} />
+                    </div>
+                  </section>
+
                   <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button 
@@ -3013,7 +3024,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                         ✖ Cancelar
                       </button>
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ padding: '12px 28px', fontSize: '13px', backgroundColor: '#047857', borderColor: '#047857' }}>
+                    <button type="submit" disabled={photosProcessing > 0} className="btn btn-primary" style={{ padding: '12px 28px', fontSize: '13px', backgroundColor: '#047857', borderColor: '#047857' }}>
                       <CheckCircle2 size={16} /> Guardar Orden de Trabajo
                     </button>
                   </div>
