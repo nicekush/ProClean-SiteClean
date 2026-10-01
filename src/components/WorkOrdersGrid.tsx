@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole, Machine, ContingencyReasonConfig, PlantArea, Sector, SubSector, TaskType, StaffingType, PlantEquipment } from '../types';
+import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole, Machine, ContingencyReasonConfig, PlantArea, Sector, SubSector, TaskType, StaffingType, PlantEquipment, UserAccount } from '../types';
 import { Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { WorkOrderPhotoInput } from './WorkOrderPhotoInput';
 
 interface WorkOrdersGridProps {
   workOrders: WorkOrder[];
+  users?: UserAccount[];
   pendingWorkOrderIds?: ReadonlySet<string>;
   onAddWorkOrder: (order: Omit<WorkOrder, 'id'>) => void;
   onUpdateWorkOrder: (id: string, updated: Partial<WorkOrder>) => void;
@@ -106,6 +107,7 @@ const getWorkOrderSortValue = (order: WorkOrder, key: WorkOrderSortKey): string 
 
 export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   workOrders,
+  users = [],
   pendingWorkOrderIds = new Set<string>(),
   onAddWorkOrder,
   onUpdateWorkOrder,
@@ -123,6 +125,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   targetEditOrder,
   onClearTargetEditOrder
 }) => {
+  const creatorName = (order: WorkOrder) => order.createdByName?.trim()
+    || users.find(user => user.id === order.createdById && user.tenantId === order.tenantId)?.name
+    || (order.createdById ? order.createdById : 'Sin autor identificado');
   const [searchTerm, setSearchTerm] = useState('');
   const [quickFilterStatus, setQuickFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
   const [quickFilterTime, setQuickFilterTime] = useState<'ALL' | 'SHIFT_7X7' | 'TODAY'>('ALL');
@@ -615,6 +620,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       order.sapCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.equipoCorrea.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.operationDetail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      creatorName(order).toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.areaName && order.areaName.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesShift = filterShiftId === 'ALL' || order.shiftId === filterShiftId;
@@ -902,6 +908,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       'Modalidad Recursos': o.hasManualLabor && o.hasEquipment ? 'Manual + Equipos' : o.hasEquipment ? 'Solo Equipos' : 'Solo Manual',
       'Turno': o.shiftName,
       'N° OT / SAP': o.sapCode,
+      'Cargada por': creatorName(o),
       'Fecha de Ejecución': o.executionDate || '',
       'Operación / Detalle': o.operationDetail,
       'Patente / Vehículo': o.vehiclePatent || '-',
@@ -2165,6 +2172,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
             <tr>
               <SortableHeader sortKey="executionDate">Fecha</SortableHeader>
               <SortableHeader sortKey="sapCode">{labels.sapCode}</SortableHeader>
+              <th>Cargada por</th>
               <th>Tipo de dotación</th>
               <SortableHeader sortKey="taskType">Tipo de Tarea</SortableHeader>
               <SortableHeader sortKey="areaName">Área de Planta</SortableHeader>
@@ -2183,7 +2191,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={15} style={{ textAlign: 'center', padding: '40px', color: 'var(--slate-400)' }}>
+                <td colSpan={16} style={{ textAlign: 'center', padding: '40px', color: 'var(--slate-400)' }}>
                   No hay órdenes de trabajo coincidentes con los filtros aplicados.
                 </td>
               </tr>
@@ -2205,6 +2213,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                         </div>
                       )}
                     </td>
+                    <td style={{ fontSize: '12px', fontWeight: 700 }} title="Usuario que creó la orden de trabajo">{creatorName(order)}</td>
                     <td>{order.staffingType || 'Sin clasificar'}</td>
                     <td>{getTaskTypeBadge(order.taskType)}</td>
                     <td>
@@ -2321,6 +2330,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
                 <div className="mobile-ot-card-stats">
                   <div><strong>Fecha:</strong> 📅 {order.executionDate || order.dia || 'Hoy'} ({order.shiftName})</div>
+                  <div><strong>Cargada por:</strong> {creatorName(order)}</div>
                   <div><strong>Evidencia:</strong> {getEvidenceProgressBadge(order)}</div>
                   <div><strong>Volumen Removido:</strong> <span style={{ color: 'var(--orange)', fontWeight: 900 }}>{order.cubicMetersRemoved || 0} m³</span></div>
                 </div>

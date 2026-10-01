@@ -925,7 +925,8 @@ export function App() {
         <main className="content-body">
           {activeTab === 'work-orders' && (
             <WorkOrdersGrid 
-              workOrders={workOrders}
+              workOrders={recoverAuthors(workOrders, auditLogs, users)}
+              users={users}
               pendingWorkOrderIds={pendingWorkOrderIds}
               onAddWorkOrder={handleAddWorkOrder}
               onUpdateWorkOrder={handleUpdateWorkOrder}
