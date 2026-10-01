@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import type { PlantEquipment, Sector, WhiteLabelConfig, WorkOrder } from '../types';
+import { hhOf, hmOf, volumeOf, waterOf, staffingBreakdown } from '../utils/kpiMetrics';
 
 type Grain = 'DAY' | 'WEEK' | 'MONTH';
 
@@ -27,16 +28,6 @@ const dateLabel = (value?: string) => {
   return parsed ? new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed) : 'Sin fecha';
 };
 const normalize = (value?: string) => (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleUpperCase();
-const hhOf = (order: WorkOrder) => Math.max(0, Number(order.headcount) || 0) * Math.max(0, Number(order.realHours) || 0);
-const hmOf = (order: WorkOrder) => Math.max(0, Number(order.machineHours) || 0);
-const volumeOf = (order: WorkOrder) => Math.max(0, Number(order.cubicMetersRemoved) || 0);
-const waterOf = (order: WorkOrder) => {
-  if (typeof order.waterVolumeM3 === 'number') return Math.max(0, order.waterVolumeM3);
-  if (order.vehiclePatent === 'TTCX50') {
-    return Math.max(0, Number(((order.machineHours || 0) * (20.0 / 4.5)).toFixed(2)));
-  }
-  return 0;
-};
 const isApproved = (order: WorkOrder) => order.status === 'APROBADO_MANDANTE' || order.status === 'COMPLETADO';
 const hasEvidence = (order: WorkOrder) => Boolean(order.imageBeforeUrl || order.beforePhotoUrl) && Boolean(order.imageAfterUrl || order.afterPhotoUrl);
 const resourceMode = (order: WorkOrder) => {
@@ -95,6 +86,8 @@ export const KpiPdfReport: React.FC<Props> = ({
       mixed: orders.filter(order => resourceMode(order) === 'Mixto').length,
     };
   }, [orders]);
+
+  const staffingRows = useMemo(() => staffingBreakdown(orders), [orders]);
 
   const timeline = useMemo(() => {
     const rows = new Map<string, { key: string; volume: number; hh: number; hm: number; water: number; ots: number; approved: number; evidence: number }>();
@@ -225,6 +218,15 @@ export const KpiPdfReport: React.FC<Props> = ({
         <section><h2>Control documental</h2><div className="kpi-pdf-progress-row"><span>Aprobadas / completadas</span><strong>{metrics.approved}/{orders.length} ({pct(metrics.approved)}%)</strong></div><i><b style={{ width: `${pct(metrics.approved)}%` }} /></i><div className="kpi-pdf-progress-row"><span>Evidencia antes y después</span><strong>{metrics.evidence}/{orders.length} ({pct(metrics.evidence)}%)</strong></div><i><b style={{ width: `${pct(metrics.evidence)}%` }} /></i></section>
         <section><h2>Composición de las OT</h2><div className="kpi-pdf-mode-grid"><div><span>Manual</span><strong>{metrics.manual}</strong></div><div><span>Maquinaria</span><strong>{metrics.machinery}</strong></div><div><span>Mixtas</span><strong>{metrics.mixed}</strong></div></div><p>La clasificación utiliza los indicadores de recursos registrados en cada OT.</p></section>
       </div>
+      <section className="kpi-pdf-staffing-summary" aria-label="Segmentación por tipo de dotación">
+        <h2>Recursos y producción por tipo de dotación</h2>
+        <table>
+          <thead><tr><th>Tipo de dotación</th><th>OT</th><th>Volumen (m³)</th><th>HH</th><th>HM</th><th>Agua (m³)</th></tr></thead>
+          <tbody>{staffingRows.map(row => <tr key={row.name}><td>{row.name}</td><td>{row.ots}</td><td>{num(row.volume)}</td><td>{num(row.hh)}</td><td>{num(row.hm)}</td><td>{num(row.water)}</td></tr>)}</tbody>
+          <tfoot><tr><td>Total del reporte</td><td>{orders.length}</td><td>{num(metrics.volume)}</td><td>{num(metrics.hh)}</td><td>{num(metrics.hm)}</td><td>{num(metrics.water)}</td></tr></tfoot>
+        </table>
+        <p>Según el tipo de dotación registrado en cada OT incluida en los filtros. Los gráficos y tablas por área muestran el consolidado de estos segmentos.</p>
+      </section>
       <div className="kpi-pdf-note"><strong>Criterio de lectura:</strong> HH = dotación × duración real. HM corresponde a horas máquina informadas. Los promedios diarios consideran jornadas con al menos una OT.</div>
       <Footer />
     </article>

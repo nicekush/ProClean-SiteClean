@@ -664,6 +664,11 @@
   .kpi-pdf-mode-grid span { display: block; color: #64748b; font-size: 7px; }
   .kpi-pdf-mode-grid strong { font-size: 18px; }
   .kpi-pdf-summary-columns p { margin: 3mm 0 0; color: #64748b; font-size: 8px; }
+  .kpi-pdf-staffing-summary { break-inside: avoid; }
+  .kpi-pdf-staffing-summary h2 { margin: 0 0 2mm; font-size: 11px; }
+  .kpi-pdf-staffing-summary th:first-child { width: 22%; }
+  .kpi-pdf-staffing-summary tfoot td { background: #f1f5f9; color: #0f172a; font-weight: 800; border-top: 1px solid #cbd5e1; }
+  .kpi-pdf-staffing-summary p { margin: 2mm 0 0; color: #64748b; font-size: 7px; line-height: 1.4; }
   .kpi-pdf-note { padding: 3mm 4mm; border-left: 2px solid #f97316; background: #fff7ed; color: #9a3412; font-size: 8px; line-height: 1.45; }
   .kpi-pdf-footer { display: flex; justify-content: space-between; gap: 6mm; margin-top: auto; padding-top: 2.5mm; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 7px; }
   .kpi-pdf-footer strong { color: #334155; }
