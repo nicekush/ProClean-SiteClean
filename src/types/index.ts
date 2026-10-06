@@ -103,6 +103,18 @@ export interface WorkOrder {
   hasEquipment?: boolean;
   taskType?: 'PLANIFICADO' | 'MANTENIMIENTO_PROGRAMADO' | 'EMERGENTE';
   cubicMetersRemoved?: number;
+  manualM3?: number;
+  machineryM3?: number;
+  headcountBasis?: 'HH_DIV_9';
+  reportedRealHours?: number;
+  reportedHeadcount?: number;
+  reportingAllocation?: {
+    allocatedHeadcount: number;
+    allocatedRealHours: number;
+    allocatedMachineHours: number;
+    allocatedCubicMetersRemoved: number;
+    allocatedFleetTripsCount: number;
+  };
   fleetTripsCount?: number;
   bucketCapacityM3?: number;
   machineHours?: number; // Horas Máquina (HM) (por equipo)

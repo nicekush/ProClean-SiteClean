@@ -52,7 +52,7 @@ const getWorkOrderResourceFlags = (order: WorkOrder) => {
   };
 };
 
-type WorkOrderSortKey = 'executionDate' | 'sapCode' | 'taskType' | 'areaName' | 'sectorName' | 'equipmentName' | 'resourceMode' | 'headcount' | 'hh' | 'hm' | 'evidence' | 'volume' | 'status';
+type WorkOrderSortKey = 'executionDate' | 'sapCode' | 'taskType' | 'areaName' | 'sectorName' | 'equipmentName' | 'resourceMode' | 'hh' | 'hm' | 'evidence' | 'volume' | 'status';
 type SortDirection = 'asc' | 'desc';
 type WorkOrderSort = { key: WorkOrderSortKey; direction: SortDirection };
 
@@ -61,10 +61,10 @@ const DEFAULT_WORK_ORDER_SORT: WorkOrderSort[] = [
   { key: 'executionDate', direction: 'desc' },
   { key: 'sapCode', direction: 'desc' },
 ];
-const SORTABLE_KEYS = new Set<WorkOrderSortKey>(['executionDate', 'sapCode', 'taskType', 'areaName', 'sectorName', 'equipmentName', 'resourceMode', 'headcount', 'hh', 'hm', 'evidence', 'volume', 'status']);
+const SORTABLE_KEYS = new Set<WorkOrderSortKey>(['executionDate', 'sapCode', 'taskType', 'areaName', 'sectorName', 'equipmentName', 'resourceMode', 'hh', 'hm', 'evidence', 'volume', 'status']);
 const SORT_LABELS: Record<WorkOrderSortKey, string> = {
   executionDate: 'Fecha', sapCode: 'OT', taskType: 'Tipo', areaName: 'Área', sectorName: 'Sector',
-  equipmentName: 'Equipo', resourceMode: 'Modalidad', headcount: 'Dotación', hh: 'HH', hm: 'HM',
+  equipmentName: 'Equipo', resourceMode: 'Modalidad', hh: 'HH', hm: 'HM',
   evidence: 'Evidencia', volume: 'Volumen', status: 'Estado',
 };
 const statusSortOrder: Record<WorkOrderStatus, number> = {
@@ -96,7 +96,6 @@ const getWorkOrderSortValue = (order: WorkOrder, key: WorkOrderSortKey): string 
     case 'sectorName': return order.sectorName || '';
     case 'equipmentName': return order.equipmentName || order.equipoCorrea || '';
     case 'resourceMode': return flags.manual && flags.equipment ? 'Mixto' : flags.equipment ? 'Maquinaria' : 'Manual';
-    case 'headcount': return Number(order.headcount) || 0;
     case 'hh': return Math.max(0, Number(order.headcount) || 0) * Math.max(0, Number(order.realHours) || 0);
     case 'hm': return Math.max(0, Number(order.machineHours) || 0);
     case 'evidence': return Number(Boolean(order.imageBeforeUrl || order.beforePhotoUrl)) + Number(Boolean(order.imageAfterUrl || order.afterPhotoUrl));
@@ -2179,7 +2178,6 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               <SortableHeader sortKey="sectorName">Sector / Proceso</SortableHeader>
               <SortableHeader sortKey="equipmentName">Equipo & Componentes</SortableHeader>
               <SortableHeader sortKey="resourceMode">Modalidad</SortableHeader>
-              <SortableHeader sortKey="headcount">Dotación</SortableHeader>
               <SortableHeader sortKey="hh">HH</SortableHeader>
               <SortableHeader sortKey="hm">HM</SortableHeader>
               <SortableHeader sortKey="evidence">Evidencia</SortableHeader>
@@ -2191,7 +2189,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={16} style={{ textAlign: 'center', padding: '40px', color: 'var(--slate-400)' }}>
+                <td colSpan={15} style={{ textAlign: 'center', padding: '40px', color: 'var(--slate-400)' }}>
                   No hay órdenes de trabajo coincidentes con los filtros aplicados.
                 </td>
               </tr>
@@ -2227,7 +2225,6 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       {getWorkOrderResourceFlags(order).manual && getWorkOrderResourceFlags(order).equipment ? 'Mixto' : getWorkOrderResourceFlags(order).equipment ? 'Maquinaria' : 'Manual'}
                       {order.vehiclePatent && <small className="ot-cell-secondary">🚜 {order.vehiclePatent}</small>}
                     </td>
-                    <td className="ot-numeric-cell">{getWorkOrderResourceFlags(order).manual ? Number(order.headcount) || 0 : '—'}</td>
                     <td className="ot-numeric-cell">{getWorkOrderResourceFlags(order).manual ? ((Number(order.headcount) || 0) * (Number(order.realHours) || 0)).toLocaleString('es-CL') : '—'}</td>
                     <td className="ot-numeric-cell">{getWorkOrderResourceFlags(order).equipment ? (Number(order.machineHours) || 0).toLocaleString('es-CL') : '—'}</td>
                     <td>{getEvidenceProgressBadge(order)}</td>

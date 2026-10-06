@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { WorkOrder, PlantArea, Sector, PlantEquipment, SubSector, WhiteLabelConfig, Machine } from '../types';
+import type { WorkOrder, PlantArea, Sector, PlantEquipment, SubSector, WhiteLabelConfig, Machine, StaffingType } from '../types';
 import { Layers, Box, Clock, X, Filter, Activity, Cpu, Truck, HardHat, Edit, MapPin, ChevronDown, CalendarDays, RotateCcw, Droplets } from 'lucide-react';
 
 interface OperationalMapProps {
@@ -125,6 +125,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   const [customEndDate, setCustomEndDate] = useState<string>(() => getLocalDateKey(new Date()));
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
   const [patentFilter, setPatentFilter] = useState<string>('ALL');
+  const [serviceFilter, setServiceFilter] = useState<StaffingType | 'ALL' | 'UNCLASSIFIED'>('ALL');
   const [selectedBeltLabel, setSelectedBeltLabel] = useState<string | null>(null);
   const [expandedWetSectorId, setExpandedWetSectorId] = useState<string | null>(null);
 
@@ -326,6 +327,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   // Resource flags are the source of truth. Volume and personnel values are metrics, not classifiers.
   const filteredOrders = workOrders.filter(order => {
     if (!orderMatchesPeriod(order) || !orderMatchesStatus(order)) return false;
+    if (serviceFilter !== 'ALL' && (order.staffingType || 'UNCLASSIFIED') !== serviceFilter) return false;
     if (patentFilter !== 'ALL' && order.vehiclePatent !== patentFilter) return false;
     if (activeMetric === 'WATER_M3') {
       // En modo Recurso Hídrico, incluir todas las operaciones de lavado/alta presión
@@ -366,6 +368,16 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
     // A single-resource OT stores an authoritative total. Mixed OTs keep their calculated split.
     if (flags.manual && !flags.equipment) manualM3 = order.cubicMetersRemoved ?? manualM3;
     if (flags.equipment && !flags.manual) machineryM3 = order.cubicMetersRemoved ?? machineryM3;
+    // Use imported breakdowns while their inputs match; edited tasks use current inputs.
+    const allocation = order.reportingAllocation;
+    const importedBreakdownCurrent = allocation
+      && order.headcount === allocation.allocatedHeadcount
+      && order.realHours === allocation.allocatedRealHours
+      && (order.machineHours || 0) === allocation.allocatedMachineHours
+      && (order.cubicMetersRemoved || 0) === allocation.allocatedCubicMetersRemoved
+      && (order.fleetTripsCount || 0) === allocation.allocatedFleetTripsCount;
+    if (importedBreakdownCurrent && flags.manual && order.manualM3 !== undefined) manualM3 = order.manualM3;
+    if (importedBreakdownCurrent && flags.equipment && order.machineryM3 !== undefined) machineryM3 = order.machineryM3;
 
     // Recurso Hídrico (m3): authoritative en la OT o calculado a razón de 4.444 m3/HM para Hidrojet TTCX50
     const waterM3 = order.waterVolumeM3 ?? (
@@ -736,6 +748,18 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             <option value="SKTK35">🚜 Mini Cargador SS1B (SKTK35)</option>
           </select>
           <select
+            aria-label="Filtrar mapa por servicio"
+            value={serviceFilter}
+            onChange={event => setServiceFilter(event.target.value as StaffingType | 'ALL' | 'UNCLASSIFIED')}
+            style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--slate-200)', fontSize: '11px', fontWeight: 800 }}
+          >
+            <option value="ALL">Todos los servicios</option>
+            <option value="Base">Base</option>
+            <option value="Spot13P">Spot13P</option>
+            <option value="Spot72P">Spot72P</option>
+            <option value="UNCLASSIFIED">Sin clasificar</option>
+          </select>
+          <select
             aria-label="Filtrar por estado de orden"
             value={statusFilter}
             onChange={event => setStatusFilter(event.target.value as StatusFilterType)}
@@ -755,6 +779,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
               setCustomEndDate(getLocalDateKey(new Date()));
               setStatusFilter('ALL');
               setPatentFilter('ALL');
+              setServiceFilter('ALL');
             }}
             title="Restablecer filtros temporales y de estado"
           >
@@ -766,6 +791,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
       <div className="operational-period-summary">
         <Filter size={14} />
         <span>Período visible: <strong>{periodDescription}</strong></span>
+        {serviceFilter !== 'ALL' && <span>Servicio: <strong>{serviceFilter === 'UNCLASSIFIED' ? 'Sin clasificar' : serviceFilter}</strong></span>}
         <b>{filteredOrders.length} {filteredOrders.length === 1 ? 'OT incluida' : 'OT incluidas'}</b>
       </div>
 
