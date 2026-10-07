@@ -3,6 +3,7 @@ import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole,
 import { Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { WorkOrderPhotoInput } from './WorkOrderPhotoInput';
+import { matchesSearchText } from '../utils/searchText';
 
 interface WorkOrdersGridProps {
   workOrders: WorkOrder[];
@@ -615,12 +616,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       if (orderDateStr < active7x7Range.startStr || orderDateStr > active7x7Range.endStr) return false;
     }
 
-    const matchesSearch = 
-      order.sapCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.equipoCorrea.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.operationDetail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creatorName(order).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.areaName && order.areaName.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = matchesSearchText([
+      order.sapCode, order.equipoCorrea, order.operationDetail, creatorName(order), order.areaName,
+    ], searchTerm);
     
     const matchesShift = filterShiftId === 'ALL' || order.shiftId === filterShiftId;
     const matchesArea = filterAreaId === 'ALL' || order.areaId === filterAreaId;

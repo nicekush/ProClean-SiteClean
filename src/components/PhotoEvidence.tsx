@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import type { WorkOrder } from '../types';
 import { Camera, Search, Upload, CheckCircle, Image as ImageIcon, Sliders, X, Save, Filter, Clock, AlertCircle } from 'lucide-react';
+import { matchesSearchText } from '../utils/searchText';
 
 interface PhotoEvidenceProps {
   workOrders: WorkOrder[];
@@ -22,10 +23,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
   const containerRef = useRef<HTMLDivElement>(null);
 
   const filteredOrders = workOrders.filter(o => {
-    const matchesSearch = 
-      o.sapCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.equipoCorrea.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.operationDetail.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = matchesSearchText([o.sapCode, o.equipoCorrea, o.operationDetail], searchTerm);
 
     const hasBefore = !!o.beforePhotoUrl;
     const hasAfter = !!o.afterPhotoUrl;
