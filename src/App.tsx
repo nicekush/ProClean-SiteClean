@@ -2,7 +2,7 @@ import { PermissionContext } from './security/PermissionContext';
 import { ROLE_LABELS, can as hasPermission, canOpenTab, TAB_PERMISSIONS, inScope } from './security/permissions';
 import { subscribeScopedData } from './api/scopedData';
 import { subscribeOwnProfile } from './api/access';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { WorkOrdersGrid } from './components/WorkOrdersGrid';
 import { OperationalParameters } from './components/OperationalParameters';
@@ -78,7 +78,7 @@ export function App() {
     if (!isFirebaseAuthRequired) return;
     localStorage.removeItem('siteclean_session');
     localStorage.removeItem('proclean_users');
-    return subscribeFirebaseSession(user => setAuthenticatedUser(user));
+    return subscribeFirebaseSession(user => setAuthenticatedUser(previous => JSON.stringify(previous) === JSON.stringify(user) ? previous : user));
   }, []);
 
   const activeTenantId = authenticatedUser?.tenantId || 'tenant_cmz';
@@ -223,25 +223,39 @@ export function App() {
   }, []);
 
   const [equipments, setEquipments] = useState<PlantEquipment[]>([]);
+  const subscriptions = useRef({ key: '', listeners: new Map<string, () => void>() });
+  useEffect(() => () => {
+    subscriptions.current.listeners.forEach(unsubscribe => unsubscribe());
+    subscriptions.current = { key: '', listeners: new Map() };
+  }, []);
 
-  // A new access key tears down every listener and clears data from the previous scope.
+  // Keep unchanged queries alive across renders; load each module's data only
+  // while needed. A changed access key clears every previous scope immediately.
   useEffect(() => {
+    if (subscriptions.current.key !== dataAccessKey) {
+    subscriptions.current.listeners.forEach(unsubscribe => unsubscribe());
+    subscriptions.current = { key: dataAccessKey, listeners: new Map() };
     setWorkOrders([]); setUsers([]); setAuditLogs([]); setPersonnel([]); setDailyAssignments([]);
     setContracts([]); setMachines([]); setWorkers([]); setCoverageAreas([]); setCargos([]);
     setPlantAreas([]); setSectors([]); setEquipments([]); setSubSectors([]); setShifts([]); setContingencies([]);
     setPendingWorkOrderIds(new Set()); setDbConnected(false);
     setLoadedAccessKey(dataAccessKey);
+    }
     if (!authenticatedUser || !dataAccessKey) return;
     const profile = authenticatedUser;
-    let disposed = false;
-    const unsubs: Array<() => void> = [];
+    const current = subscriptions.current;
+    const needed = new Set<string>();
     const error = (err: unknown) => {
       console.error('Scoped data subscription failed:', err);
-      if (!disposed) setSyncToastMessage('No fue posible consultar algunos datos. Revisa los permisos y la conexión.');
+      if (subscriptions.current === current) setSyncToastMessage((err as { code?: string })?.code === 'resource-exhausted'
+        ? 'La base de datos alcanzó su cuota de consultas. Intenta más tarde o contacta a administración.'
+        : 'No fue posible consultar algunos datos. Revisa los permisos y la conexión.');
     };
     const listen = <T,>(collection: string, setter: (items: T[]) => void, options = {}) => {
-      unsubs.push(subscribeScopedData<T>(collection, profile, (items, fromCache, pendingIds) => {
-        if (disposed) return;
+      needed.add(collection);
+      if (current.listeners.has(collection)) return;
+      current.listeners.set(collection, subscribeScopedData<T>(collection, profile, (items, fromCache, pendingIds) => {
+        if (subscriptions.current !== current || !needed.has(collection)) return;
         setter(items);
         if (['work_orders', 'work_order_details', 'work_order_metrics'].includes(collection)) {
           setIsReadingFromCache(fromCache); setPendingWorkOrderIds(new Set(pendingIds));
@@ -249,32 +263,35 @@ export function App() {
         if (!fromCache) setDbConnected(true);
       }, error, options));
     };
-    if (can('orders.view') || can('map.view') || can('kpi.view')) {
+    const operational = ['work-orders', 'map-operational', 'dashboard', 'reporting-control', 'evidences'].includes(activeTab);
+    const references = ['work-orders', 'map-operational', 'dashboard', 'parameters', 'system-config'].includes(activeTab);
+    const personnelModule = ['personnel-coverage', 'parameters'].includes(activeTab);
+    if (operational && (can('orders.view') || can('map.view') || can('kpi.view'))) {
       const source = can('evidence.view') ? 'work_orders' : can('orders.view') ? 'work_order_details' : 'work_order_metrics';
       listen<WorkOrder>(source, setWorkOrders, { contract: true, areas: true });
     }
-    if (can('users.view')) listen<UserAccount>('users', setUsers, { contract: true });
+    if (['system-config', 'reporting-control', 'work-orders'].includes(activeTab) && can('users.view')) listen<UserAccount>('users', setUsers, { contract: true });
     else setUsers([profile]);
-    if (can('audit.view')) listen<AuditLogEntry>('audit_logs', setAuditLogs, { contract: true });
+    if (['audit-logs', 'reporting-control', 'work-orders'].includes(activeTab) && can('audit.view')) listen<AuditLogEntry>('audit_logs', setAuditLogs, { contract: true });
     // Plant names are reference data, required to label maps and operational forms.
-    if (can('structure.view') || can('orders.view') || can('map.view') || can('kpi.view')) {
+    if (references && (can('structure.view') || can('orders.view') || can('map.view') || can('kpi.view'))) {
       listen<PlantArea>('plant_areas', setPlantAreas); listen<Sector>('sectors', setSectors);
       listen<PlantEquipment>('equipments', setEquipments); listen<SubSector>('sub_sectors', setSubSectors);
     }
-    if (can('orders.view') || can('map.view') || can('machines.view')) listen<Machine>('machines', setMachines);
-    if (can('workers.view')) listen<Worker>('workers', setWorkers);
-    if (can('personnel.view')) listen<PersonnelMember>('proclean_personnel', setPersonnel);
-    if (can('coverage.view') || can('coverageConfig.view')) {
+    if (['work-orders', 'map-operational', 'parameters'].includes(activeTab) && (can('orders.view') || can('map.view') || can('machines.view'))) listen<Machine>('machines', setMachines);
+    if (activeTab === 'parameters' && can('workers.view')) listen<Worker>('workers', setWorkers);
+    if (personnelModule && can('personnel.view')) listen<PersonnelMember>('proclean_personnel', setPersonnel);
+    if (personnelModule && (can('coverage.view') || can('coverageConfig.view'))) {
       listen<CoverageArea>('proclean_coverageAreas', setCoverageAreas);
       listen<CargoConfig>('proclean_cargos', setCargos);
     }
-    if (can('coverage.view')) listen<DailyPersonnelAssignment>(can('coverage.names') ? 'proclean_dailyAssignments' : 'coverage_public', setDailyAssignments, { contract: true, today: true });
+    if (activeTab === 'personnel-coverage' && can('coverage.view')) listen<DailyPersonnelAssignment>(can('coverage.names') ? 'proclean_dailyAssignments' : 'coverage_public', setDailyAssignments, { contract: true, today: true });
     listen<ClientContract>('contracts', setContracts, { contract: true });
     listen<ShiftType>('shifts', setShifts);
-    if (can('orders.create') || can('orders.edit') || can('contingencies.manage')) listen<ContingencyReasonConfig>('contingencies', setContingencies);
+    if (['work-orders', 'system-config'].includes(activeTab) && (can('orders.create') || can('orders.edit') || can('contingencies.manage'))) listen<ContingencyReasonConfig>('contingencies', setContingencies);
     listen<WhiteLabelConfig>('whitelabel', items => { if (items[0]) setWhiteLabel(items[0]); });
-    return () => { disposed = true; unsubs.forEach(unsub => unsub()); };
-  }, [dataAccessKey, authenticatedUser, can]);
+    for (const [name, unsubscribe] of current.listeners) if (!needed.has(name)) { unsubscribe(); current.listeners.delete(name); }
+  }, [activeTab, dataAccessKey, authenticatedUser, can]);
 
   const handleAccessUserSaved = (saved: UserAccount | null, removedId?: string) => {
     setUsers(prev => saved ? [...prev.filter(u => u.id !== saved.id), saved] : prev.filter(u => u.id !== removedId));
@@ -286,7 +303,9 @@ export function App() {
 
   // Login & Logout Handlers
   const handleLoginSuccess = (user: UserAccount) => {
-    setAuthenticatedUser(user);
+    // The live Auth profile listener is authoritative in production, avoiding
+    // duplicate initial subscriptions from the login callback and profile event.
+    if (!isFirebaseAuthRequired) setAuthenticatedUser(user);
     if (!isFirebaseAuthRequired) localStorage.setItem('siteclean_session', JSON.stringify(user));
     addAuditLog('CREACION', 'Sesión de Usuario', user.email, `Inicio de sesión exitoso como ${user.name}`, `Rol: ${user.role}`);
   };
