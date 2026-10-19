@@ -27,8 +27,8 @@ async function preparePhoto(file: File): Promise<string> {
   } finally { URL.revokeObjectURL(url); }
 }
 
-export function WorkOrderPhotoInput({ label, value, onChange, onBusyChange }: {
-  label: string; value?: string; onChange: (value: string) => void; onBusyChange: (busy: boolean) => void;
+export function WorkOrderPhotoInput({ label, value, onChange, onBusyChange, disabled = false }: {
+  disabled?: boolean; label: string; value?: string; onChange: (value: string) => void; onBusyChange: (busy: boolean) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -36,7 +36,7 @@ export function WorkOrderPhotoInput({ label, value, onChange, onBusyChange }: {
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   return <div style={{ flex: '1 1 240px', minWidth: 0, border: '1px solid #CBD5E1', borderRadius: 12, padding: 16 }}>
     <label style={{ display: 'block', fontWeight: 800 }}>{label}
-      <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} style={{ display: 'block', marginTop: 12, maxWidth: '100%' }} onChange={async e => {
+      <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || disabled} style={{ display: 'block', marginTop: 12, maxWidth: '100%' }} onChange={async e => {
         const file = e.target.files?.[0]; e.target.value = '';
         if (!file) return;
         setBusy(true); setError(''); onBusyChange(true);
@@ -48,7 +48,7 @@ export function WorkOrderPhotoInput({ label, value, onChange, onBusyChange }: {
     {busy && <p role="status">Preparando imagen…</p>}
     {error && <p role="alert" style={{ color: '#B91C1C' }}>{error}</p>}
     {value && <><img src={value} alt={label} style={{ display: 'block', width: '100%', height: 180, objectFit: 'contain', marginTop: 12 }} />
-      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onChange('')} style={{ marginTop: 8 }}>Quitar imagen</button></>}
+      <button type="button" className="btn btn-secondary" disabled={busy || disabled} onClick={() => onChange('')} style={{ marginTop: 8 }}>Quitar imagen</button></>}
     {!value && !busy && <p style={{ color: '#64748B', fontSize: 13 }}>Sin imagen seleccionada</p>}
   </div>;
 }

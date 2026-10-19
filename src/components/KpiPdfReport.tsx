@@ -29,7 +29,7 @@ const dateLabel = (value?: string) => {
 };
 const normalize = (value?: string) => (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleUpperCase();
 const isApproved = (order: WorkOrder) => order.status === 'APROBADO_MANDANTE' || order.status === 'COMPLETADO';
-const hasEvidence = (order: WorkOrder) => Boolean(order.imageBeforeUrl || order.beforePhotoUrl) && Boolean(order.imageAfterUrl || order.afterPhotoUrl);
+const hasEvidence = (order: WorkOrder) => Boolean(order.hasBeforeEvidence || order.imageBeforeUrl || order.beforePhotoUrl) && Boolean(order.hasAfterEvidence || order.imageAfterUrl || order.afterPhotoUrl);
 const resourceMode = (order: WorkOrder) => {
   const manual = order.hasManualLabor ?? (hhOf(order) > 0);
   const machinery = order.hasEquipment ?? Boolean(order.vehiclePatent || order.fleetTripsCount || hmOf(order));

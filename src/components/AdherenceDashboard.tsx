@@ -1,3 +1,4 @@
+import { usePermissions } from '../security/PermissionContext';
 import React, { useMemo, useState } from 'react';
 import type { PlantEquipment, Sector, WhiteLabelConfig, WorkOrder } from '../types';
 import {
@@ -59,7 +60,7 @@ const hhOf = (o: WorkOrder) => Math.max(0, Number(o.headcount) || 0) * Math.max(
 const hmOf = (o: WorkOrder) => Math.max(0, Number(o.machineHours) || 0);
 const volumeOf = (o: WorkOrder) => Math.max(0, Number(o.cubicMetersRemoved) || 0);
 const approved = (o: WorkOrder) => o.status === 'APROBADO_MANDANTE' || o.status === 'COMPLETADO';
-const evidence = (o: WorkOrder) => Boolean(o.imageBeforeUrl || o.beforePhotoUrl) && Boolean(o.imageAfterUrl || o.afterPhotoUrl);
+const evidence = (o: WorkOrder) => Boolean(o.hasBeforeEvidence || o.imageBeforeUrl || o.beforePhotoUrl) && Boolean(o.hasAfterEvidence || o.imageAfterUrl || o.afterPhotoUrl);
 const makeBreakdown = (orders: WorkOrder[], pick: (o: WorkOrder) => string) => {
   const map = new Map<string, number>();
   orders.forEach(o => { const key = pick(o); map.set(key, (map.get(key) || 0) + 1); });
@@ -77,6 +78,7 @@ const modeNames: Record<Mode, string> = { ALL: 'Todos los recursos', MANUAL: 'Tr
 export const AdherenceDashboard: React.FC<Props> = ({ workOrders, sectors = [], equipments = [], whiteLabel, generatedBy, contractLabel }) => {
   const now = useMemo(() => new Date(), []);
   const todayKey = dateKey(now);
+  const { can } = usePermissions();
   const [preset, setPreset] = useState<Preset>('LAST_7');
   const [customStart, setCustomStart] = useState(dateKey(addDays(now, -6)));
   const [customEnd, setCustomEnd] = useState(todayKey);
@@ -197,7 +199,7 @@ export const AdherenceDashboard: React.FC<Props> = ({ workOrders, sectors = [], 
   return <section className="kpi-dashboard">
     <header className="kpi-dashboard__header">
       <div><span className="kpi-dashboard__eyebrow"><BarChart3 size={15} /> Analítica operacional</span><h2>Reporte KPI de Producción y Recursos</h2><p>Volumen, horas-hombre, actividad y control documental desde las órdenes de trabajo.</p></div>
-      <div className="kpi-dashboard__actions kpi-no-print"><button className="btn btn-secondary" onClick={printReport}><Printer size={16} /> Informe PDF consolidado</button><button className="btn btn-secondary" onClick={exportExcel}><FileSpreadsheet size={16} /> Exportar Excel</button></div>
+      <div className="kpi-dashboard__actions kpi-no-print"><button className="btn btn-secondary" hidden={!can('kpi.pdf')} onClick={printReport}><Printer size={16} /> Informe PDF consolidado</button><button className="btn btn-secondary" hidden={!can('kpi.export')} onClick={exportExcel}><FileSpreadsheet size={16} /> Exportar Excel</button></div>
     </header>
 
     <section className="kpi-filter-panel kpi-no-print">

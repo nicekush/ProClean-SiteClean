@@ -26,3 +26,20 @@ export function firebaseCliCredential() {
   };
 }
 
+// firebase-admin only accepts its own credential classes for Firestore. Use
+// the CLI session with the Cloud SDK directly, keeping its auth-library version
+// aligned with google-gax (older copies return an incompatible headers object).
+export async function firebaseCliFirestore(projectId) {
+  const { Firestore } = await import('@google-cloud/firestore');
+  const gaxRequire = createRequire(require.resolve('google-gax'));
+  const { OAuth2Client } = gaxRequire('google-auth-library');
+  const client = new OAuth2Client();
+  client.refreshHandler = async () => {
+    const token = await firebaseCliCredential().getAccessToken();
+    return { access_token: token.access_token, expiry_date: Date.now() + token.expires_in * 1000 };
+  };
+  const token = await firebaseCliCredential().getAccessToken();
+  client.setCredentials({ access_token: token.access_token, expiry_date: Date.now() + token.expires_in * 1000 });
+  return new Firestore({ projectId, authClient: client });
+}
+

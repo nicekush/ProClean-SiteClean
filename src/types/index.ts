@@ -2,7 +2,8 @@ export type UserRole =
   | 'SUPERVISOR_TERRENO' 
   | 'ADMINISTRADOR_CONTRATO' 
   | 'ITO_MANDANTE' 
-  | 'SUPER_ADMIN';
+  | 'SUPER_ADMIN'
+  | 'CLIENTE_VISUALIZADOR';
 
 export interface UserAccount {
   id: string;
@@ -15,6 +16,10 @@ export interface UserAccount {
   active: boolean;
   avatarColor?: string;
   lastLogin?: string;
+  permissions?: string[];
+  permissionProfileId?: string;
+  accessScope?: 'TENANT' | 'CONTRACT';
+  allowedAreaIds?: string[];
 }
 
 export interface ShiftType {
@@ -50,6 +55,10 @@ export type TaskType = 'PLANIFICADO' | 'MANTENIMIENTO_PROGRAMADO' | 'EMERGENTE';
 export type StaffingType = 'Spot13P' | 'Spot72P' | 'Base';
 
 export interface WorkOrder {
+  revision?: string;
+  contractId?: string;
+  hasBeforeEvidence?: boolean;
+  hasAfterEvidence?: boolean;
   createdById?: string;
   authorSource?: 'audit';
   authorAuditId?: string;

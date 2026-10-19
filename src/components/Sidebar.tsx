@@ -1,3 +1,5 @@
+import { usePermissions } from '../security/PermissionContext';
+import { canOpenTab } from '../security/permissions';
 import React from 'react';
 import type { WhiteLabelConfig, ClientContract, UserRole } from '../types';
 import { OFFICIAL_PROCLEAN_LOGO_URL } from '../config/branding';
@@ -39,23 +41,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeContract,
   dbConnected = true,
   isOnline = true,
-  currentRole = 'SUPERVISOR_TERRENO',
   isOpenMobile = false,
   onCloseMobile
 }) => {
+  const { user } = usePermissions();
   const companyLogoUrl = whiteLabel.companyLogoUrl || OFFICIAL_PROCLEAN_LOGO_URL;
 
   interface DomainItem {
     id: string;
     label: string;
     icon: any;
-    allowedRoles?: UserRole[];
   }
 
   interface DomainGroup {
     title: string;
     icon: any;
-    allowedRoles: UserRole[];
     items: DomainItem[];
   }
 
@@ -64,28 +64,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: 'OPERACIÓN TERRENO',
       icon: HardHat,
-      allowedRoles: ['SUPERVISOR_TERRENO', 'ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'],
       items: [
-        { id: 'work-orders', label: 'Órdenes de Trabajo', icon: ClipboardList, allowedRoles: ['SUPERVISOR_TERRENO', 'ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
-        { id: 'personnel-coverage', label: 'Dotación & Cobertura', icon: Users, allowedRoles: ['SUPERVISOR_TERRENO', 'ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
-        { id: 'map-operational', label: 'Mapa Operacional Zaldívar', icon: MapPin, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
-        { id: 'evidences', label: 'Evidencias Fotográficas', icon: Camera, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] }
+        { id: 'work-orders', label: 'Órdenes de Trabajo', icon: ClipboardList },
+        { id: 'personnel-coverage', label: 'Dotación & Cobertura', icon: Users },
+        { id: 'map-operational', label: 'Mapa Operacional Zaldívar', icon: MapPin },
+        { id: 'evidences', label: 'Evidencias Fotográficas', icon: Camera }
       ]
     },
     {
       title: 'ANALÍTICA Y AUDITORÍA',
       icon: BarChart2,
-      allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'],
       items: [
-        { id: 'dashboard', label: 'Reporte KPI Operacional', icon: BarChart3, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
-        { id: 'reporting-control', label: 'Control de reportabilidad', icon: ClipboardList, allowedRoles: ['ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] },
-        { id: 'audit-logs', label: 'Historial de Auditoría', icon: History, allowedRoles: ['ITO_MANDANTE', 'ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'] }
+        { id: 'dashboard', label: 'Reporte KPI Operacional', icon: BarChart3 },
+        { id: 'reporting-control', label: 'Control de reportabilidad', icon: ClipboardList },
+        { id: 'audit-logs', label: 'Historial de Auditoría', icon: History }
       ]
     },
     {
       title: 'PARAMETRIZACIÓN & SAAS',
       icon: Sliders,
-      allowedRoles: ['ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'],
       items: [
         { id: 'parameters', label: 'Parámetros Operativos', icon: Settings },
         { id: 'system-config', label: 'Configuración General', icon: SlidersHorizontal }
@@ -172,10 +169,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <nav className="sidebar-menu">
           {domainGroups.map((group) => {
             // Check group-level RBAC
-            if (!group.allowedRoles.includes(currentRole)) return null;
+
 
             // Filter item-level RBAC
-            const validItems = group.items.filter(item => !item.allowedRoles || item.allowedRoles.includes(currentRole));
+            const validItems = group.items.filter(item => canOpenTab(user, item.id));
             if (validItems.length === 0) return null;
 
             return (

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import { usePermissions } from '../security/PermissionContext';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { PlantArea, Sector, PlantEquipment, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
 import { syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase } from '../api/firebase';
 import { 
@@ -311,6 +312,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   cargos = [],
   setCargos
 }) => {
+  const { can } = usePermissions();
   const [activeTab, setActiveTab] = useState<'areas' | 'sectors' | 'subsectors' | 'machines' | 'workers' | 'manual_matrix' | 'coverage_config'>('areas');
 
   // Search Filters
@@ -318,6 +320,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   const [searchWorker, setSearchWorker] = useState('');
 
   // Tab 3-4 (Equipos y Componentes) Search, Sort & Pagination States
+  useEffect(() => { const tabs = {"areas": "structure.view", "sectors": "structure.view", "subsectors": "structure.view", "machines": "machines.view", "workers": "workers.view", "manual_matrix": "manualMatrix.manage", "coverage_config": "coverageConfig.view"}; if (!(can(tabs[activeTab]) || activeTab === 'coverage_config' && can('personnel.view'))) { const next = Object.keys(tabs).find(tab => can(tabs[tab as keyof typeof tabs]) || tab === 'coverage_config' && can('personnel.view')); if (next) setActiveTab(next as typeof activeTab); } }, [activeTab, can]);
   const [searchEquipment, setSearchEquipment] = useState('');
   const [filterEquipmentSector, setFilterEquipmentSector] = useState('ALL');
   const [sortEquipmentKey, setSortEquipmentKey] = useState<'sector' | 'code' | 'name' | 'components'>('name');
@@ -481,6 +484,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   // Coverage Areas CRUD (100% Cloud Firestore Sync)
   const handleAddCovArea = (e: React.FormEvent) => {
+    if (!can('coverageConfig.manage')) return;
     e.preventDefault();
     if (!newCovArea.name || !setCoverageAreas) return;
     const newAreaObj: CoverageArea = {
@@ -497,6 +501,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeleteCovArea = (id: string) => {
+    if (!can('coverageConfig.manage')) return;
     if (!setCoverageAreas) return;
     if (confirm('¿Deseas eliminar esta ubicación de dotación?')) {
       setCoverageAreas(prev => prev.filter(ca => ca.id !== id));
@@ -505,6 +510,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleUpdateCovArea = (e: React.FormEvent) => {
+    if (!can('coverageConfig.manage')) return;
     e.preventDefault();
     if (!editingCovArea || !setCoverageAreas) return;
     const updatedArea = { ...editingCovArea, tenantId };
@@ -515,6 +521,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   // Cargos CRUD (100% Cloud Firestore Sync)
   const handleAddCargo = (e: React.FormEvent) => {
+    if (!can('coverageConfig.manage')) return;
     e.preventDefault();
     if (!newCargo.nombre || !setCargos) return;
     const newCargoObj: CargoConfig = {
@@ -530,6 +537,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeleteCargo = (id: string) => {
+    if (!can('coverageConfig.manage')) return;
     if (!setCargos) return;
     if (confirm('¿Deseas eliminar este cargo de la matriz de dotación?')) {
       setCargos(prev => prev.filter(c => c.id !== id));
@@ -538,6 +546,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleUpdateCargo = (e: React.FormEvent) => {
+    if (!can('coverageConfig.manage')) return;
     e.preventDefault();
     if (!editingCargo || !setCargos) return;
     const updatedCargo = { ...editingCargo, tenantId };
@@ -548,6 +557,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   // Personnel Roster CRUD (100% Cloud Firestore Sync)
   const handleAddPersonnel = (e: React.FormEvent) => {
+    if (!can('personnel.manage')) return;
     e.preventDefault();
     if (!newPersonnel.nombre || !setPersonnel) return;
     const newMember: PersonnelMember = {
@@ -565,6 +575,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeletePersonnel = (id: string) => {
+    if (!can('personnel.manage')) return;
     if (!setPersonnel) return;
     if (confirm('¿Deseas eliminar a este colaborador de la nómina oficial?')) {
       setPersonnel(prev => prev.filter(p => p.id !== id));
@@ -573,6 +584,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleUpdatePersonnel = (e: React.FormEvent) => {
+    if (!can('personnel.manage')) return;
     e.preventDefault();
     if (!editingPersonnel || !setPersonnel) return;
     const updatedMember = { ...editingPersonnel, tenantId };
@@ -583,6 +595,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   // Plant Areas CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddArea = (e: React.FormEvent) => {
+    if (!can('structure.manage')) return;
     e.preventDefault();
     if (!newArea.name) return;
     const newObj: PlantArea = {
@@ -600,6 +613,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeleteArea = (id: string) => {
+    if (!can('structure.manage')) return;
     if (confirm('¿Deseas eliminar esta área de planta? Se eliminará la categoría para los sectores vinculados.')) {
       setPlantAreas(prev => {
         const updated = prev.filter(a => a.id !== id);
@@ -612,6 +626,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   // Sectors CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddSector = (e: React.FormEvent) => {
+    if (!can('structure.manage')) return;
     e.preventDefault();
     if (!newSector.name || !newSector.areaId) return;
     const linkedArea = plantAreas.find(a => a.id === newSector.areaId);
@@ -635,6 +650,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeleteSector = (id: string) => {
+    if (!can('structure.manage')) return;
     if (confirm('¿Deseas eliminar este sector operativo?')) {
       setSectors(prev => {
         const updated = prev.filter(s => s.id !== id);
@@ -647,6 +663,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   // Level 3 equipment and level 4 component CRUD.
   const handleAddSubSector = (e: React.FormEvent) => {
+    if (!can('structure.manage')) return;
     e.preventDefault();
     if (!newSubSector.name || !newSubSector.sectorId) return;
     const linkedSector = sectors.find(s => s.id === newSubSector.sectorId);
@@ -689,6 +706,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeleteSubSector = (id: string) => {
+    if (!can('structure.manage')) return;
     if (confirm('¿Deseas eliminar este componente?')) {
       setSubSectors(prev => {
         const updated = prev.filter(s => s.id !== id);
@@ -700,6 +718,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeleteEquipment = (id: string) => {
+    if (!can('structure.manage')) return;
     const hasComponents = subSectors.some(item => item.equipmentId === id);
     if (hasComponents) {
       alert('Este equipo tiene componentes asociados. Elimina o reasigna esos componentes antes de eliminarlo.');
@@ -712,6 +731,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handlePromoteSubSectorToEquipment = async (sub: SubSector) => {
+    if (!can('structure.manage')) return;
     const normalizedName = sub.name.trim().toLocaleLowerCase();
     const alreadyExists = equipments.some(item =>
       item.name.trim().toLocaleLowerCase() === normalizedName
@@ -753,6 +773,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   // Machines CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddMachine = (e: React.FormEvent) => {
+    if (!can('machines.manage')) return;
     e.preventDefault();
     if (!newMachine.name || !newMachine.patent) return;
     const capValue = newMachine.capacityM3 !== undefined && !isNaN(newMachine.capacityM3) ? Number(newMachine.capacityM3) : 0;
@@ -794,6 +815,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleUpdateMachineSubmit = (e: React.FormEvent) => {
+    if (!can('machines.manage')) return;
     e.preventDefault();
     if (!editingMachine) return;
     const capValue = Number(editingMachine.capacityM3) || 0.45;
@@ -813,6 +835,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeleteMachine = (id: string) => {
+    if (!can('machines.manage')) return;
     if (confirm('¿Deseas eliminar este vehículo de la flota?')) {
       setMachines(prev => {
         const updated = prev.filter(m => m.id !== id);
@@ -825,6 +848,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   // Workers CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddWorker = (e: React.FormEvent) => {
+    if (!can('workers.manage')) return;
     e.preventDefault();
     if (!newWorker.name) return;
     const newObj: Worker = {
@@ -845,6 +869,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   };
 
   const handleDeleteWorker = (id: string) => {
+    if (!can('workers.manage')) return;
     if (confirm('¿Deseas desvincular a este operario de la nómina?')) {
       setWorkers(prev => {
         const updated = prev.filter(w => w.id !== id);
@@ -882,7 +907,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       <div className="scrollable-tabs" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '24px', flexWrap: 'nowrap' }}>
         <button
           className={`btn ${activeTab === 'areas' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('areas')}
+          hidden={!can('structure.view')} onClick={() => setActiveTab('areas')}
           style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
         >
           <Layers size={16} /> 1. Áreas ({plantAreas.length})
@@ -890,7 +915,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
         <button
           className={`btn ${activeTab === 'sectors' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('sectors')}
+          hidden={!can('structure.view')} onClick={() => setActiveTab('sectors')}
           style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
         >
           <MapPin size={16} /> 2. Sectores ({sectors.length})
@@ -898,7 +923,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
         <button
           className={`btn ${activeTab === 'subsectors' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('subsectors')}
+          hidden={!can('structure.view')} onClick={() => setActiveTab('subsectors')}
           style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
         >
           <Grid size={16} /> 3-4. Equipos y Componentes ({equipments.length}/{subSectors.length})
@@ -906,7 +931,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
         <button
           className={`btn ${activeTab === 'machines' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('machines')}
+          hidden={!can('machines.view')} onClick={() => setActiveTab('machines')}
           style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
         >
           <Truck size={16} /> Flota Maquinaria ({machines.length})
@@ -914,7 +939,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
         <button
           className={`btn ${activeTab === 'workers' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('workers')}
+          hidden={!can('workers.view')} onClick={() => setActiveTab('workers')}
           style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
         >
           <Users size={16} /> Nómina Personal ({workers.length})
@@ -922,7 +947,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
         <button
           className={`btn ${activeTab === 'manual_matrix' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('manual_matrix')}
+          hidden={!can('manualMatrix.manage')} onClick={() => setActiveTab('manual_matrix')}
           style={{ 
             flexShrink: 0, 
             whiteSpace: 'nowrap',
@@ -936,7 +961,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
         <button
           className={`btn ${activeTab === 'coverage_config' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('coverage_config')}
+          hidden={!can('coverageConfig.view') && !can('personnel.view')} onClick={() => setActiveTab('coverage_config')}
           style={{ 
             flexShrink: 0, 
             whiteSpace: 'nowrap',
@@ -949,14 +974,15 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
         </button>
       </div>
 
+      <div>
       {/* TAB 1: PLANT AREAS */}
-      {activeTab === 'areas' && (
+      {activeTab === 'areas' && can('structure.view') && (
         <div className="card">
           <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '16px' }}>
             Nivel 1: Configuración de Áreas Principales de la Planta Minera
           </h3>
 
-          <form className="responsive-form-grid" onSubmit={handleAddArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" hidden={!can('structure.manage')} onSubmit={handleAddArea} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <input
               type="text"
               placeholder="Nombre del Área (Ej: Chancador Terciario)"
@@ -1000,7 +1026,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         </span>
                       </td>
                       <td>
-                        <button onClick={() => handleDeleteArea(area.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                        <button hidden={!can('structure.manage')} onClick={() => handleDeleteArea(area.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
                       </td>
@@ -1014,13 +1040,13 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       )}
 
       {/* TAB 2: SECTORS */}
-      {activeTab === 'sectors' && (
+      {activeTab === 'sectors' && can('structure.view') && (
         <div className="card">
           <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '16px' }}>
             Nivel 2: Configuración de Sectores Vincualdos a un Área
           </h3>
 
-          <form className="responsive-form-grid" onSubmit={handleAddSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" hidden={!can('structure.manage')} onSubmit={handleAddSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <select
               value={newSector.areaId}
               onChange={e => setNewSector({ ...newSector, areaId: e.target.value })}
@@ -1085,7 +1111,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         </span>
                       </td>
                       <td>
-                        <button onClick={() => handleDeleteSector(sector.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                        <button hidden={!can('structure.manage')} onClick={() => handleDeleteSector(sector.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
                       </td>
@@ -1099,7 +1125,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       )}
 
       {/* TAB 3-4: EQUIPMENT / COMPONENTS */}
-      {activeTab === 'subsectors' && (
+      {activeTab === 'subsectors' && can('structure.view') && (
         <div className="card">
           <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '16px' }}>
             Niveles 3 y 4: Equipos principales y sus componentes
@@ -1125,7 +1151,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             </button>
           </div>
 
-          <form className="responsive-form-grid" onSubmit={handleAddSubSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" hidden={!can('structure.manage')} onSubmit={handleAddSubSector} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <select
               value={newSubSector.sectorId}
               onChange={e => setNewSubSector({ ...newSubSector, sectorId: e.target.value, equipmentId: '' })}
@@ -1344,7 +1370,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <button onClick={() => handleDeleteEquipment(item.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                        <button hidden={!can('structure.manage')} onClick={() => handleDeleteEquipment(item.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
                       </td>
@@ -1556,11 +1582,11 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       <td style={{ fontWeight: 800, color: 'var(--color-forest-teal)' }}>{sub.name}</td>
                       <td style={{ textAlign: 'right' }}>
                         {!sub.equipmentId && !sub.equipmentName && (
-                          <button onClick={() => handlePromoteSubSectorToEquipment(sub)} className="btn" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #93C5FD', padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}>
+                          <button hidden={!can('structure.manage')} onClick={() => handlePromoteSubSectorToEquipment(sub)} className="btn" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #93C5FD', padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}>
                             Convertir a equipo
                           </button>
                         )}
-                        <button onClick={() => handleDeleteSubSector(sub.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                        <button hidden={!can('structure.manage')} onClick={() => handleDeleteSubSector(sub.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
                       </td>
@@ -1583,7 +1609,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       )}
 
       {/* TAB 4: MACHINES */}
-      {activeTab === 'machines' && (
+      {activeTab === 'machines' && can('machines.view') && (
         <div className="card">
           <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
@@ -1604,16 +1630,16 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           </div>
 
           {/* Edit Machine Modal */}
-          {editingMachine && (
+          {editingMachine && can('machines.manage') && (
             <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '2px solid var(--color-action-teal)', marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-action-teal)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Edit size={16} /> Editar Datos del Vehículo
                 </h4>
-                <button onClick={() => setEditingMachine(null)} className="btn btn-secondary" style={{ padding: '2px 6px' }}><X size={14} /></button>
+                <button hidden={!can('machines.manage')} onClick={() => setEditingMachine(null)} className="btn btn-secondary" style={{ padding: '2px 6px' }}><X size={14} /></button>
               </div>
 
-              <form className="responsive-form-grid" onSubmit={handleUpdateMachineSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px' }}>
+              <form className="responsive-form-grid" hidden={!can('machines.manage')} onSubmit={handleUpdateMachineSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '2px' }}>Nombre / Modelo</label>
                   <input
@@ -1659,7 +1685,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 </div>
 
                 <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '6px' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setEditingMachine(null)}>Cancelar</button>
+                  <button type="button" className="btn btn-secondary" hidden={!can('machines.manage')} onClick={() => setEditingMachine(null)}>Cancelar</button>
                   <button type="submit" className="btn btn-primary"><Save size={14} /> Actualizar Vehículo</button>
                 </div>
               </form>
@@ -1667,7 +1693,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           )}
 
           {/* New Machine Form */}
-          <form className="responsive-form-grid" onSubmit={handleAddMachine} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" hidden={!can('machines.manage')} onSubmit={handleAddMachine} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <input
               type="text"
               placeholder="Nombre del Vehículo (Ej: Mini Cargador Bobcat S650)"
@@ -1735,10 +1761,10 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <button onClick={() => setEditingMachine(m)} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }}>
+                        <button hidden={!can('machines.manage')} onClick={() => setEditingMachine(m)} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }}>
                           <Edit size={14} /> Editar
                         </button>
-                        <button onClick={() => handleDeleteMachine(m.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                        <button hidden={!can('machines.manage')} onClick={() => handleDeleteMachine(m.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
                       </div>
@@ -1757,7 +1783,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       )}
 
       {/* TAB 5: WORKERS */}
-      {activeTab === 'workers' && (
+      {activeTab === 'workers' && can('workers.view') && (
         <div className="card">
           <div className="responsive-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
@@ -1777,7 +1803,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             </div>
           </div>
 
-          <form className="responsive-form-grid" onSubmit={handleAddWorker} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <form className="responsive-form-grid" hidden={!can('workers.manage')} onSubmit={handleAddWorker} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px', marginBottom: '24px' }}>
             <input
               type="text"
               placeholder="Nombre Completo (Ej: Manuel Torres)"
@@ -1826,7 +1852,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                     <td><span className="pill pill-complete">{w.role}</span></td>
                     <td><span className="pill pill-complete">ACTIVO</span></td>
                     <td>
-                      <button onClick={() => handleDeleteWorker(w.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
+                      <button hidden={!can('workers.manage')} onClick={() => handleDeleteWorker(w.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                         <Trash2 size={14} /> Desvincular
                       </button>
                     </td>
@@ -1839,7 +1865,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       )}
 
       {/* TAB 6: MANUAL LABOR & WHEELBARROW MATRIX CONFIG */}
-      {activeTab === 'manual_matrix' && (
+      {activeTab === 'manual_matrix' && can('manualMatrix.manage') && (
         <div className="card" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             🧹 Matriz de Rendimiento Aseo Manual & Carretillas
@@ -1981,7 +2007,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
       )}
 
       {/* TAB 7: COVERAGE CONFIG (FULL PARAMETRIC CRUD MANAGER) */}
-      {activeTab === 'coverage_config' && (
+      {activeTab === 'coverage_config' && (can('coverageConfig.view') || can('personnel.view')) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div className="card" style={{ padding: '20px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--slate-900)', margin: '0 0 4px 0' }}>
@@ -1995,7 +2021,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           <div className="responsive-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: '20px' }}>
             
             {/* PANEL 1: UBICACIONES DE DOTACION (AREAS) */}
-            <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div hidden={!can('coverageConfig.view')} className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ borderBottom: '2px solid #E2E8F0', paddingBottom: '12px' }}>
                 <h4 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MapPin size={18} color="var(--orange)" /> 1. Ubicaciones de Dotación ({coverageAreas.length})
@@ -2004,7 +2030,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               </div>
 
               {/* Form Agregar Ubicacion */}
-              <form onSubmit={handleAddCovArea} style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+              <form hidden={!can('coverageConfig.manage')} onSubmit={handleAddCovArea} style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)' }}>➕ Nueva Ubicación</div>
                 <input 
                   type="text" 
@@ -2056,7 +2082,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                     </div>
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <button 
-                        onClick={() => setEditingCovArea(ca)}
+                        hidden={!can('coverageConfig.manage')} onClick={() => setEditingCovArea(ca)}
                         className="btn btn-secondary"
                         style={{ padding: '4px 8px', color: 'var(--color-primary-dark)', border: '1px solid var(--color-border-light)' }}
                         title="Editar Ubicación"
@@ -2064,7 +2090,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         <Edit size={14} />
                       </button>
                       <button 
-                        onClick={() => handleDeleteCovArea(ca.id)}
+                        hidden={!can('coverageConfig.manage')} onClick={() => handleDeleteCovArea(ca.id)}
                         className="btn btn-secondary"
                         style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
                         title="Eliminar Ubicación"
@@ -2078,7 +2104,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             </div>
 
             {/* PANEL 2: CARGOS OPERACIONALES */}
-            <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div hidden={!can('coverageConfig.view')} className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ borderBottom: '2px solid #E2E8F0', paddingBottom: '12px' }}>
                 <h4 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Users size={18} color="var(--orange)" /> 2. Cargos Operacionales ({cargos.length})
@@ -2087,7 +2113,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               </div>
 
               {/* Form Agregar Cargo */}
-              <form onSubmit={handleAddCargo} style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+              <form hidden={!can('coverageConfig.manage')} onSubmit={handleAddCargo} style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)' }}>➕ Nuevo Cargo</div>
                 <input 
                   type="text" 
@@ -2162,7 +2188,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                     </div>
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <button 
-                        onClick={() => setEditingCargo(c)}
+                        hidden={!can('coverageConfig.manage')} onClick={() => setEditingCargo(c)}
                         className="btn btn-secondary"
                         style={{ padding: '4px 8px', color: 'var(--color-primary-dark)', border: '1px solid var(--color-border-light)' }}
                         title="Editar Cargo"
@@ -2170,7 +2196,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         <Edit size={14} />
                       </button>
                       <button 
-                        onClick={() => handleDeleteCargo(c.id)}
+                        hidden={!can('coverageConfig.manage')} onClick={() => handleDeleteCargo(c.id)}
                         className="btn btn-secondary"
                         style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
                         title="Eliminar Cargo"
@@ -2184,7 +2210,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
             </div>
 
             {/* PANEL 3: NOMINA DE COLABORADORES */}
-            <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div hidden={!can('personnel.view')} className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ borderBottom: '2px solid #E2E8F0', paddingBottom: '12px' }}>
                 <h4 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--slate-900)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Users size={18} color="var(--orange)" /> 3. Nómina Oficial ({personnel.length})
@@ -2193,7 +2219,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
               </div>
 
               {/* Form Agregar Colaborador */}
-              <form onSubmit={handleAddPersonnel} style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+              <form hidden={!can('personnel.manage')} onSubmit={handleAddPersonnel} style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-700)' }}>➕ Agregar Nuevo Colaborador</div>
                 <input 
                   type="text" 
@@ -2255,7 +2281,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       </div>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button 
-                          onClick={() => setEditingPersonnel(p)}
+                          hidden={!can('personnel.manage')} onClick={() => setEditingPersonnel(p)}
                           className="btn btn-secondary"
                           style={{ padding: '4px 8px', color: 'var(--color-primary-dark)', border: '1px solid var(--color-border-light)' }}
                           title="Editar Colaborador"
@@ -2263,7 +2289,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                           <Edit size={12} />
                         </button>
                         <button 
-                          onClick={() => handleDeletePersonnel(p.id)}
+                          hidden={!can('personnel.manage')} onClick={() => handleDeletePersonnel(p.id)}
                           className="btn btn-secondary"
                           style={{ padding: '4px 8px', color: '#DC2626', border: '1px solid #FCA5A5' }}
                           title="Eliminar de Nómina"
@@ -2279,7 +2305,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           </div>
 
           {/* EDIT MODAL UBICACION */}
-          {editingCovArea && (
+          {editingCovArea && can('coverageConfig.manage') && (
             <div
               className="modal-backdrop-overlay"
               style={{
@@ -2296,7 +2322,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 justifyContent: 'center',
                 padding: '20px'
               }}
-              onClick={() => setEditingCovArea(null)}
+              hidden={!can('coverageConfig.manage')} onClick={() => setEditingCovArea(null)}
             >
               <div
                 className="card modal-content-card"
@@ -2315,12 +2341,12 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       Parámetros operacionales del sector de planta
                     </p>
                   </div>
-                  <button className="btn btn-secondary" onClick={() => setEditingCovArea(null)} style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #CBD5E1' }}>
+                  <button className="btn btn-secondary" hidden={!can('coverageConfig.manage')} onClick={() => setEditingCovArea(null)} style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #CBD5E1' }}>
                     <X size={16} />
                   </button>
                 </div>
 
-                <form onSubmit={handleUpdateCovArea} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <form hidden={!can('coverageConfig.manage')} onSubmit={handleUpdateCovArea} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
                       Nombre de Ubicación
@@ -2360,7 +2386,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                   </div>
                   
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-                    <button type="button" onClick={() => setEditingCovArea(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
+                    <button type="button" hidden={!can('coverageConfig.manage')} onClick={() => setEditingCovArea(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
                       Cancelar
                     </button>
                     <button type="submit" style={{ background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFFFFF', fontWeight: 900, padding: '12px 24px', borderRadius: '14px', boxShadow: '0 4px 14px rgba(255,122,0,0.3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -2373,7 +2399,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           )}
 
           {/* EDIT MODAL CARGO */}
-          {editingCargo && (
+          {editingCargo && can('coverageConfig.manage') && (
             <div
               className="modal-backdrop-overlay"
               style={{
@@ -2390,7 +2416,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 justifyContent: 'center',
                 padding: '20px'
               }}
-              onClick={() => setEditingCargo(null)}
+              hidden={!can('coverageConfig.manage')} onClick={() => setEditingCargo(null)}
             >
               <div
                 className="card modal-content-card"
@@ -2409,12 +2435,12 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       Catálogo y restricciones de dotación
                     </p>
                   </div>
-                  <button className="btn btn-secondary" onClick={() => setEditingCargo(null)} style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #CBD5E1' }}>
+                  <button className="btn btn-secondary" hidden={!can('coverageConfig.manage')} onClick={() => setEditingCargo(null)} style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #CBD5E1' }}>
                     <X size={16} />
                   </button>
                 </div>
 
-                <form onSubmit={handleUpdateCargo} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <form hidden={!can('coverageConfig.manage')} onSubmit={handleUpdateCargo} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
                       Nombre del Cargo
@@ -2483,7 +2509,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-                    <button type="button" onClick={() => setEditingCargo(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
+                    <button type="button" hidden={!can('coverageConfig.manage')} onClick={() => setEditingCargo(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
                       Cancelar
                     </button>
                     <button type="submit" style={{ background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFFFFF', fontWeight: 900, padding: '12px 24px', borderRadius: '14px', boxShadow: '0 4px 14px rgba(255,122,0,0.3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -2496,7 +2522,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
           )}
 
           {/* EDIT MODAL COLABORADOR */}
-          {editingPersonnel && (
+          {editingPersonnel && can('personnel.manage') && (
             <div
               className="modal-backdrop-overlay"
               style={{
@@ -2513,7 +2539,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                 justifyContent: 'center',
                 padding: '20px'
               }}
-              onClick={() => setEditingPersonnel(null)}
+              hidden={!can('personnel.manage')} onClick={() => setEditingPersonnel(null)}
             >
               <div
                 className="card modal-content-card"
@@ -2532,12 +2558,12 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                       Personal oficial de contrato Minera Zaldívar
                     </p>
                   </div>
-                  <button className="btn btn-secondary" onClick={() => setEditingPersonnel(null)} style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #CBD5E1' }}>
+                  <button className="btn btn-secondary" hidden={!can('personnel.manage')} onClick={() => setEditingPersonnel(null)} style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #CBD5E1' }}>
                     <X size={16} />
                   </button>
                 </div>
 
-                <form onSubmit={handleUpdatePersonnel} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <form hidden={!can('personnel.manage')} onSubmit={handleUpdatePersonnel} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--slate-600)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
                       Nombre Completo
@@ -2576,7 +2602,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                   </div>
                   
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-                    <button type="button" onClick={() => setEditingPersonnel(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
+                    <button type="button" hidden={!can('personnel.manage')} onClick={() => setEditingPersonnel(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 800, padding: '12px 20px', borderRadius: '14px', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '13px' }}>
                       Cancelar
                     </button>
                     <button type="submit" style={{ background: 'linear-gradient(135deg, var(--orange), #EA580C)', color: '#FFFFFF', fontWeight: 900, padding: '12px 24px', borderRadius: '14px', boxShadow: '0 4px 14px rgba(255,122,0,0.3)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -2590,6 +2616,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
         </div>
       )}
+      </div>
     </div>
   );
 };

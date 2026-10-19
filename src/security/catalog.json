@@ -1,0 +1,341 @@
+[
+  {
+    "id": "orders.view",
+    "group": "Órdenes de trabajo",
+    "label": "Ver listado y detalle",
+    "requires": []
+  },
+  {
+    "id": "orders.create",
+    "group": "Órdenes de trabajo",
+    "label": "Crear órdenes",
+    "requires": [
+      "orders.view"
+    ]
+  },
+  {
+    "id": "orders.edit",
+    "group": "Órdenes de trabajo",
+    "label": "Editar órdenes",
+    "requires": [
+      "orders.view",
+      "evidence.view"
+    ]
+  },
+  {
+    "id": "orders.delete",
+    "group": "Órdenes de trabajo",
+    "label": "Eliminar órdenes",
+    "requires": [
+      "orders.view"
+    ]
+  },
+  {
+    "id": "orders.approve",
+    "group": "Órdenes de trabajo",
+    "label": "Firmar y aprobar como ITO",
+    "requires": [
+      "orders.view",
+      "evidence.view"
+    ]
+  },
+  {
+    "id": "orders.export",
+    "group": "Órdenes de trabajo",
+    "label": "Exportar Excel",
+    "requires": [
+      "orders.view"
+    ]
+  },
+  {
+    "id": "kpi.view",
+    "group": "Indicadores y reportes",
+    "label": "Ver indicadores",
+    "requires": []
+  },
+  {
+    "id": "kpi.export",
+    "group": "Indicadores y reportes",
+    "label": "Exportar Excel",
+    "requires": [
+      "kpi.view"
+    ]
+  },
+  {
+    "id": "kpi.pdf",
+    "group": "Indicadores y reportes",
+    "label": "Generar informe PDF",
+    "requires": [
+      "kpi.view"
+    ]
+  },
+  {
+    "id": "map.view",
+    "group": "Mapa operacional",
+    "label": "Ver mapas y métricas",
+    "requires": []
+  },
+  {
+    "id": "map.orders",
+    "group": "Mapa operacional",
+    "label": "Consultar detalle de OT desde el mapa",
+    "requires": [
+      "map.view",
+      "orders.view"
+    ]
+  },
+  {
+    "id": "evidence.view",
+    "group": "Evidencias fotográficas",
+    "label": "Ver fotografías",
+    "requires": [
+      "orders.view"
+    ]
+  },
+  {
+    "id": "evidence.upload",
+    "group": "Evidencias fotográficas",
+    "label": "Agregar o reemplazar fotografías",
+    "requires": [
+      "evidence.view"
+    ]
+  },
+  {
+    "id": "coverage.view",
+    "group": "Dotación y cobertura",
+    "label": "Ver cobertura",
+    "requires": []
+  },
+  {
+    "id": "coverage.names",
+    "group": "Dotación y cobertura",
+    "label": "Ver nombres del personal asignado",
+    "requires": [
+      "coverage.view"
+    ]
+  },
+  {
+    "id": "coverage.edit",
+    "group": "Dotación y cobertura",
+    "label": "Asignar y modificar dotación",
+    "requires": [
+      "coverage.names",
+      "personnel.view"
+    ]
+  },
+  {
+    "id": "coverage.pdf",
+    "group": "Dotación y cobertura",
+    "label": "Generar reporte PDF",
+    "requires": [
+      "coverage.view"
+    ]
+  },
+  {
+    "id": "reporting.view",
+    "group": "Control de reportabilidad",
+    "label": "Ver control de reportabilidad",
+    "requires": [
+      "orders.view"
+    ]
+  },
+  {
+    "id": "reporting.assign",
+    "group": "Control de reportabilidad",
+    "label": "Modificar supervisor responsable",
+    "requires": [
+      "reporting.view",
+      "users.view"
+    ]
+  },
+  {
+    "id": "reporting.export",
+    "group": "Control de reportabilidad",
+    "label": "Exportar CSV",
+    "requires": [
+      "reporting.view"
+    ]
+  },
+  {
+    "id": "audit.view",
+    "group": "Auditoría",
+    "label": "Ver historial",
+    "requires": []
+  },
+  {
+    "id": "audit.export",
+    "group": "Auditoría",
+    "label": "Exportar historial",
+    "requires": [
+      "audit.view"
+    ]
+  },
+  {
+    "id": "structure.view",
+    "group": "Estructura de planta",
+    "label": "Consultar estructura",
+    "requires": []
+  },
+  {
+    "id": "structure.manage",
+    "group": "Estructura de planta",
+    "label": "Administrar áreas, sectores, equipos y componentes",
+    "requires": [
+      "structure.view"
+    ]
+  },
+  {
+    "id": "machines.view",
+    "group": "Maquinaria",
+    "label": "Consultar maquinaria",
+    "requires": []
+  },
+  {
+    "id": "machines.manage",
+    "group": "Maquinaria",
+    "label": "Administrar maquinaria",
+    "requires": [
+      "machines.view"
+    ]
+  },
+  {
+    "id": "workers.view",
+    "group": "Trabajadores",
+    "label": "Consultar trabajadores",
+    "requires": []
+  },
+  {
+    "id": "workers.manage",
+    "group": "Trabajadores",
+    "label": "Administrar trabajadores",
+    "requires": [
+      "workers.view"
+    ]
+  },
+  {
+    "id": "personnel.view",
+    "group": "Nómina de dotación",
+    "label": "Consultar nómina y datos personales",
+    "requires": []
+  },
+  {
+    "id": "personnel.manage",
+    "group": "Nómina de dotación",
+    "label": "Administrar nómina y datos personales",
+    "requires": [
+      "personnel.view"
+    ]
+  },
+  {
+    "id": "coverageConfig.view",
+    "group": "Configuración de cobertura",
+    "label": "Consultar áreas de cobertura y cargos",
+    "requires": []
+  },
+  {
+    "id": "coverageConfig.manage",
+    "group": "Configuración de cobertura",
+    "label": "Administrar áreas de cobertura y cargos",
+    "requires": [
+      "coverageConfig.view"
+    ]
+  },
+  {
+    "id": "manualMatrix.manage",
+    "group": "Rendimiento manual",
+    "label": "Administrar matriz de rendimiento",
+    "requires": []
+  },
+  {
+    "id": "contracts.manage",
+    "group": "Clientes y contratos",
+    "label": "Administrar clientes y contratos",
+    "requires": []
+  },
+  {
+    "id": "shifts.manage",
+    "group": "Turnos",
+    "label": "Administrar turnos",
+    "requires": []
+  },
+  {
+    "id": "contingencies.manage",
+    "group": "Contingencias",
+    "label": "Administrar contingencias",
+    "requires": []
+  },
+  {
+    "id": "branding.manage",
+    "group": "Identidad visual",
+    "label": "Administrar tema visual y logos",
+    "requires": []
+  },
+  {
+    "id": "users.view",
+    "group": "Usuarios",
+    "label": "Ver directorio de usuarios",
+    "requires": []
+  },
+  {
+    "id": "users.create",
+    "group": "Usuarios",
+    "label": "Crear cuentas",
+    "requires": [
+      "users.view"
+    ]
+  },
+  {
+    "id": "users.edit",
+    "group": "Usuarios",
+    "label": "Editar datos de cuentas",
+    "requires": [
+      "users.view"
+    ]
+  },
+  {
+    "id": "users.disable",
+    "group": "Usuarios",
+    "label": "Activar o desactivar cuentas",
+    "requires": [
+      "users.view"
+    ]
+  },
+  {
+    "id": "users.delete",
+    "group": "Usuarios",
+    "label": "Eliminar acceso de cuentas",
+    "requires": [
+      "users.view"
+    ]
+  },
+  {
+    "id": "access.view",
+    "group": "Permisos y perfiles",
+    "label": "Ver permisos de usuarios",
+    "requires": [
+      "users.view"
+    ]
+  },
+  {
+    "id": "access.manage",
+    "group": "Permisos y perfiles",
+    "label": "Asignar perfiles y personalizar permisos",
+    "requires": [
+      "access.view"
+    ]
+  },
+  {
+    "id": "access.profiles",
+    "group": "Permisos y perfiles",
+    "label": "Administrar plantillas de perfiles",
+    "requires": [
+      "access.view"
+    ]
+  },
+  {
+    "id": "maintenance.reset",
+    "group": "Mantenimiento",
+    "label": "Reiniciar datos (administrador principal)",
+    "requires": []
+  }
+]

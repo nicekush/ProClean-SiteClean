@@ -1,6 +1,7 @@
+import { usePermissions } from '../security/PermissionContext';
 import React, { useState, useRef, useEffect } from 'react';
 import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole, Machine, ContingencyReasonConfig, PlantArea, Sector, SubSector, TaskType, StaffingType, PlantEquipment, UserAccount } from '../types';
-import { Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { Eye, Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { WorkOrderPhotoInput } from './WorkOrderPhotoInput';
 import { matchesSearchText } from '../utils/searchText';
@@ -99,7 +100,7 @@ const getWorkOrderSortValue = (order: WorkOrder, key: WorkOrderSortKey): string 
     case 'resourceMode': return flags.manual && flags.equipment ? 'Mixto' : flags.equipment ? 'Maquinaria' : 'Manual';
     case 'hh': return Math.max(0, Number(order.headcount) || 0) * Math.max(0, Number(order.realHours) || 0);
     case 'hm': return Math.max(0, Number(order.machineHours) || 0);
-    case 'evidence': return Number(Boolean(order.imageBeforeUrl || order.beforePhotoUrl)) + Number(Boolean(order.imageAfterUrl || order.afterPhotoUrl));
+    case 'evidence': return Number(Boolean(order.hasBeforeEvidence || order.imageBeforeUrl || order.beforePhotoUrl)) + Number(Boolean(order.hasAfterEvidence || order.imageAfterUrl || order.afterPhotoUrl));
     case 'volume': return Math.max(0, Number(order.cubicMetersRemoved) || 0);
     case 'status': return statusSortOrder[order.status] || 0;
   }
@@ -121,10 +122,10 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   equipments = [],
   subSectors = [],
   contingencies = [],
-  currentRole,
   targetEditOrder,
   onClearTargetEditOrder
 }) => {
+  const { can } = usePermissions();
   const creatorName = (order: WorkOrder) => order.createdByName?.trim()
     || users.find(user => user.id === order.createdById && user.tenantId === order.tenantId)?.name
     || (order.createdById ? order.createdById : 'Sin autor identificado');
@@ -144,6 +145,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const photoBusyChange = (busy: boolean) => setPhotosProcessing(n => Math.max(0, n + (busy ? 1 : -1)));
   const [currentAddStep, setCurrentAddStep] = useState<number>(0);
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
+  const [viewingOrder, setViewingOrder] = useState<WorkOrder | null>(null);
   const [currentEditStep, setCurrentEditStep] = useState<number>(1);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [reportingContingencyOrder, setReportingContingencyOrder] = useState<WorkOrder | null>(null);
@@ -243,10 +245,11 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
   useEffect(() => {
     if (targetEditOrder) {
-      handleOpenEditModal(targetEditOrder);
+      if (can('orders.edit')) handleOpenEditModal(targetEditOrder);
+      else setViewingOrder(targetEditOrder);
       if (onClearTargetEditOrder) onClearTargetEditOrder();
     }
-  }, [targetEditOrder]);
+  }, [targetEditOrder, can]);
 
   // Filtered Options for 4-Level Cascading Dropdowns strictly sourced from Database
   const getSectorsForArea = (areaId: string) => {
@@ -844,8 +847,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   };
 
   const getEvidenceProgressBadge = (order: WorkOrder) => {
-    const hasBefore = !!order.beforePhotoUrl;
-    const hasAfter = !!order.afterPhotoUrl;
+    const hasBefore = Boolean(order.hasBeforeEvidence || order.beforePhotoUrl || order.imageBeforeUrl);
+    const hasAfter = Boolean(order.hasAfterEvidence || order.afterPhotoUrl || order.imageAfterUrl);
 
     if (hasBefore && hasAfter) {
       return (
@@ -992,11 +995,11 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <button onClick={exportToExcel} className="btn btn-secondary">
+          <button hidden={!can('orders.export')} onClick={exportToExcel} className="btn btn-secondary">
             <FileSpreadsheet size={16} /> Exportar Excel 4N
           </button>
 
-          {(currentRole === 'SUPERVISOR_TERRENO' || currentRole === 'ADMINISTRADOR_CONTRATO' || currentRole === 'SUPER_ADMIN') && (
+          {can('orders.create') && (
             <button onClick={handleOpenAddModal} className="btn btn-primary">
               <Plus size={16} /> + Nueva Orden de Trabajo
             </button>
@@ -1059,7 +1062,27 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       )}
 
       {/* ITO Sign-off & Digital Signature Canvas Modal */}
-      {itoApprovingOrder && (
+      {viewingOrder && (
+        <div className="modal-backdrop-overlay">
+          <section className="modal-content-card" role="dialog" aria-modal="true" aria-label={`Detalle de ${viewingOrder.sapCode || viewingOrder.id}`} style={{maxWidth:760}}>
+            <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}><h3>Detalle de {viewingOrder.sapCode || viewingOrder.id}</h3><button className="btn btn-secondary" aria-label="Cerrar detalle" onClick={() => setViewingOrder(null)}><X size={18} /></button></header>
+            <p style={{color:'var(--slate-500)',fontSize:13}}>Consulta de la orden de trabajo</p>
+            <div className="responsive-card-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:14,margin:'20px 0'}}>
+              {[
+                ['Estado',viewingOrder.status],['Fecha de ejecución',viewingOrder.executionDate || viewingOrder.dia],['Turno',viewingOrder.shiftName],
+                ['Área',viewingOrder.areaName],['Sector',viewingOrder.sectorName],['Equipo',viewingOrder.equipmentName || viewingOrder.equipoCorrea],['Ubicación',viewingOrder.subSectorName],
+                ['Personas',viewingOrder.headcount],['Duración (h)',viewingOrder.realHours],['Horas hombre',Number(viewingOrder.headcount || 0)*Number(viewingOrder.realHours || 0)],
+                ['Horas máquina',viewingOrder.machineHours ?? 0],['Volumen removido (m³)',viewingOrder.cubicMetersRemoved ?? 0],['Agua utilizada (m³)',viewingOrder.waterVolumeM3 ?? 0],
+                ['Autor',viewingOrder.createdByName],['Supervisor responsable',viewingOrder.responsibleSupervisorName],['Aprobado por',viewingOrder.itoApproverName]
+              ].map(([label,value]) => <div key={String(label)}><strong style={{display:'block',fontSize:12,color:'var(--slate-500)'}}>{label}</strong><span>{value === undefined || value === '' ? 'Sin informar' : value}</span></div>)}
+            </div>
+            <h4>Actividad realizada</h4><p style={{whiteSpace:'pre-wrap',lineHeight:1.6}}>{viewingOrder.operationDetail || 'Sin detalle registrado'}</p>
+            {can('evidence.view') && <div className="responsive-card-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>{[['Antes',viewingOrder.beforePhotoUrl || viewingOrder.imageBeforeUrl],['Después',viewingOrder.afterPhotoUrl || viewingOrder.imageAfterUrl]].map(([label,url]) => <div key={label}><strong>{label}</strong>{url ? <img src={url} alt={`Evidencia ${label?.toLowerCase()}`} style={{display:'block',width:'100%',maxHeight:240,objectFit:'contain',marginTop:8}} /> : <p>Sin fotografía</p>}</div>)}</div>}
+          </section>
+        </div>
+      )}
+
+      {itoApprovingOrder && can('orders.approve') && (
         <div className="modal-backdrop-overlay" style={{ backgroundColor: 'rgba(15,23,42,0.6)' }}>
           <div className="modal-content-card" style={{ maxWidth: '560px', border: '2px solid var(--orange)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1133,7 +1156,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       )}
 
       {/* FULL-FEATURED WORK ORDER EDITOR MODAL WIZARD */}
-      {editingOrder && (
+      {editingOrder && can('orders.edit') && (
         <div className="modal-backdrop-overlay">
           <div className="modal-content-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--slate-200)', paddingBottom: '12px' }}>
@@ -2248,7 +2271,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                           />
                         )}
 
-                        {(currentRole === 'ITO_MANDANTE' || currentRole === 'SUPER_ADMIN') && order.status !== 'APROBADO_MANDANTE' && (
+                        <button className="btn btn-secondary" aria-label={`Ver detalle de ${order.sapCode || order.id}`} onClick={() => setViewingOrder(order)} style={{padding:'4px 8px',fontSize:11}}><Eye size={14} /> Ver detalle</button>
+                        {can('orders.approve') && order.status !== 'APROBADO_MANDANTE' && (
                           <button
                             onClick={() => setItoApprovingOrder(order)}
                             className="btn btn-primary"
@@ -2259,23 +2283,23 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                           </button>
                         )}
 
-                        {(currentRole === 'SUPERVISOR_TERRENO' || currentRole === 'ADMINISTRADOR_CONTRATO' || currentRole === 'SUPER_ADMIN') && (
+                        {(can('orders.edit') || can('orders.delete')) && (
                           <>
-                            <button
+                            {can('orders.edit') && <button
                               onClick={() => handleOpenEditModal(order)}
                               className="btn btn-secondary"
                               style={{ padding: '4px 8px', fontSize: '11px' }}
                               title="Editar Orden de Trabajo"
                             >
                               <Edit size={14} />
-                            </button>
-                            <button
+                            </button>}
+                            {can('orders.delete') && <button
                               onClick={() => handleDeleteClick(order.id)}
                               className="btn"
                               style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}
                             >
                               <Trash2 size={14} />
-                            </button>
+                            </button>}
                           </>
                         )}
                       </div>
@@ -2331,22 +2355,23 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 </div>
 
                 <div className="mobile-ot-card-actions">
-                  {(currentRole === 'SUPERVISOR_TERRENO' || currentRole === 'ADMINISTRADOR_CONTRATO' || currentRole === 'SUPER_ADMIN') && (
+                  <button className="btn btn-secondary" aria-label={`Ver detalle de ${order.sapCode || order.id}`} onClick={() => setViewingOrder(order)}><Eye size={14} /> Ver detalle</button>
+                  {(can('orders.edit') || can('orders.delete')) && (
                     <>
-                      <button
+                      {can('orders.edit') && <button
                         onClick={() => setEditingOrder(order)}
                         className="btn btn-secondary"
                         style={{ padding: '6px 10px', fontSize: '12px' }}
                       >
                         <Edit size={14} /> Editar
-                      </button>
-                      <button
+                      </button>}
+                      {can('orders.delete') && <button
                         onClick={() => handleDeleteClick(order.id)}
                         className="btn"
                         style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '6px 10px', fontSize: '12px' }}
                       >
                         <Trash2 size={14} />
-                      </button>
+                      </button>}
                     </>
                   )}
                 </div>
@@ -2358,7 +2383,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
       {/* New Work Order Modal with 3-Step Guided Wizard */}
       {/* ADD WORK ORDER MODAL WIZARD */}
-      {showAddModal && (
+      {showAddModal && can('orders.create') && (
         <div className="modal-backdrop-overlay">
           <div className="modal-content-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -3011,8 +3036,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   <section aria-label="Evidencia fotográfica de la OT">
                     <p style={{ fontSize: 13, color: '#64748B' }}>Adjunta una fotografía antes y otra después del trabajo (opcional). JPG, PNG o WebP. Las imágenes se optimizan al cargarlas.</p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-                      <WorkOrderPhotoInput label="Foto antes" value={newOrder.beforePhotoUrl} onChange={value => setNewOrder(prev => ({ ...prev, beforePhotoUrl: value }))} onBusyChange={photoBusyChange} />
-                      <WorkOrderPhotoInput label="Foto después" value={newOrder.afterPhotoUrl} onChange={value => setNewOrder(prev => ({ ...prev, afterPhotoUrl: value }))} onBusyChange={photoBusyChange} />
+                      <WorkOrderPhotoInput disabled={!can('evidence.upload')} label="Foto antes" value={newOrder.beforePhotoUrl} onChange={value => setNewOrder(prev => ({ ...prev, beforePhotoUrl: value }))} onBusyChange={photoBusyChange} />
+                      <WorkOrderPhotoInput disabled={!can('evidence.upload')} label="Foto después" value={newOrder.afterPhotoUrl} onChange={value => setNewOrder(prev => ({ ...prev, afterPhotoUrl: value }))} onBusyChange={photoBusyChange} />
                     </div>
                   </section>
 

@@ -1,4 +1,8 @@
-import { useState, useEffect } from 'react';
+import { PermissionContext } from './security/PermissionContext';
+import { ROLE_LABELS, can as hasPermission, canOpenTab, TAB_PERMISSIONS, inScope } from './security/permissions';
+import { subscribeScopedData } from './api/scopedData';
+import { subscribeOwnProfile } from './api/access';
+import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { WorkOrdersGrid } from './components/WorkOrdersGrid';
 import { OperationalParameters } from './components/OperationalParameters';
@@ -30,10 +34,9 @@ import type {
   DailyPersonnelAssignment,
   CoverageArea
 } from './types';
-import { fetchSupabaseWorkOrders, isSupabaseConfigured } from './api/supabase';
-import { fetchFirebaseWorkOrders, isFirebaseConfigured, subscribeFirebaseWorkOrders, syncWorkOrderToFirebase, deleteFirebaseWorkOrder, fetchFirebaseUsers, subscribeFirebaseUsers, syncAllUsersToFirebase, syncSingleDocToFirebase, fetchSingleDocFromFirebase, syncArrayToFirebase, fetchFirebaseCollection, fetchFirebaseCollectionByField, subscribeFirebaseCollection, subscribeFirebaseCollectionByField, subscribeFirebaseCollectionByFields, subscribeFirebaseCargos, replaceFirebaseCollection } from './api/firebase';
+import { isSupabaseConfigured } from './api/supabase';
+import { isFirebaseConfigured, syncWorkOrderToFirebase, patchWorkOrderResponsibility, deleteFirebaseWorkOrder, syncSingleDocToFirebase, replaceFirebaseCollection } from './api/firebase';
 import { 
-  fetchFullDb, 
   saveWhiteLabel as apiSaveWhiteLabel, 
   saveContracts as apiSaveContracts, 
   saveShifts as apiSaveShifts, 
@@ -46,7 +49,6 @@ import {
   createAuditLogEntry as apiCreateAuditLog,
   resetDatabaseBlankSlate
 } from './api/client';
-import initialDbData from '../data/db.json';
 import { OFFICIAL_PROCLEAN_LOGO_URL } from './config/branding';
 import { isFirebaseAuthRequired, logoutFromFirebase, subscribeFirebaseSession } from './api/auth';
 import { ShieldCheck, Database, Wifi, WifiOff, LogOut, UserCheck, HardHat, Shield, Wrench, Menu, RefreshCw } from 'lucide-react';
@@ -74,27 +76,38 @@ export function App() {
 
   useEffect(() => {
     if (!isFirebaseAuthRequired) return;
+    localStorage.removeItem('siteclean_session');
+    localStorage.removeItem('proclean_users');
     return subscribeFirebaseSession(user => setAuthenticatedUser(user));
   }, []);
 
   const activeTenantId = authenticatedUser?.tenantId || 'tenant_cmz';
   const dataAccessKey = authenticatedUser
-    ? `${authenticatedUser.id}:${activeTenantId}:${authenticatedUser.role}`
+    ? JSON.stringify([authenticatedUser.id, activeTenantId, authenticatedUser.role, authenticatedUser.active, authenticatedUser.permissions, authenticatedUser.accessScope, authenticatedUser.contractId, authenticatedUser.allowedAreaIds])
     : '';
 
   // Users Accounts Database State
   const [users, setUsers] = useState<UserAccount[]>([]);
+  const [loadedAccessKey, setLoadedAccessKey] = useState('');
 
   // Derived role strictly from authenticatedUser
   const currentRole = authenticatedUser?.role || 'SUPERVISOR_TERRENO';
 
-  // Keep supervisors inside the operational views exposed by the sidebar.
+  const can = useCallback((permission: string) => hasPermission(authenticatedUser, permission), [authenticatedUser]);
   useEffect(() => {
-    const supervisorTabs = ['work-orders', 'personnel-coverage'];
-    if (currentRole === 'SUPERVISOR_TERRENO' && !supervisorTabs.includes(activeTab)) {
-      setActiveTab('work-orders');
+    if (authenticatedUser && !canOpenTab(authenticatedUser, activeTab)) {
+      setActiveTab(Object.keys(TAB_PERMISSIONS).find(tab => canOpenTab(authenticatedUser, tab)) || 'no-access');
     }
-  }, [currentRole, activeTab]);
+  }, [authenticatedUser, activeTab]);
+  const sessionUserId = authenticatedUser?.id;
+  useEffect(() => {
+    if (isFirebaseAuthRequired || !sessionUserId) return;
+    return subscribeOwnProfile(sessionUserId, profile => {
+      setAuthenticatedUser(previous => JSON.stringify(previous) === JSON.stringify(profile) ? previous : profile);
+      if (profile) localStorage.setItem('siteclean_session', JSON.stringify(profile));
+      else localStorage.removeItem('siteclean_session');
+    });
+  }, [sessionUserId]);
 
   // Audit Logs State
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -185,92 +198,6 @@ export function App() {
   // Daily Personnel Coverage Assignments
   const [dailyAssignments, setDailyAssignments] = useState<DailyPersonnelAssignment[]>([]);
 
-  // Real-time Cloud Firebase Firestore Listener for Dotación & Cobertura (Sync PC & Mobile)
-  useEffect(() => {
-    if (!isFirebaseConfigured || !dataAccessKey) return;
-
-    const tenantId = activeTenantId;
-    const unsubAreas = isFirebaseAuthRequired
-      ? subscribeFirebaseCollectionByField<CoverageArea>('proclean_coverageAreas', 'tenantId', tenantId, items => {
-          setCoverageAreas(items || []);
-        })
-      : subscribeFirebaseCollection<CoverageArea>('proclean_coverageAreas', items => {
-          setCoverageAreas(items || []);
-        });
-
-    const unsubCargos = isFirebaseAuthRequired
-      ? subscribeFirebaseCollectionByField<CargoConfig>('proclean_cargos', 'tenantId', tenantId, items => {
-          setCargos(items || []);
-        })
-      : subscribeFirebaseCargos(items => {
-          setCargos(items || []);
-        });
-
-    const unsubPersonnel = isFirebaseAuthRequired
-      ? subscribeFirebaseCollectionByField<PersonnelMember>('proclean_personnel', 'tenantId', tenantId, items => {
-          setPersonnel(items || []);
-        })
-      : subscribeFirebaseCollection<PersonnelMember>('proclean_personnel', items => {
-          setPersonnel(items || []);
-        });
-
-    const today = new Date().toISOString().split('T')[0];
-    const unsubAsgs = isFirebaseAuthRequired
-      ? subscribeFirebaseCollectionByFields<DailyPersonnelAssignment>(
-          'proclean_dailyAssignments',
-          [
-            { fieldName: 'tenantId', fieldValue: activeTenantId },
-            { fieldName: 'fecha', fieldValue: today }
-          ],
-          items => setDailyAssignments(items || [])
-        )
-      : subscribeFirebaseCollectionByField<DailyPersonnelAssignment>(
-          'proclean_dailyAssignments',
-          'fecha',
-          today,
-          items => setDailyAssignments(items || [])
-        );
-
-    return () => {
-      unsubAreas?.();
-      unsubCargos?.();
-      unsubPersonnel?.();
-      unsubAsgs?.();
-    };
-  }, [dataAccessKey, activeTenantId]);
-
-  // Plant hierarchy is shared configuration: changes made by an administrator
-  // must reach every open OT creator without requiring a reload.
-  useEffect(() => {
-    if (!isFirebaseConfigured || !dataAccessKey || !dbConnected) return;
-
-    const subscribeCatalog = <T,>(
-      collectionName: string,
-      storageKey: string,
-      setter: React.Dispatch<React.SetStateAction<T[]>>
-    ) => isFirebaseAuthRequired
-      ? subscribeFirebaseCollectionByField<T>(collectionName, 'tenantId', activeTenantId, items => {
-          setter(items || []);
-          try { localStorage.setItem(storageKey, JSON.stringify(items || [])); } catch (e) {}
-        })
-      : subscribeFirebaseCollection<T>(collectionName, items => {
-          setter(items || []);
-          try { localStorage.setItem(storageKey, JSON.stringify(items || [])); } catch (e) {}
-        });
-
-    const unsubPlantAreas = subscribeCatalog<PlantArea>('plant_areas', 'proclean_plant_areas', setPlantAreas);
-    const unsubSectors = subscribeCatalog<Sector>('sectors', 'proclean_sectors', setSectors);
-    const unsubEquipments = subscribeCatalog<PlantEquipment>('equipments', 'proclean_equipments', setEquipments);
-    const unsubSubSectors = subscribeCatalog<SubSector>('sub_sectors', 'proclean_sub_sectors', setSubSectors);
-
-    return () => {
-      unsubPlantAreas?.();
-      unsubSectors?.();
-      unsubEquipments?.();
-      unsubSubSectors?.();
-    };
-  }, [dataAccessKey, activeTenantId, dbConnected]);
-
   // Firestore owns the offline queue. Browser network events only inform the
   // user; pending writes are confirmed by snapshot metadata, never by a timer.
   useEffect(() => {
@@ -297,204 +224,65 @@ export function App() {
 
   const [equipments, setEquipments] = useState<PlantEquipment[]>([]);
 
-  // Load from Local REST DB on mount with Vercel production fallback & Real-time Firebase Sync
+  // A new access key tears down every listener and clears data from the previous scope.
   useEffect(() => {
-    if (!dataAccessKey) return;
-    let firebaseUnsub: (() => void) | null = null;
-    let firebaseUsersUnsub: (() => void) | null = null;
-
-    const processDbData = async (db: any) => {
-      // 1. Check Cloud DB (Firebase or Supabase) for Work Orders
-      let cloudOrders: WorkOrder[] | null = null;
-      if (isFirebaseConfigured) {
-        const scopedTenantId = isFirebaseAuthRequired ? activeTenantId : undefined;
-        cloudOrders = await fetchFirebaseWorkOrders(scopedTenantId);
-        
-        // Subscribe to real-time changes from Firestore on ALL devices
-        firebaseUnsub = subscribeFirebaseWorkOrders((liveOrders, metadata) => {
-          setWorkOrders(liveOrders);
-          setPendingWorkOrderIds(new Set(metadata.pendingIds));
-          setIsReadingFromCache(metadata.fromCache);
-          if (metadata.pendingIds.length === 0 && !metadata.fromCache) setDbConnected(true);
-          setSyncToastMessage(prev => (prev?.includes('No fue posible escuchar') ? null : prev));
-        }, (error) => {
-          console.error('Firestore work-order listener failed:', error);
-          setSyncToastMessage('❌ No fue posible escuchar las OT en Firebase. Revisa permisos y conexión.');
-          setTimeout(() => setSyncToastMessage(prev => (prev?.includes('No fue posible escuchar') ? null : prev)), 6000);
-        }, scopedTenantId);
-      } else if (isSupabaseConfigured) {
-        cloudOrders = await fetchSupabaseWorkOrders();
-      }
-
-      if (cloudOrders && Array.isArray(cloudOrders) && cloudOrders.length > 0) {
-        setWorkOrders(cloudOrders);
-      } else if (!isFirebaseConfigured && db.workOrders) {
-        // Local seed data is a development-only fallback. Production Firebase
-        // never resurrects work orders from localStorage or bundled JSON.
-        setWorkOrders(db.workOrders);
-      }
-
-      // Firebase Auth mode loads only the signed-in profile for operational
-      // users. Tenant administrators receive the tenant-scoped directory.
-      if (isFirebaseAuthRequired && authenticatedUser) {
-        const canListTenantUsers = ['ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'].includes(authenticatedUser.role);
-        if (isFirebaseConfigured && canListTenantUsers) {
-          const cloudUsers = await fetchFirebaseCollectionByField<UserAccount>('users', 'tenantId', activeTenantId);
-          setUsers(cloudUsers || []);
-          firebaseUsersUnsub = subscribeFirebaseCollectionByField<UserAccount>(
-            'users',
-            'tenantId',
-            activeTenantId,
-            liveUsers => setUsers(liveUsers || [])
-          );
-        } else {
-          setUsers([authenticatedUser]);
-        }
-      }
-
-      // Load legacy user accounts only while the staged Firebase Auth rollout
-      // is disabled. Authenticated production never exposes the bundled list.
-      if (!isFirebaseAuthRequired) {
-      // Load Users: Cloud Firebase -> LocalStorage -> Seed JSON
-      let cloudUsers: UserAccount[] | null = null;
-      if (isFirebaseConfigured) {
-        cloudUsers = await fetchFirebaseUsers();
-        
-        // Seed initial users to Firebase ONLY if cloud DB has no users (first time)
-        const isUsersSeeded = localStorage.getItem('proclean_seeded_users_firebase');
-        if ((!cloudUsers || cloudUsers.length === 0) && !isUsersSeeded && db.users && db.users.length > 0) {
-          await syncAllUsersToFirebase(db.users, { preserveLegacyPassword: true });
-          localStorage.setItem('proclean_seeded_users_firebase', 'true');
-          cloudUsers = await fetchFirebaseUsers();
-        }
-
-        // Subscribe to real-time users sync on ALL devices
-        firebaseUsersUnsub = subscribeFirebaseUsers((liveUsers) => {
-          if (liveUsers && liveUsers.length > 0) {
-            setUsers(liveUsers);
-            try {
-              localStorage.setItem('proclean_users', JSON.stringify(liveUsers));
-            } catch (e) {
-              console.warn('LocalStorage error:', e);
-            }
-          }
-        });
-      }
-
-      if (cloudUsers && Array.isArray(cloudUsers) && cloudUsers.length > 0) {
-        setUsers(cloudUsers);
-        localStorage.setItem('proclean_users', JSON.stringify(cloudUsers));
-      } else {
-        const localUsers = localStorage.getItem('proclean_users');
-        if (localUsers) {
-          try {
-            const parsed = JSON.parse(localUsers);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setUsers(parsed);
-            } else if (db.users) {
-              setUsers(db.users);
-            }
-          } catch {
-            if (db.users) setUsers(db.users);
-          }
-        } else if (db.users) {
-          setUsers(db.users);
-        }
-      }
-      }
-
-      // Master catalogues are cache-first and refreshed at most every six
-      // hours per device. Operational data (OT and staffing) keeps dedicated
-      // real-time listeners; avoiding permanent listeners over hundreds of
-      // catalogue documents protects the Firestore free-tier read quota.
-      const loadEntity = async <T,>(
-        storageKey: string,
-        colName: string,
-        setter: React.Dispatch<React.SetStateAction<T>>,
-        seedData: T,
-        isSingleDoc: boolean = false
-      ) => {
-        let cloud: T | null = null;
-        if (isFirebaseConfigured) {
-          let hasCachedValue = false;
-          const cached = localStorage.getItem(storageKey);
-          if (cached) {
-            try {
-              setter(JSON.parse(cached));
-              hasCachedValue = true;
-            } catch {
-              // Ignore corrupt browser cache and refresh it from Firestore.
-            }
-          }
-
-          const refreshKey = `${storageKey}_cloud_refreshed_at`;
-          const refreshedAt = Number(localStorage.getItem(refreshKey) || 0);
-          const refreshIntervalMs = 6 * 60 * 60 * 1000;
-          if (hasCachedValue && Date.now() - refreshedAt < refreshIntervalMs) return;
-
-          if (isSingleDoc) {
-            cloud = await fetchSingleDocFromFirebase<T>(colName, 'config');
-          } else {
-            const tenantId = activeTenantId;
-            cloud = (isFirebaseAuthRequired
-              ? await fetchFirebaseCollectionByField(colName, 'tenantId', tenantId)
-              : await fetchFirebaseCollection(colName)) as unknown as T;
-          }
-
-          if (cloud !== null) {
-            setter(cloud);
-            localStorage.setItem(storageKey, JSON.stringify(cloud));
-            localStorage.setItem(refreshKey, String(Date.now()));
-          }
-          return;
-        }
-
-        const local = localStorage.getItem(storageKey);
-        if (local) {
-          try {
-            const parsed = JSON.parse(local);
-            if (parsed && ((Array.isArray(parsed) && parsed.length > 0) || !Array.isArray(parsed))) {
-              setter(parsed);
-            } else if (seedData) {
-              setter(seedData);
-            }
-          } catch {
-            if (seedData) setter(seedData);
-          }
-        } else if (seedData) {
-          setter(seedData);
-        }
-      };
-
-      if (db.whiteLabel) await loadEntity('proclean_whitelabel', 'whitelabel', setWhiteLabel, db.whiteLabel, true);
-      if (db.contracts) await loadEntity('proclean_contracts', 'contracts', setContracts, db.contracts);
-      if (db.shifts) await loadEntity('proclean_shifts', 'shifts', setShifts, db.shifts);
-      if (db.contingencies) await loadEntity('proclean_contingencies', 'contingencies', setContingencies, db.contingencies);
-      if (db.plantAreas) await loadEntity('proclean_plant_areas', 'plant_areas', setPlantAreas, db.plantAreas);
-      if (db.sectors) await loadEntity('proclean_sectors', 'sectors', setSectors, db.sectors);
-      if (db.equipments) await loadEntity('proclean_equipments', 'equipments', setEquipments, db.equipments);
-      if (db.subSectors) await loadEntity('proclean_sub_sectors', 'sub_sectors', setSubSectors, db.subSectors);
-      if (db.machines) await loadEntity('proclean_machines', 'machines', setMachines, db.machines);
-      if (db.workers) await loadEntity('proclean_workers', 'workers', setWorkers, db.workers);
-      if (db.auditLogs) await loadEntity('proclean_audit_logs', 'audit_logs', setAuditLogs, db.auditLogs);
-
-      setDbConnected(true);
+    setWorkOrders([]); setUsers([]); setAuditLogs([]); setPersonnel([]); setDailyAssignments([]);
+    setContracts([]); setMachines([]); setWorkers([]); setCoverageAreas([]); setCargos([]);
+    setPlantAreas([]); setSectors([]); setEquipments([]); setSubSectors([]); setShifts([]); setContingencies([]);
+    setPendingWorkOrderIds(new Set()); setDbConnected(false);
+    setLoadedAccessKey(dataAccessKey);
+    if (!authenticatedUser || !dataAccessKey) return;
+    const profile = authenticatedUser;
+    let disposed = false;
+    const unsubs: Array<() => void> = [];
+    const error = (err: unknown) => {
+      console.error('Scoped data subscription failed:', err);
+      if (!disposed) setSyncToastMessage('No fue posible consultar algunos datos. Revisa los permisos y la conexión.');
     };
-
-    fetchFullDb()
-      .then(db => {
-        processDbData(db);
-      })
-      .catch(err => {
-        console.info('REST API opcional no configurada. Firebase permanece como fuente cloud y se cargan defaults sólo para entidades aún no migradas.', err);
-        processDbData(initialDbData as any);
-      });
-
-    return () => {
-      if (firebaseUnsub) firebaseUnsub();
-      if (firebaseUsersUnsub) firebaseUsersUnsub();
+    const listen = <T,>(collection: string, setter: (items: T[]) => void, options = {}) => {
+      unsubs.push(subscribeScopedData<T>(collection, profile, (items, fromCache, pendingIds) => {
+        if (disposed) return;
+        setter(items);
+        if (['work_orders', 'work_order_details', 'work_order_metrics'].includes(collection)) {
+          setIsReadingFromCache(fromCache); setPendingWorkOrderIds(new Set(pendingIds));
+        }
+        if (!fromCache) setDbConnected(true);
+      }, error, options));
     };
-  }, [dataAccessKey, activeTenantId, authenticatedUser]);
+    if (can('orders.view') || can('map.view') || can('kpi.view')) {
+      const source = can('evidence.view') ? 'work_orders' : can('orders.view') ? 'work_order_details' : 'work_order_metrics';
+      listen<WorkOrder>(source, setWorkOrders, { contract: true, areas: true });
+    }
+    if (can('users.view')) listen<UserAccount>('users', setUsers, { contract: true });
+    else setUsers([profile]);
+    if (can('audit.view')) listen<AuditLogEntry>('audit_logs', setAuditLogs, { contract: true });
+    // Plant names are reference data, required to label maps and operational forms.
+    if (can('structure.view') || can('orders.view') || can('map.view') || can('kpi.view')) {
+      listen<PlantArea>('plant_areas', setPlantAreas); listen<Sector>('sectors', setSectors);
+      listen<PlantEquipment>('equipments', setEquipments); listen<SubSector>('sub_sectors', setSubSectors);
+    }
+    if (can('orders.view') || can('map.view') || can('machines.view')) listen<Machine>('machines', setMachines);
+    if (can('workers.view')) listen<Worker>('workers', setWorkers);
+    if (can('personnel.view')) listen<PersonnelMember>('proclean_personnel', setPersonnel);
+    if (can('coverage.view') || can('coverageConfig.view')) {
+      listen<CoverageArea>('proclean_coverageAreas', setCoverageAreas);
+      listen<CargoConfig>('proclean_cargos', setCargos);
+    }
+    if (can('coverage.view')) listen<DailyPersonnelAssignment>(can('coverage.names') ? 'proclean_dailyAssignments' : 'coverage_public', setDailyAssignments, { contract: true, today: true });
+    listen<ClientContract>('contracts', setContracts, { contract: true });
+    listen<ShiftType>('shifts', setShifts);
+    if (can('orders.create') || can('orders.edit') || can('contingencies.manage')) listen<ContingencyReasonConfig>('contingencies', setContingencies);
+    listen<WhiteLabelConfig>('whitelabel', items => { if (items[0]) setWhiteLabel(items[0]); });
+    return () => { disposed = true; unsubs.forEach(unsub => unsub()); };
+  }, [dataAccessKey, authenticatedUser, can]);
+
+  const handleAccessUserSaved = (saved: UserAccount | null, removedId?: string) => {
+    setUsers(prev => saved ? [...prev.filter(u => u.id !== saved.id), saved] : prev.filter(u => u.id !== removedId));
+    if (!isFirebaseAuthRequired) {
+      const next = saved ? [...users.filter(u => u.id !== saved.id), saved] : users.filter(u => u.id !== removedId);
+      localStorage.setItem('proclean_users', JSON.stringify(next));
+    }
+  };
 
   // Login & Logout Handlers
   const handleLoginSuccess = (user: UserAccount) => {
@@ -529,12 +317,9 @@ export function App() {
       diffSummary
     };
 
-    setAuditLogs(prev => {
-      const next = [ { ...entry, id: `log-${Date.now()}` }, ...prev ];
-      try { localStorage.setItem('proclean_audit_logs', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('audit_logs', next);
-      return next;
-    });
+    const log = JSON.parse(JSON.stringify({ ...entry, id: crypto.randomUUID(), contractId: authenticatedUser.contractId || activeContractId }));
+    setAuditLogs(prev => [log, ...prev]);
+    if (isFirebaseConfigured) void syncSingleDocToFirebase('audit_logs', log.id, log);
     apiCreateAuditLog(entry);
   };
 
@@ -551,8 +336,10 @@ export function App() {
   };
 
   const updateWhiteLabel = (val: React.SetStateAction<WhiteLabelConfig>) => {
+    if (!can('branding.manage') && !can('manualMatrix.manage')) return;
     setWhiteLabel(prev => {
-      const requested = typeof val === 'function' ? val(prev) : val;
+      let requested = typeof val === 'function' ? val(prev) : val;
+      if (!can('branding.manage')) requested = { ...prev, manualLaborConfig: requested.manualLaborConfig };
       const next = stampCurrentTenant({
         ...requested,
         companyLogoUrl: requested.companyLogoUrl || OFFICIAL_PROCLEAN_LOGO_URL
@@ -565,27 +352,13 @@ export function App() {
     });
   };
 
-  const updateUsers = (val: React.SetStateAction<UserAccount[]>) => {
-    setUsers(prev => {
-      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
-      try {
-        localStorage.setItem('proclean_users', JSON.stringify(next));
-      } catch (e) {
-        console.warn('LocalStorage error:', e);
-      }
-      if (isFirebaseConfigured) {
-        syncAllUsersToFirebase(next, { preserveLegacyPassword: !isFirebaseAuthRequired });
-      }
-      addAuditLog('EDICION', 'Cuentas de Usuario', 'Users', 'Actualización de usuarios y roles fijos asignados');
-      return next;
-    });
-  };
-
   const updateContracts = (val: React.SetStateAction<ClientContract[]>) => {
+    if (!can('contracts.manage') && !can('branding.manage')) return;
     setContracts(prev => {
-      const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
+      const requested = typeof val === 'function' ? val(prev) : val;
+      const next = stampCurrentTenant(can('contracts.manage') ? requested : prev.map(contract => ({ ...contract, clientLogoUrl: requested.find(item => item.id === contract.id)?.clientLogoUrl || contract.clientLogoUrl || '' })));
       try { localStorage.setItem('proclean_contracts', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('contracts', next);
+      if (isFirebaseConfigured) monitorWorkOrderWrite(replaceFirebaseCollection('contracts', prev, next), 'guardar los contratos');
       apiSaveContracts(next);
       addAuditLog('EDICION', 'Contratos', 'MultiContract', 'Actualización de clientes y contratos mineros');
       return next;
@@ -593,10 +366,11 @@ export function App() {
   };
 
   const updateShifts = (val: React.SetStateAction<ShiftType[]>) => {
+    if (!can('shifts.manage')) return;
     setShifts(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_shifts', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('shifts', next);
+      if (isFirebaseConfigured) monitorWorkOrderWrite(replaceFirebaseCollection('shifts', prev, next), 'guardar los turnos');
       apiSaveShifts(next);
       addAuditLog('EDICION', 'Turnos', 'Shifts', 'Parametrización de turnos operacionales');
       return next;
@@ -604,10 +378,11 @@ export function App() {
   };
 
   const updateContingencies = (val: React.SetStateAction<ContingencyReasonConfig[]>) => {
+    if (!can('contingencies.manage')) return;
     setContingencies(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_contingencies', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('contingencies', next);
+      if (isFirebaseConfigured) monitorWorkOrderWrite(replaceFirebaseCollection('contingencies', prev, next), 'guardar los motivos de contingencia');
       apiSaveContingencies(next);
       addAuditLog('EDICION', 'Contingencias', 'Contingency', 'Actualización de motivos de detención');
       return next;
@@ -615,6 +390,7 @@ export function App() {
   };
 
   const updatePlantAreas = (val: React.SetStateAction<PlantArea[]>) => {
+    if (!can('structure.manage')) return;
     setPlantAreas(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_plant_areas', JSON.stringify(next)); } catch (e) {}
@@ -624,6 +400,7 @@ export function App() {
   };
 
   const updateSectors = (val: React.SetStateAction<Sector[]>) => {
+    if (!can('structure.manage')) return;
     setSectors(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_sectors', JSON.stringify(next)); } catch (e) {}
@@ -633,6 +410,7 @@ export function App() {
   };
 
   const updateSubSectors = (val: React.SetStateAction<SubSector[]>) => {
+    if (!can('structure.manage')) return;
     setSubSectors(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_sub_sectors', JSON.stringify(next)); } catch (e) {}
@@ -642,6 +420,7 @@ export function App() {
   };
 
   const updateEquipments = (val: React.SetStateAction<PlantEquipment[]>) => {
+    if (!can('structure.manage')) return;
     setEquipments(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_equipments', JSON.stringify(next)); } catch (e) {}
@@ -650,20 +429,22 @@ export function App() {
   };
 
   const updateMachines = (val: React.SetStateAction<Machine[]>) => {
+    if (!can('machines.manage')) return;
     setMachines(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_machines', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('machines', next);
+      if (isFirebaseConfigured) monitorWorkOrderWrite(replaceFirebaseCollection('machines', prev, next), 'guardar la maquinaria');
       apiSaveMachines(next);
       return next;
     });
   };
 
   const updateWorkers = (val: React.SetStateAction<Worker[]>) => {
+    if (!can('workers.manage')) return;
     setWorkers(prev => {
       const next = stampCurrentTenant(typeof val === 'function' ? val(prev) : val);
       try { localStorage.setItem('proclean_workers', JSON.stringify(next)); } catch (e) {}
-      if (isFirebaseConfigured) syncArrayToFirebase('workers', next);
+      if (isFirebaseConfigured) monitorWorkOrderWrite(replaceFirebaseCollection('workers', prev, next), 'guardar la nómina de trabajadores');
       apiSaveWorkers(next);
       return next;
     });
@@ -685,13 +466,16 @@ export function App() {
   };
 
   const handleAddWorkOrder = (newOrder: Omit<WorkOrder, 'id'>) => {
-    if (!authenticatedUser) return;
+    if (!authenticatedUser || !can('orders.create')) return;
     const order: WorkOrder = {
       ...newOrder,
       ...createTrace(authenticatedUser),
+      contractId: authenticatedUser.accessScope === 'CONTRACT' ? authenticatedUser.contractId : activeContractId,
       id: globalThis.crypto?.randomUUID?.() || Date.now().toString(),
       tenantId: authenticatedUser?.tenantId || 'tenant_cmz'
     };
+    if (!inScope(authenticatedUser, order)) return;
+    if (!can('evidence.upload')) for (const key of ['imageBeforeUrl','imageAfterUrl','beforePhotoUrl','afterPhotoUrl','itoSignatureDataUrl'] as const) delete order[key];
     const updated = [order, ...workOrders];
     setWorkOrders(updated);
     if (isFirebaseConfigured) {
@@ -702,17 +486,22 @@ export function App() {
 
   const handleUpdateWorkOrder = (id: string, updatedFields: Partial<WorkOrder>) => {
     if (!authenticatedUser) return;
+    const keys = Object.keys(updatedFields);
+    const photos = ['imageBeforeUrl','imageAfterUrl','beforePhotoUrl','afterPhotoUrl'];
+    const assign = ['responsibleSupervisorId','responsibleSupervisorName'];
+    const permitted = keys.length > 0 && (keys.every(k => photos.includes(k)) ? can('evidence.upload') : keys.every(k => assign.includes(k)) ? can('reporting.assign') : can('orders.edit'));
+    if (!permitted) return;
     if (!navigator.onLine) {
       setSyncToastMessage('⚠️ Sin conexión sólo se permite crear nuevas OT. La edición requiere conexión.');
       return;
     }
     const target = workOrders.find(o => o.id === id);
-    if (!target) return;
+    if (!target || !inScope(authenticatedUser, target)) return;
     const updatedObj = editTrace(target, updatedFields, authenticatedUser);
     const updated = workOrders.map(o => o.id === id ? updatedObj : o);
     setWorkOrders(updated);
     if (isFirebaseConfigured && updatedObj) {
-      monitorWorkOrderWrite(syncWorkOrderToFirebase(updatedObj), 'actualizar la orden de trabajo');
+      monitorWorkOrderWrite(keys.every(k => ['responsibleSupervisorId','responsibleSupervisorName'].includes(k)) ? patchWorkOrderResponsibility(updatedObj) : syncWorkOrderToFirebase(updatedObj), 'actualizar la orden de trabajo');
     }
     
     let diffStr = undefined;
@@ -724,12 +513,13 @@ export function App() {
   };
 
   const handleItoApproveWorkOrder = (id: string, approverName: string, comments?: string, signatureDataUrl?: string) => {
-    if (!authenticatedUser) return;
+    if (!authenticatedUser || !can('orders.approve')) return;
     if (!navigator.onLine) {
       setSyncToastMessage('⚠️ La aprobación ITO requiere conexión para evitar conflictos.');
       return;
     }
     const target = workOrders.find(o => o.id === id);
+    if (!target || !inScope(authenticatedUser, target)) return;
     const approvalDate = new Date().toLocaleString('es-CL');
     const updatedObj = target ? { 
       ...target, 
@@ -755,6 +545,8 @@ export function App() {
   };
 
   const handleDeleteWorkOrder = (id: string) => {
+    const target = workOrders.find(o => o.id === id);
+    if (!authenticatedUser || !can('orders.delete') || !target || !inScope(authenticatedUser, target)) return;
     if (!navigator.onLine) {
       setSyncToastMessage('⚠️ La eliminación de una OT requiere conexión.');
       return;
@@ -768,6 +560,7 @@ export function App() {
   };
 
   const handleSaveDailyAssignments = async (newAssignments: DailyPersonnelAssignment[]) => {
+    if (!can('coverage.edit')) return;
     if (!navigator.onLine) {
       setSyncToastMessage('⚠️ La dotación requiere conexión. No se aplicaron cambios.');
       return;
@@ -776,6 +569,7 @@ export function App() {
     const previousAssignments = dailyAssignments;
     const tenantAssignments = newAssignments.map(assignment => ({
       ...assignment,
+      contractId: authenticatedUser?.accessScope === 'CONTRACT' ? authenticatedUser.contractId : activeContractId,
       tenantId: authenticatedUser?.tenantId || 'tenant_cmz'
     }));
     setDailyAssignments(tenantAssignments);
@@ -790,13 +584,13 @@ export function App() {
     if (saved) {
       setSyncToastMessage('✅ Dotación confirmada en Firebase.');
     } else {
-      setDailyAssignments(previousAssignments);
-      setSyncToastMessage('❌ No fue posible guardar la dotación. Se restauró el estado anterior.');
+      setSyncToastMessage('❌ No se completó el guardado de dotación. Revisa los registros confirmados antes de reintentar.');
     }
     setTimeout(() => setSyncToastMessage(null), 4000);
   };
 
   const handleResetBlankSlate = () => {
+    if (!can('maintenance.reset')) return;
     resetDatabaseBlankSlate().then(() => {
       setWorkOrders([]);
       setSectors([]);
@@ -815,6 +609,8 @@ export function App() {
         return <UserCheck size={14} style={{ color: '#025951' }} />;
       case 'ADMINISTRADOR_CONTRATO':
         return <Shield size={14} style={{ color: '#3F3D73' }} />;
+      case 'CLIENTE_VISUALIZADOR':
+        return <ShieldCheck size={14} style={{ color: '#475569' }} />;
       case 'SUPER_ADMIN':
         return <Wrench size={14} style={{ color: '#B91C1C' }} />;
     }
@@ -825,7 +621,10 @@ export function App() {
     return <LoginView whiteLabel={whiteLabel} onLoginSuccess={handleLoginSuccess} />;
   }
 
+  if (loadedAccessKey !== dataAccessKey) return <div className="card" role="status">Actualizando accesos…</div>;
+
   return (
+    <PermissionContext.Provider value={authenticatedUser}>
     <div className="app-container">
       {/* Toast Notification Banner for Sync */}
       {syncToastMessage && (
@@ -904,7 +703,7 @@ export function App() {
                 <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-main)' }}>{authenticatedUser.name}</div>
                 <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   {getRoleIcon(authenticatedUser.role)}
-                  {authenticatedUser.role}
+                  {ROLE_LABELS[authenticatedUser.role]}
                 </div>
               </div>
 
@@ -923,7 +722,8 @@ export function App() {
 
         {/* Content Body */}
         <main className="content-body">
-          {activeTab === 'work-orders' && (
+          {activeTab === 'no-access' && <div className="card"><h2>Sin módulos habilitados</h2><p>Tu cuenta está activa, pero no tiene permisos de consulta. Contacta al administrador.</p></div>}
+          {activeTab === 'work-orders' && canOpenTab(authenticatedUser, 'work-orders') && (
             <WorkOrdersGrid 
               workOrders={recoverAuthors(workOrders, auditLogs, users)}
               users={users}
@@ -946,7 +746,7 @@ export function App() {
             />
           )}
 
-          {activeTab === 'personnel-coverage' && (
+          {activeTab === 'personnel-coverage' && canOpenTab(authenticatedUser, 'personnel-coverage') && (
             <PersonnelCoverageModule
               personnel={personnel}
               cargos={cargos}
@@ -960,7 +760,7 @@ export function App() {
             />
           )}
 
-          {activeTab === 'map-operational' && (
+          {activeTab === 'map-operational' && canOpenTab(authenticatedUser, 'map-operational') && (
             <OperationalMap 
               workOrders={workOrders}
               plantAreas={plantAreas}
@@ -976,7 +776,7 @@ export function App() {
             />
           )}
 
-          {activeTab === 'parameters' && (
+          {activeTab === 'parameters' && canOpenTab(authenticatedUser, 'parameters') && (
             <OperationalParameters 
               tenantId={authenticatedUser?.tenantId || 'tenant_cmz'}
               plantAreas={plantAreas}
@@ -1003,8 +803,8 @@ export function App() {
             />
           )}
 
-          {activeTab === 'system-config' && (
-            <SystemConfig 
+          {activeTab === 'system-config' && canOpenTab(authenticatedUser, 'system-config') && (
+            <SystemConfig plantAreas={plantAreas} onAccessUserSaved={handleAccessUserSaved}
               whiteLabel={whiteLabel}
               setWhiteLabel={updateWhiteLabel}
               contracts={contracts}
@@ -1016,12 +816,11 @@ export function App() {
               contingencies={contingencies}
               setContingencies={updateContingencies}
               users={users}
-              setUsers={updateUsers}
               onResetBlankSlate={handleResetBlankSlate}
             />
           )}
 
-          {activeTab === 'dashboard' && (
+          {activeTab === 'dashboard' && canOpenTab(authenticatedUser, 'dashboard') && (
             <AdherenceDashboard 
               workOrders={workOrders}
               sectors={sectors}
@@ -1032,22 +831,23 @@ export function App() {
             />
           )}
 
-          {activeTab === 'audit-logs' && (
+          {activeTab === 'audit-logs' && canOpenTab(authenticatedUser, 'audit-logs') && (
             <AuditLogViewer auditLogs={auditLogs} />
           )}
-          {activeTab === 'reporting-control' && ['ADMINISTRADOR_CONTRATO', 'SUPER_ADMIN'].includes(currentRole) && (
+          {activeTab === 'reporting-control' && can('reporting.view') && (
             <ReportingControl orders={recoverAuthors(workOrders.filter(o => o.tenantId === activeTenantId), auditLogs, users)} users={users.filter(u => u.tenantId === activeTenantId)} fromCache={isReadingFromCache} pendingIds={pendingWorkOrderIds} onUpdate={handleUpdateWorkOrder} onOpen={o => { setTargetEditOrder(workOrders.find(original => original.id === o.id) || null); setActiveTab('work-orders'); }} />
           )}
 
-          {activeTab === 'evidences' && (
+          {activeTab === 'evidences' && canOpenTab(authenticatedUser, 'evidences') && (
             <PhotoEvidence 
               workOrders={workOrders} 
-              onUpdateWorkOrder={handleUpdateWorkOrder}
+              onUpdateWorkOrder={can('evidence.upload') ? handleUpdateWorkOrder : undefined}
             />
           )}
         </main>
       </div>
     </div>
+    </PermissionContext.Provider>
   );
 }
 

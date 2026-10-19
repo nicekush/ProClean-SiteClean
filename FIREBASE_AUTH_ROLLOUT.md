@@ -17,6 +17,45 @@ staging project and a Vercel Preview deployment.
 
 ## 2. Validate the source accounts without connecting to Firebase
 
+For an existing production system, use the live-account procedure below instead
+of the seed accounts. The seed file no longer contains passwords and is not a
+production account inventory.
+
+### Existing production accounts (recommended)
+
+The authenticated Firebase CLI session can be used without creating or storing
+a service-account key. First create and verify a backup outside the repository:
+
+```powershell
+npm run backup:firestore -- --use-firebase-cli-credentials
+npm run migrate:auth -- --source=firestore --use-firebase-cli-credentials
+npx firebase-tools deploy --only auth --project proclean-siteclean
+npm run migrate:auth -- --source=firestore --use-firebase-cli-credentials --apply --confirm-project=proclean-siteclean --backup=<verified-backup-path>
+$env:FIREBASE_PROJECT_ID = 'proclean-siteclean'
+$env:DEFAULT_CONTRACT_ID = 'c1'
+npm run migrate:permission-views -- --apply --confirm-project=proclean-siteclean --use-firebase-cli-credentials
+```
+
+The live migration preserves each Firestore user ID as the Firebase UID when
+creating a new identity, keeping historical OT ownership intact. It uses the
+current account list and passwords, replaces the profiles with password-free
+root/payload copies, and preserves custom permissions and scope. Existing Auth
+passwords are not overwritten. A backup from the same project with the same
+account count is required before applying the live migration.
+
+Enable the email/password provider through `firebase.json` and `deploy --only
+auth`. No billing upgrade is required. Verify every existing account can sign in
+before switching production. Never log passwords, ID tokens or Admin errors
+containing HTTP request headers.
+
+Production builds always require Firebase Authentication. The environment flag
+only enables Firebase identities during local development. After publishing the
+new frontend and the rules, rerun the view migration with `--repair-only` to
+reconcile any old-client edits made during the rollout. Reconcile source/view
+counts and verify the production permissions with separate sessions.
+
+The seed-file procedure below is only for new test projects:
+
 ```powershell
 npm run migrate:auth
 ```

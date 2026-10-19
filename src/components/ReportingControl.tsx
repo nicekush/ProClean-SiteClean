@@ -1,3 +1,4 @@
+import { usePermissions } from '../security/PermissionContext';
 import { useMemo, useState } from 'react';
 import type { WorkOrder, UserAccount } from '../types';
 import { chileDate, orderDate, person, positive, delayDays, reviewIssues, UNKNOWN } from '../utils/reportability';
@@ -7,6 +8,7 @@ import './ReportingControl.css';
 interface Props { orders: WorkOrder[]; users: UserAccount[]; onOpen: (o: WorkOrder) => void; onUpdate: (id: string, change: Partial<WorkOrder>) => void; fromCache: boolean; pendingIds: Set<string>; }
 const fmt = (n: number) => n.toLocaleString('es-CL', { maximumFractionDigits: 1 });
 export function ReportingControl({ orders, users, onOpen, onUpdate, fromCache, pendingIds }: Props) {
+  const { can } = usePermissions();
   const today = chileDate(new Date().toISOString());
   const [from, setFrom] = useState(today.slice(0, 8) + '01'), [to, setTo] = useState(today);
   const [basis, setBasis] = useState<DateBasis>('execution');
@@ -18,7 +20,7 @@ export function ReportingControl({ orders, users, onOpen, onUpdate, fromCache, p
   const scoped = useMemo(() => orders.filter(o => !invalid && orderDate(o, basis) >= from && orderDate(o, basis) <= to && !!orderDate(o, basis)), [orders, from, to, basis, invalid]);
   const withoutDate = orders.filter(o => !orderDate(o, basis)).length;
   const rows = useMemo(() => scoped.filter(o => (!selected || person(o, peopleBasis).id === selected) && (!state || o.status === state) && (!shift || o.shiftId === shift) && (!issueOnly || reviewIssues(o).length > 0) && (!query || `${o.id} ${o.sapCode} ${o.equipoCorrea} ${o.operationDetail} ${o.vehiclePatent || ''}`.toLowerCase().includes(query.toLowerCase()))), [scoped, selected, peopleBasis, state, shift, issueOnly, query]);
-  const metrics = (items: WorkOrder[]) => ({ count: items.length, hh: items.reduce((s,o)=>s+positive(o.headcount)*positive(o.realHours),0), hm: items.reduce((s,o)=>s+positive(o.machineHours),0), m3: items.reduce((s,o)=>s+positive(o.cubicMetersRemoved),0), review: items.filter(o=>reviewIssues(o).length>0).length, late: items.filter(o=>o.status!=='PROGRAMADO' && delayDays(o)!==null && (delayDays(o) ?? 0) > grace).length, undated: items.filter(o=>delayDays(o)===null).length, evidence: items.filter(o=>(o.imageBeforeUrl||o.beforePhotoUrl)&&(o.imageAfterUrl||o.afterPhotoUrl)).length, pending: items.filter(o=>o.status==='PENDIENTE_APROBACION_ITO').length, rejected: items.filter(o=>o.status==='RECHAZADO_CONTINGENCIA').length, days: new Set(items.map(o=>o.executionDate).filter(Boolean)).size });
+  const metrics = (items: WorkOrder[]) => ({ count: items.length, hh: items.reduce((s,o)=>s+positive(o.headcount)*positive(o.realHours),0), hm: items.reduce((s,o)=>s+positive(o.machineHours),0), m3: items.reduce((s,o)=>s+positive(o.cubicMetersRemoved),0), review: items.filter(o=>reviewIssues(o).length>0).length, late: items.filter(o=>o.status!=='PROGRAMADO' && delayDays(o)!==null && (delayDays(o) ?? 0) > grace).length, undated: items.filter(o=>delayDays(o)===null).length, evidence: items.filter(o=>(o.hasBeforeEvidence||o.imageBeforeUrl||o.beforePhotoUrl)&&(o.hasAfterEvidence||o.imageAfterUrl||o.afterPhotoUrl)).length, pending: items.filter(o=>o.status==='PENDIENTE_APROBACION_ITO').length, rejected: items.filter(o=>o.status==='RECHAZADO_CONTINGENCIA').length, days: new Set(items.map(o=>o.executionDate).filter(Boolean)).size });
   const total = metrics(rows);
   const people = new Map<string,string>();
   users.filter(u=>u.role==='SUPERVISOR_TERRENO').forEach(u=>people.set(u.id,u.name));
@@ -32,7 +34,7 @@ export function ReportingControl({ orders, users, onOpen, onUpdate, fromCache, p
     const a=document.createElement('a');a.href=url;a.download=`Control_reportabilidad_${from}_${to}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   return <section className="reporting-control">
-    <header><h2>Control de reportabilidad</h2><p>Registro por usuario y responsable. Fechas en horario de Chile.</p><button onClick={download} disabled={!rows.length}>Exportar detalle CSV</button></header>
+    <header><h2>Control de reportabilidad</h2><p>Registro por usuario y responsable. Fechas en horario de Chile.</p><button hidden={!can('reporting.export')} onClick={download} disabled={!rows.length}>Exportar detalle CSV</button></header>
     {(fromCache||pendingIds.size>0)&&<p className="rc-notice">{fromCache?'Mostrando datos en caché; no equivalen a una consulta actual de la nube. ':''}{pendingIds.size>0?`${pendingIds.size} OT pendientes de sincronizar.`:''}</p>}
     <div className="rc-filters">
       <label>Desde<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Hasta<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label>
@@ -57,7 +59,7 @@ export function ReportingControl({ orders, users, onOpen, onUpdate, fromCache, p
       <td>{o.sapCode||o.id}<small>{o.equipoCorrea}</small><small>{o.vehiclePatent}</small></td>
       <td>{o.executionDate||'Sin fecha'}<small>Ingreso: {orderDate(o,'creation')||'No disponible'}</small></td>
       <td>{person(o,'author').name}{o.authorSource === 'audit' && <small>Recuperado de auditoría · {o.authorAuditId}</small>}<small>Editor: {o.updatedByName||'No disponible'}</small></td>
-      <td><select aria-label={`Responsable de ${o.sapCode||o.id}`} value={o.responsibleSupervisorId||''} onChange={e=>{const u=users.find(u=>u.id===e.target.value);onUpdate(o.id,{responsibleSupervisorId:u?.id||'',responsibleSupervisorName:u?.name||''});}}><option value="">Sin responsable</option>{users.filter(u=>u.role==='SUPERVISOR_TERRENO'||u.id===o.responsibleSupervisorId).map(u=><option key={u.id} value={u.id}>{u.name}</option>)}{o.responsibleSupervisorId&&!users.some(u=>u.id===o.responsibleSupervisorId)&&<option value={o.responsibleSupervisorId}>{o.responsibleSupervisorName||o.responsibleSupervisorId}</option>}</select></td>
+      <td><select disabled={!can('reporting.assign')} aria-label={`Responsable de ${o.sapCode||o.id}`} value={o.responsibleSupervisorId||''} onChange={e=>{const u=users.find(u=>u.id===e.target.value);onUpdate(o.id,{responsibleSupervisorId:u?.id||'',responsibleSupervisorName:u?.name||''});}}><option value="">Sin responsable</option>{users.filter(u=>u.role==='SUPERVISOR_TERRENO'||u.id===o.responsibleSupervisorId).map(u=><option key={u.id} value={u.id}>{u.name}</option>)}{o.responsibleSupervisorId&&!users.some(u=>u.id===o.responsibleSupervisorId)&&<option value={o.responsibleSupervisorId}>{o.responsibleSupervisorName||o.responsibleSupervisorId}</option>}</select></td>
       <td>{fmt(positive(o.headcount)*positive(o.realHours))} HH<small>{fmt(positive(o.machineHours))} HM</small></td><td>{o.status}{pendingIds.has(o.id)&&<small>Pendiente de sincronizar</small>}</td>
       <td>{reviewIssues(o).join(' · ')||'Sin alertas de campos'}{delayDays(o)!==null&&(delayDays(o) ?? 0) > grace&&o.status!=='PROGRAMADO'&&<small>Ingreso {delayDays(o)} días después de ejecución</small>}{person(o,'author').id===UNKNOWN&&<small>Autor no disponible</small>}</td>
       <td><button onClick={()=>onOpen(o)}>Abrir OT</button></td>

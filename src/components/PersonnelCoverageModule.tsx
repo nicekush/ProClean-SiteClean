@@ -1,3 +1,4 @@
+import { usePermissions } from '../security/PermissionContext';
 import React, { useState, useMemo } from 'react';
 import type { 
   PersonnelMember, 
@@ -66,6 +67,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   userEmail = 'supervisor@procleanmg.cl',
   userName = 'Supervisor de Terreno'
 }) => {
+  const { can } = usePermissions();
   // Filter States
   const [activeShiftFilter, setActiveShiftFilter] = useState<'ALL' | 'DAY' | 'NIGHT' | 'STAFF'>('ALL');
   const [activeGrupoFilter, setActiveGrupoFilter] = useState<'A' | 'B' | 'ALL'>('A');
@@ -269,6 +271,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
 
   // Open Wizard for an Area (or launch Guided Continuous Tour)
   const handleOpenWizardForArea = (areaId?: string, forceTour: boolean = false) => {
+    if (!can('coverage.edit')) return;
     const isTourMode = forceTour || !areaId;
     setIsGuidedTour(isTourMode);
 
@@ -413,6 +416,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
   };
 
   const handleClearDailyCoverage = () => {
+    if (!can('coverage.edit')) return;
     if (confirm('🧹 ¿Estás seguro de que deseas limpiar todas las asignaciones del día para iniciar el turno desde cero?')) {
       onSaveAssignments([]);
       alert('✨ Cobertura del día limpiada exitosamente. Las tarjetas han quedado listas para reportar desde cero con el Wizard.');
@@ -438,8 +442,8 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
           <div><span>RÉGIMEN</span><strong>{printShiftLabel}</strong></div>
           <div><span>MALLA</span><strong>{printGroupLabel}</strong></div>
           <div><span>DOTACIÓN</span><strong>{printMetrics.covered}/{printMetrics.required} HH ({printMetrics.pct}%)</strong></div>
-          <div><span>PLANTA</span><strong>{printMetrics.planta}</strong></div>
-          <div><span>SPOT</span><strong>{printMetrics.spot}</strong></div>
+          <div><span>PLANTA</span><strong>{can('personnel.view') ? printMetrics.planta : '—'}</strong></div>
+          <div><span>SPOT</span><strong>{can('personnel.view') ? printMetrics.spot : '—'}</strong></div>
           <div className={printMetrics.gap > 0 ? 'has-gap' : ''}><span>BRECHA</span><strong>{printMetrics.gap}</strong></div>
         </div>
 
@@ -464,7 +468,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                         <div className={`personnel-print-row ${assignment.personId ? '' : 'is-vacant'}`} key={assignment.id}>
                           <span className="personnel-print-role">{assignment.cargoName}</span>
                           <span className="personnel-print-name">
-                            {assignment.personName || '[VACANTE]'}
+                            {assignment.personName || (assignment.personId ? 'Persona asignada' : '[VACANTE]')}
                             {rosterPerson?.tipo ? <small>[{rosterPerson.tipo}]</small> : null}
                           </span>
                         </div>
@@ -502,7 +506,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <button 
+            <button hidden={!can('coverage.edit')}
               onClick={handleClearDailyCoverage}
               className="btn btn-secondary" 
               style={{ fontSize: '13px', padding: '10px 16px', backgroundColor: '#FEF2F2', color: '#DC2626', border: '1px solid #FCA5A5', fontWeight: 800, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -511,14 +515,14 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
               <Trash2 size={16} /> Limpiar Cobertura del Día
             </button>
             <button 
-              onClick={handlePrintCoverageReport}
+              hidden={!can('coverage.pdf')} onClick={handlePrintCoverageReport}
               className="btn btn-secondary" 
               style={{ fontSize: '13px', padding: '10px 18px' }}
             >
               <Printer size={16} /> Imprimir Reporte PDF (1 Hoja)
             </button>
             <button 
-              onClick={() => handleOpenWizardForArea()} 
+              hidden={!can('coverage.edit')} onClick={() => handleOpenWizardForArea()}
               className="btn btn-primary" 
               style={{ fontSize: '13px', padding: '10px 18px', backgroundColor: 'var(--orange)' }}
             >
@@ -751,7 +755,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                 </p>
               </div>
               <button
-                onClick={() => handleOpenWizardForArea()}
+                hidden={!can('coverage.edit')} onClick={() => handleOpenWizardForArea()}
                 className="btn btn-primary"
                 style={{
                   padding: '16px 32px',
@@ -880,7 +884,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                     </div>
 
                     <button 
-                      onClick={() => handleOpenWizardForArea(area.id)}
+                      hidden={!can('coverage.edit')} onClick={() => handleOpenWizardForArea(area.id)}
                       className="btn btn-secondary" 
                       style={{ 
                         width: '100%', 
@@ -907,7 +911,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
                   📋 Quedan {filteredAreas.length - declaredAreas.length} de {filteredAreas.length} áreas operacionales pendientes por declarar hoy.
                 </span>
                 <button
-                  onClick={() => handleOpenWizardForArea()}
+                  hidden={!can('coverage.edit')} onClick={() => handleOpenWizardForArea()}
                   style={{ border: 'none', backgroundColor: 'var(--orange)', color: '#FFF', padding: '8px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 900, cursor: 'pointer' }}
                 >
                   ➡️ Continuar Recorrido Guiado ➔
@@ -919,7 +923,7 @@ export const PersonnelCoverageModule: React.FC<PersonnelCoverageModuleProps> = (
       })()}
 
       {/* 4. "A PRUEBA DE NIÑOS" 4-STEP WIZARD MODAL (TOP-LEVEL FIXED OVERLAY) */}
-      {showWizardModal && (
+      {showWizardModal && can('coverage.edit') && (
         <div
           className="modal-backdrop-overlay"
           style={{

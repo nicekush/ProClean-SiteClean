@@ -7,11 +7,13 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import type { UserAccount } from '../types';
 import { db, firebaseApp } from './firebase';
 
-export const isFirebaseAuthRequired = import.meta.env.VITE_FIREBASE_AUTH_REQUIRED === 'true';
+// Production always enforces Firebase identities; the flag only enables them
+// in local development. A stale hosting variable cannot restore legacy login.
+export const isFirebaseAuthRequired = import.meta.env.PROD || import.meta.env.VITE_FIREBASE_AUTH_REQUIRED === 'true';
 
 const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
@@ -22,7 +24,7 @@ if (auth) {
 }
 
 function sanitizeProfile(profile: UserAccount, uid: string, email: string): UserAccount {
-  const { password: _password, ...safeProfile } = profile;
+  const { password: _password, payload: _payload, ...safeProfile } = profile as UserAccount & { payload?: unknown };
   return {
     ...safeProfile,
     id: uid,
@@ -67,18 +69,19 @@ export function subscribeFirebaseSession(onChange: (user: UserAccount | null) =>
     return () => undefined;
   }
 
-  return onAuthStateChanged(auth, async firebaseUser => {
-    if (!firebaseUser) {
-      onChange(null);
-      return;
-    }
-
-    try {
-      onChange(await fetchFirebaseUserProfile(firebaseUser.uid, firebaseUser.email || ''));
-    } catch (error) {
-      console.error('Firebase session profile rejected:', error);
-      await signOut(auth);
-      onChange(null);
-    }
+  let unsubscribeProfile: (() => void) | undefined;
+  const unsubscribeAuth = onAuthStateChanged(auth, firebaseUser => {
+    unsubscribeProfile?.();
+    if (!firebaseUser) { onChange(null); return; }
+    unsubscribeProfile = onSnapshot(doc(db!, 'users', firebaseUser.uid), snapshot => {
+      const data = snapshot.data();
+      if (!data || data.active !== true) {
+        onChange(null);
+        void signOut(auth);
+        return;
+      }
+      onChange(sanitizeProfile({ ...(data.payload || data), ...data }, firebaseUser.uid, firebaseUser.email || ''));
+    }, () => { onChange(null); void signOut(auth); });
   });
+  return () => { unsubscribeProfile?.(); unsubscribeAuth(); };
 }

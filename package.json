@@ -12,7 +12,11 @@
     "backup:firestore": "node scripts/backup-firestore.mjs",
     "migrate:personnel-both-groups": "node scripts/set-personnel-both-groups.mjs",
     "diagnose:firebase": "node scripts/check-firebase-cloud-status.mjs",
-    "migrate:auth": "node scripts/migrate-firebase-auth.mjs"
+    "migrate:auth": "node scripts/migrate-firebase-auth.mjs",
+    "test:permissions": "node --test tests/permissions.test.mjs",
+    "generate:rules": "node scripts/generate-permission-rules.mjs",
+    "check:rules": "node scripts/generate-permission-rules.mjs --check",
+    "migrate:permission-views": "node scripts/backfill-permission-views.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

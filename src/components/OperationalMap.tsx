@@ -1,3 +1,4 @@
+import { usePermissions } from '../security/PermissionContext';
 import React, { useState } from 'react';
 import type { WorkOrder, PlantArea, Sector, PlantEquipment, SubSector, WhiteLabelConfig, Machine, StaffingType } from '../types';
 import { Layers, Box, Clock, X, Filter, Activity, Cpu, Truck, HardHat, Edit, MapPin, ChevronDown, CalendarDays, RotateCcw, Droplets } from 'lucide-react';
@@ -117,6 +118,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   machines = [],
   onEditWorkOrder
 }) => {
+  const { can } = usePermissions();
   const [activeDiagramId, setActiveDiagramId] = useState<string>('primario');
   const [activeMetric, setActiveMetric] = useState<MetricType>('RESOURCE_HOURS');
   const [resourceFilter, setResourceFilter] = useState<ResourceFilterType>('MANUAL');
@@ -1163,7 +1165,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' }}>
-                  {selectedMetrics.matchingOrders.map(o => {
+                  {can('map.orders') && selectedMetrics.matchingOrders.map(o => {
                     const breakdown = getOrderBreakdown(o);
                     const flags = getResourceFlags(o);
 
@@ -1175,7 +1177,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                             <span style={{ fontSize: '11px', color: 'var(--slate-600)', fontWeight: 800 }}>
                               📅 {o.executionDate || o.dia || 'Hoy'} ({o.shiftName})
                             </span>
-                            {onEditWorkOrder && (
+                            {onEditWorkOrder && can('orders.edit') && (
                               <button
                                 onClick={() => {
                                   setSelectedBeltLabel(null);

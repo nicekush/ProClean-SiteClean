@@ -23,6 +23,7 @@ export const UserSessionSwitcher: React.FC<UserSessionSwitcherProps> = ({
         return { label: 'ITO Mandante Minero', icon: UserCheck, color: '#025951', bg: '#ECFDF5' };
       case 'ADMINISTRADOR_CONTRATO':
         return { label: 'Admin Contrato', icon: ShieldCheck, color: '#3F3D73', bg: '#F1F5F9' };
+      case 'CLIENTE_VISUALIZADOR': return { icon: UserCheck, color: '#475569', bg: '#F1F5F9', label: 'Cliente visualizador' };
       case 'SUPER_ADMIN':
         return { label: 'Super Admin SaaS', icon: Wrench, color: '#B91C1C', bg: '#FEF2F2' };
     }

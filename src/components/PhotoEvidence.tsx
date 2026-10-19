@@ -1,3 +1,4 @@
+import { usePermissions } from '../security/PermissionContext';
 import React, { useState, useRef } from 'react';
 import type { WorkOrder } from '../types';
 import { Camera, Search, Upload, CheckCircle, Image as ImageIcon, Sliders, X, Save, Filter, Clock, AlertCircle } from 'lucide-react';
@@ -9,6 +10,7 @@ interface PhotoEvidenceProps {
 }
 
 export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpdateWorkOrder }) => {
+  const { can } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterReadiness, setFilterReadiness] = useState<string>('ALL');
   const [selectedOrderId, setSelectedOrderId] = useState<string>(workOrders[0]?.id || '');
@@ -115,7 +117,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
         <div className="responsive-control-group" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           {selectedOrder && onUpdateWorkOrder && (
             <button 
-              onClick={() => handleOpenUploadModal(selectedOrder)}
+              hidden={!can('evidence.upload')} onClick={() => handleOpenUploadModal(selectedOrder)}
               className="btn btn-primary"
             >
               <Upload size={16} /> Subir / Editar Fotos ({selectedOrder.sapCode})
@@ -166,7 +168,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
       </div>
 
       {/* Upload Evidence Modal */}
-      {uploadingOrder && (
+      {uploadingOrder && can('evidence.upload') && (
         <div className="modal-backdrop-overlay" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <div className="modal-content-card" style={{ maxWidth: '560px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -384,7 +386,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
                   <div style={{ width: '100%', height: '100%', backgroundColor: '#FEF2F2', border: '2px dashed #FCA5A5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#991B1B', padding: '20px' }}>
                     <ImageIcon size={36} />
                     <div style={{ fontWeight: 800, fontSize: '13px' }}>Falta Foto Inicial (ANTES)</div>
-                    <button onClick={() => handleOpenUploadModal(selectedOrder)} className="btn btn-secondary" style={{ fontSize: '11px', padding: '6px 12px', marginTop: '6px' }}>
+                    <button hidden={!can('evidence.upload')} onClick={() => handleOpenUploadModal(selectedOrder)} className="btn btn-secondary" style={{ fontSize: '11px', padding: '6px 12px', marginTop: '6px' }}>
                       <Upload size={12} /> Cargar Foto ANTES
                     </button>
                   </div>
@@ -403,7 +405,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
                   <div style={{ width: '100%', height: '100%', backgroundColor: '#ECFDF5', border: '2px dashed #6EE7B7', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#047857', padding: '20px' }}>
                     <ImageIcon size={36} />
                     <div style={{ fontWeight: 800, fontSize: '13px' }}>Falta Foto Final (DESPUÉS)</div>
-                    <button onClick={() => handleOpenUploadModal(selectedOrder)} className="btn btn-secondary" style={{ fontSize: '11px', padding: '6px 12px', marginTop: '6px' }}>
+                    <button hidden={!can('evidence.upload')} onClick={() => handleOpenUploadModal(selectedOrder)} className="btn btn-secondary" style={{ fontSize: '11px', padding: '6px 12px', marginTop: '6px' }}>
                       <Upload size={12} /> Cargar Foto DESPUÉS
                     </button>
                   </div>
@@ -424,7 +426,7 @@ export const PhotoEvidence: React.FC<PhotoEvidenceProps> = ({ workOrders, onUpda
               </p>
               {onUpdateWorkOrder && (
                 <button 
-                  onClick={() => handleOpenUploadModal(selectedOrder)}
+                  hidden={!can('evidence.upload')} onClick={() => handleOpenUploadModal(selectedOrder)}
                   className="btn btn-primary"
                   style={{ marginTop: '6px', padding: '10px 18px', fontSize: '13px' }}
                 >

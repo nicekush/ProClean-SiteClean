@@ -15,6 +15,7 @@ import {
   query,
   where
 } from 'firebase/firestore';
+import { readModels, publicCoverage } from '../security/readModels.mjs';
 import type { Firestore } from 'firebase/firestore';
 import type { WorkOrder, UserAccount } from '../types';
 
@@ -130,15 +131,23 @@ export async function syncWorkOrderToFirebase(order: WorkOrder): Promise<boolean
   if (!db) return false;
   try {
     const docRef = doc(db, COLLECTION_WORK_ORDERS, order.id);
-    await setDoc(docRef, {
-      payload: order,
+    const cleanOrder = JSON.parse(JSON.stringify({ ...order, revision: crypto.randomUUID(), contractId: order.contractId || 'c1' }));
+    const batch = writeBatch(db);
+    batch.set(docRef, {
+      payload: cleanOrder,
       staffingType: order.staffingType || null,
       sapCode: order.sapCode || '',
       equipoCorrea: order.equipoCorrea || '',
       status: order.status,
       tenantId: order.tenantId || 'tenant_cmz',
+      contractId: cleanOrder.contractId,
+      areaId: cleanOrder.areaId || '',
       updatedAt: serverTimestamp()
     }, { merge: true });
+    const projections = readModels(cleanOrder);
+    batch.set(doc(db, 'work_order_details', order.id), projections.detail);
+    batch.set(doc(db, 'work_order_metrics', order.id), projections.metrics);
+    await batch.commit();
     return true;
   } catch (err) {
     console.error('Failed to sync to Firebase:', err);
@@ -159,11 +168,32 @@ export async function syncAllWorkOrdersToFirebase(orders: WorkOrder[]): Promise<
   }
 }
 
+// Responsibility delegation must preserve photos/signatures the caller cannot read.
+export async function patchWorkOrderResponsibility(order: WorkOrder): Promise<boolean> {
+  if (!db) return false;
+  try {
+    const revision = crypto.randomUUID();
+    const fields = { ...Object.fromEntries(['responsibleSupervisorId', 'responsibleSupervisorName', 'updatedById', 'updatedByName', 'updatedAt']
+      .map(key => [key, order[key as keyof WorkOrder] ?? ''])), revision };
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'work_orders', order.id), {
+      ...Object.fromEntries(Object.entries(fields).map(([key, value]) => [`payload.${key}`, value])), updatedAt: serverTimestamp()
+    });
+    batch.update(doc(db, 'work_order_details', order.id), fields);
+    batch.update(doc(db, 'work_order_metrics', order.id), { revision });
+    await batch.commit(); return true;
+  } catch (error) { console.error('Could not update OT responsibility:', error); return false; }
+}
+
 export async function deleteFirebaseWorkOrder(id: string): Promise<boolean> {
   if (!db) return false;
   try {
     const docRef = doc(db, COLLECTION_WORK_ORDERS, id);
-    await deleteDoc(docRef);
+    const batch = writeBatch(db);
+    batch.delete(docRef);
+    batch.delete(doc(db, 'work_order_details', id));
+    batch.delete(doc(db, 'work_order_metrics', id));
+    await batch.commit();
     return true;
   } catch (err) {
     console.error('Failed to delete from Firebase:', err);
@@ -490,17 +520,21 @@ export async function replaceFirebaseCollection<T extends { id: string }>(
       ...nextItems.map(item => ({ type: 'set' as const, item }))
     ];
 
-    // Firestore batches allow at most 500 operations. Keep headroom so this
-    // remains safe if the daily roster grows significantly.
-    for (let offset = 0; offset < operations.length; offset += 450) {
+    // Staffing projections look up their source in rules. Keep each batch below
+    // Firestore's 20 document-access checks as well as its write-count limit.
+    const batchSize = collectionName === 'proclean_dailyAssignments' ? 8 : 450;
+    for (let offset = 0; offset < operations.length; offset += batchSize) {
       const batch = writeBatch(db);
-      for (const operation of operations.slice(offset, offset + 450)) {
+      for (const operation of operations.slice(offset, offset + batchSize)) {
         if (operation.type === 'delete') {
           batch.delete(doc(db, collectionName, operation.id));
+          if (collectionName === 'proclean_dailyAssignments') batch.delete(doc(db, 'coverage_public', operation.id));
         } else {
+          const cleanItem = JSON.parse(JSON.stringify(operation.item));
+          if (collectionName === 'proclean_dailyAssignments') batch.set(doc(db, 'coverage_public', operation.item.id), publicCoverage(cleanItem));
           batch.set(doc(db, collectionName, operation.item.id), {
-            ...operation.item,
-            payload: operation.item,
+            ...cleanItem,
+            payload: cleanItem,
             id: operation.item.id,
             updatedAt: serverTimestamp()
           });

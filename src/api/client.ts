@@ -11,7 +11,6 @@ import type {
   UserAccount
 } from '../types';
 
-import initialDbData from '../../data/db.json';
 import { isFirebaseAuthRequired, loginWithFirebase } from './auth';
 import { fetchFirebaseUsers, isFirebaseConfigured } from './firebase';
 
@@ -141,7 +140,10 @@ export async function loginUser(email: string, password?: string): Promise<{ suc
     } catch (err) { console.warn(err); }
 
     if (!localUsers || localUsers.length === 0) {
-      localUsers = (initialDbData as any).users || [];
+      if (import.meta.env.DEV) {
+        const developmentSeed = await import('../../data/db.json');
+        localUsers = developmentSeed.default.users as UserAccount[];
+      }
     }
 
     let matchedUser = localUsers.find((u: any) => u.email.toLowerCase() === email.trim().toLowerCase());
@@ -154,6 +156,7 @@ export async function loginUser(email: string, password?: string): Promise<{ suc
       }
     }
     if (matchedUser) {
+      if (matchedUser.active === false) throw new Error('Esta cuenta se encuentra deshabilitada.');
       if (!matchedUser.password) {
         throw new Error('La cuenta no tiene una credencial heredada válida. Contacta al administrador.');
       }

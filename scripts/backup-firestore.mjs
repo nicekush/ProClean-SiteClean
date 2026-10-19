@@ -1,5 +1,8 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { firebaseCliCredential } from './firebase-cli-credential.mjs';
+const credential = process.argv.includes('--use-firebase-cli-credentials') ? firebaseCliCredential() : null;
 const projectId = process.env.FIREBASE_PROJECT_ID || 'proclean-siteclean';
 const apiKey = process.env.VITE_FIREBASE_API_KEY || 'AIzaSyCyRmnH6xKA41-lVm5jzb56qCsED1gpWsI';
 const outputPath = resolve(
@@ -8,7 +11,7 @@ const outputPath = resolve(
 );
 
 const databaseRoot = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)`;
-const knownCollections = [
+let knownCollections = [
   'work_orders',
   'users',
   'proclean_dailyAssignments',
@@ -25,7 +28,7 @@ const knownCollections = [
   'machines',
   'workers',
   'whitelabel',
-  'audit_logs'
+  'audit_logs', 'work_order_details', 'work_order_metrics', 'coverage_public', 'permission_profiles'
 ];
 const collections = {};
 let documentCount = 0;
@@ -39,6 +42,7 @@ async function firestoreRequest(url, init = {}) {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(credential ? { Authorization: `Bearer ${(await credential.getAccessToken()).access_token}` } : {}),
       ...(init.headers || {})
     }
   });
@@ -68,6 +72,18 @@ async function backupCollection(collectionPath) {
   console.log(`Backed up ${records.length} documents from ${collectionPath}.`);
 }
 
+if (credential) {
+  let pageToken;
+  const discovered = [];
+  do {
+    const result = await firestoreRequest(`${databaseRoot}/documents:listCollectionIds`, {
+      method: 'POST', body: JSON.stringify({ pageSize: 1000, ...(pageToken ? { pageToken } : {}) })
+    });
+    discovered.push(...(result.collectionIds || []));
+    pageToken = result.nextPageToken;
+  } while (pageToken);
+  knownCollections = [...new Set([...knownCollections, ...discovered])];
+}
 for (const collectionId of knownCollections) {
   await backupCollection(collectionId);
 }
@@ -83,5 +99,9 @@ const backup = {
 
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, JSON.stringify(backup, null, 2), 'utf8');
+const saved = await readFile(outputPath);
+const verified = JSON.parse(saved.toString('utf8'));
+if (Object.values(verified.collections).reduce((n, docs) => n + docs.length, 0) !== documentCount) throw new Error('Backup count verification failed.');
 console.log(`Backup complete: ${documentCount} documents in ${backup.collectionCount} collections.`);
+console.log(`SHA256: ${createHash('sha256').update(saved).digest('hex')}`);
 console.log(`Output: ${outputPath}`);

@@ -1,3 +1,4 @@
+import { usePermissions } from '../security/PermissionContext';
 import React, { useState } from 'react';
 import type { AuditLogEntry } from '../types';
 import { History, Search, Filter, ShieldCheck, HardHat, Shield, Wrench, FileSpreadsheet, PlusCircle, Edit3, Trash2, CheckCircle2 } from 'lucide-react';
@@ -8,6 +9,7 @@ interface AuditLogViewerProps {
 }
 
 export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ auditLogs }) => {
+  const { can } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('ALL');
   const [filterAction, setFilterAction] = useState<string>('ALL');
@@ -88,7 +90,7 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ auditLogs }) => 
           </p>
         </div>
 
-        <button onClick={exportAuditLogExcel} className="btn btn-secondary">
+        <button hidden={!can('audit.export')} onClick={exportAuditLogExcel} className="btn btn-secondary">
           <FileSpreadsheet size={16} /> Exportar Log (.xlsx)
         </button>
       </div>
