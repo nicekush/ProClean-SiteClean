@@ -31,23 +31,25 @@ en 21 colecciones: `firestore-proclean-siteclean-2026-10-19T23-01-26-785Z.json`.
 SHA256: `a8faadbf7c9885f4e24bf223784a7627261c4e8cf3be51dc4fbd07ba32be5fd0`.
 Contiene datos privados y credenciales heredadas: no subirlo al repositorio.
 
-## Incidencia pendiente: cuota gratuita de lecturas
+## Cuota gratuita de lecturas: restablecida el 20 de octubre
 
 Durante la migración y las verificaciones se agotó la cuota diaria gratuita de
 lecturas. Firestore devolvió HTTP 429 / `RESOURCE_EXHAUSTED: Quota exceeded`.
-La facturación del proyecto sigue deshabilitada. El código publicado y las reglas
-están activos, pero el servicio de datos necesita la renovación de cuota o que
-el propietario autorice habilitar facturación Blaze. No se contrató un plan pago.
+El propietario decidió esperar la renovación gratuita. El 20 de octubre se
+verificó que Firestore volvió a responder HTTP 200, que una sesión nueva pudo
+autenticarse y leer su perfil, y que una OT con sus dos vistas y una asignación
+con su vista de cobertura coincidían exactamente. El acceso anónimo siguió
+devolviendo HTTP 403. La comprobación de sesión y vistas leyó solo seis documentos
+y no modificó registros. No se habilitó facturación ni se contrató un plan pago.
 
 Se corrigió la doble carga al iniciar sesión. Las suscripciones ya existentes no
 se recrean por cambios irrelevantes del perfil; las consultas adicionales se
 limitan a los módulos que se están usando. Las nuevas verificaciones se hicieron
 solo contra el emulador local.
 
-Después de recuperar cuota: ejecutar una única conciliación con `--repair-only`
-y verificar inicio de sesión y consulta desde una sesión nueva, evitando repetir
-cargas completas de producción. La migración ahora compara revisiones antes de
-leer OT completas y agrupa las actualizaciones de alcance.
+Se evitó repetir cargas completas de producción tras la recuperación. Si se
+detectaran discrepancias, la conciliación puede ejecutarse con `--repair-only`:
+compara revisiones antes de leer OT completas y agrupa actualizaciones de alcance.
 
 Dos contraseñas administrativas vigentes aparecían en el archivo de ejemplo del
 repositorio público. Se retiraron del código actual, pero permanecen en el
