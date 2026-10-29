@@ -177,6 +177,14 @@
     "requires": []
   },
   {
+    "id": "components.create",
+    "group": "Estructura de planta",
+    "label": "Crear componentes desde el wizard",
+    "requires": [
+      "orders.view"
+    ]
+  },
+  {
     "id": "structure.manage",
     "group": "Estructura de planta",
     "label": "Administrar áreas, sectores, equipos y componentes",

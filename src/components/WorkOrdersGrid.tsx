@@ -5,6 +5,9 @@ import { Eye, Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpre
 import * as XLSX from 'xlsx';
 import { WorkOrderPhotoInput } from './WorkOrderPhotoInput';
 import { matchesSearchText } from '../utils/searchText';
+import { componentsForEquipment, selectedComponentIds } from '../utils/components.mjs';
+import { ComponentCreator } from './ComponentCreator';
+import type { ComponentCreationInput, ComponentCreationResult } from '../api/components';
 
 interface WorkOrdersGridProps {
   workOrders: WorkOrder[];
@@ -21,6 +24,7 @@ interface WorkOrdersGridProps {
   sectors: Sector[];
   equipments?: PlantEquipment[];
   subSectors: SubSector[];
+  onCreateComponent: (input: ComponentCreationInput) => Promise<ComponentCreationResult>;
   contingencies?: ContingencyReasonConfig[];
   currentRole: UserRole;
   targetEditOrder?: WorkOrder | null;
@@ -121,6 +125,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   sectors = [],
   equipments = [],
   subSectors = [],
+  onCreateComponent,
   contingencies = [],
   targetEditOrder,
   onClearTargetEditOrder
@@ -282,36 +287,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
   // Helper to query Component Badges directly from DB (with strict name deduplication)
   const getSubSectorsFromDb = (equipId: string, sectorId: string) => {
-    const equipObj = (equipments || []).find(e => e.id === equipId);
-    const sectorObj = (sectors || []).find(s => s.id === sectorId);
-
-    // Equipment-specific components and sector-wide components must coexist.
-    // A component created only under a sector is intentionally available to
-    // every equipment in that sector, while components from sibling equipment
-    // remain excluded.
-    const matched = (subSectors || []).filter(sub => {
-      const equipmentMatch = Boolean(equipId) && (
-        sub.equipmentId === equipId
-        || Boolean(equipObj && sub.equipmentName === equipObj.name)
-      );
-      const hasEquipmentScope = Boolean(sub.equipmentId || sub.equipmentName);
-      const sectorMatch = Boolean(sectorId) && (
-        sub.sectorId === sectorId
-        || Boolean(sectorObj && sub.sectorName === sectorObj.name)
-      );
-      const isUnscopedLegacyComponent = !sub.sectorId && !sub.sectorName && !hasEquipmentScope;
-      return equipmentMatch || (sectorMatch && !hasEquipmentScope) || isUnscopedLegacyComponent;
-    });
-
-    // Strict deduplication by component name to eliminate repeated badges
-    const uniqueMap = new Map<string, SubSector>();
-    matched.forEach(item => {
-      if (item && item.name && !uniqueMap.has(item.name.trim())) {
-        uniqueMap.set(item.name.trim(), item);
-      }
-    });
-
-    return Array.from(uniqueMap.values());
+    return componentsForEquipment(subSectors, equipments.find(e => e.id === equipId), sectors.find(s => s.id === sectorId));
   };
 
   const availableSubSectors = getSubSectorsFromDb(selectedEquipmentId, selectedSectorId);
@@ -728,9 +704,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       machineHours: newOrder.hasEquipment ? newOrder.machineHours : 0,
       equipoCorrea: finalEquipo,
       equipmentName: equipName,
-      selectedSubSectorIds: selectedSubSectorNames
-        .map(name => (subSectors || []).find(sub => sub.name === name && (!selectedEquipmentId || sub.equipmentId === selectedEquipmentId))?.id)
-        .filter((id): id is string => Boolean(id)),
+      selectedSubSectorIds: selectedComponentIds(selectedSubSectorNames, availableSubSectors),
       selectedSubSectorNames,
       shiftName: selectedShift.name
     });
@@ -798,9 +772,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       equipmentId: editSelectedEquipmentId || editingOrder.equipmentId,
       equipmentName: equipName,
       equipoCorrea: finalEquipo,
-      selectedSubSectorIds: editSelectedSubSectorNames
-        .map(name => (subSectors || []).find(sub => sub.name === name && (!editSelectedEquipmentId || sub.equipmentId === editSelectedEquipmentId))?.id)
-        .filter((id): id is string => Boolean(id)),
+      selectedSubSectorIds: selectedComponentIds(editSelectedSubSectorNames, editAvailableSubSectors,
+        editSelectedEquipmentId === editingOrder.equipmentId ? editingOrder.selectedSubSectorIds : [],
+        editSelectedEquipmentId === editingOrder.equipmentId ? editingOrder.selectedSubSectorNames : []),
       selectedSubSectorNames: editSelectedSubSectorNames,
       shiftName: selectedShift.name,
       headcount: editingOrder.hasManualLabor ? editingOrder.headcount : 0,
@@ -1410,7 +1384,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                   </select>
                 </div>
 
-                {editAvailableSubSectors.length > 0 && (
+                {(editAvailableSubSectors.length > 0 || editSelectedEquipmentId) && (
                   <div style={{ backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '16px', border: editSelectedSubSectorNames.length === 0 ? '2px solid #EF4444' : '1px solid var(--slate-200)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 900, color: 'var(--slate-800)', display: 'block' }}>
@@ -1455,6 +1429,14 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     </div>
                   </div>
                 )}
+
+                {can('components.create') && <ComponentCreator
+                  key={`edit-${editingOrder.id}-${editSelectedAreaId}-${editSelectedSectorId}-${editSelectedEquipmentId}`}
+                  areaId={editSelectedAreaId} sectorId={editSelectedSectorId} equipmentId={editSelectedEquipmentId}
+                  equipmentName={equipments.find(equipment => equipment.id === editSelectedEquipmentId)?.name || ''}
+                  onCreate={onCreateComponent}
+                  onSelect={component => setEditSelectedSubSectorNames(previous => previous.includes(component.name) ? previous : [...previous, component.name])}
+                />}
 
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>N° OT (Correlativo)</label>
@@ -2693,6 +2675,14 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       })}
                     </div>
                   </div>
+
+                  {can('components.create') && <ComponentCreator
+                    key={`add-${selectedAreaId}-${selectedSectorId}-${selectedEquipmentId}`}
+                    areaId={selectedAreaId} sectorId={selectedSectorId} equipmentId={selectedEquipmentId}
+                    equipmentName={equipments.find(equipment => equipment.id === selectedEquipmentId)?.name || ''}
+                    onCreate={onCreateComponent}
+                    onSelect={component => setSelectedSubSectorNames(previous => previous.includes(component.name) ? previous : [...previous, component.name])}
+                  />}
 
                   <div className="modal-action-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', gap: '8px' }}>

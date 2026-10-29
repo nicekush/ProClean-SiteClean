@@ -47,6 +47,17 @@ test('tenant, contract and area scopes intersect', () => {
   assert.ok(inScope(profile,{tenantId:'tenant-a',contractId:'c1',areaId:'a1'}));
   for (const change of [{tenantId:'tenant-b'},{contractId:'c2'},{areaId:'a2'}]) assert.equal(inScope(profile,{tenantId:'tenant-a',contractId:'c1',areaId:'a1',...change}),false);
 });
+
+test('component creation is an individual supervisor permission without structure administration', () => {
+  const supervisor = user({ role: 'SUPERVISOR_TERRENO' });
+  assert.equal(effectivePermissions(supervisor).includes('components.create'), false);
+  const granted = effectivePermissions({ ...supervisor, permissions: [...defaults.SUPERVISOR_TERRENO, 'components.create'] });
+  assert.ok(granted.includes('components.create'));
+  assert.equal(granted.includes('structure.manage'), false);
+  assert.deepEqual(new Set(normalizePermissions(['components.create'])), new Set(['orders.view', 'components.create']));
+  assert.equal(togglePermission(granted, 'components.create', false).includes('orders.create'), true);
+  assert.equal(togglePermission(granted, 'orders.view', false).includes('components.create'), false);
+});
 test('metric data omit photos, signatures, names and activity text while retaining evidence counts and OT number', () => {
   const {detail,metrics}=readModels({id:'1',tenantId:'a',sapCode:'OT-7',operationDetail:'Internal text',createdByName:'Private name',beforePhotoUrl:'data:image/jpeg;base64,abc',afterPhotoUrl:null,itoSignatureDataUrl:'signature',headcount:5});
   for (const field of PHOTO_FIELDS) { assert.equal(detail[field],undefined); assert.equal(metrics[field],undefined); }

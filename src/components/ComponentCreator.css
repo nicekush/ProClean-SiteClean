@@ -1,0 +1,8 @@
+.component-creator { display: grid; gap: 10px; }
+.component-creator-form { display: grid; gap: 12px; padding: 16px; border: 1px solid #FDBA74; border-radius: 12px; background: #FFF7ED; }
+.component-creator-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 800; }
+.component-creator-form input { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid var(--slate-300); border-radius: 8px; background: white; font: inherit; }
+.component-creator-form small { color: var(--slate-700); }
+.component-creator-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.component-creator p { margin: 0; font-size: 13px; }
+.component-creator-error { color: #991B1B; }

@@ -7,7 +7,7 @@ confirmación de Firestore y escribe la auditoría en el mismo lote.
 
 ## Comportamiento
 
-- El catálogo contiene 46 permisos. Se encuentra en `src/security/catalog.json`.
+- El catálogo contiene 47 permisos. Se encuentra en `src/security/catalog.json`.
 - Los roles existentes conservan una plantilla inicial en `roleDefaults.json`.
   Una lista explícita de permisos sustituye esa plantilla; una lista vacía no
   concede acceso a módulos.
@@ -33,6 +33,36 @@ confirmación de Firestore y escribe la auditoría en el mismo lote.
   La información que se permite consultar puede ser copiada por quien la ve.
 
 ## Datos y límites
+
+### Creación de componentes desde el wizard
+
+En **Configuración General → Usuarios**, seleccionar al supervisor, habilitar
+**Estructura de planta → Crear componentes desde el wizard** y guardar sus
+accesos. El permiso `components.create` está desactivado en la plantilla de
+supervisor y puede concederse o retirarse por persona; no habilita la
+administración de áreas, sectores o equipos ni la edición/eliminación de
+componentes. Las plantillas administrativas incluyen el permiso para poder
+delegarlo; los perfiles personalizados conservan sus permisos explícitos.
+
+El botón **Agregar componente** aparece en el paso de componentes al crear o
+editar una OT. **Guardar y seleccionar** incorpora el componente inmediatamente
+al catálogo compartido de la empresa para ese equipo y lo selecciona en la OT.
+La creación es independiente de guardar la OT: cancelar la orden después no
+elimina el componente. Requiere conexión; si falla, el formulario conserva el
+nombre para reintentar.
+
+Se valida en Firestore la empresa, el área autorizada y la relación real
+área/sector/equipo. Cada creación incluye autor, fecha del servidor y auditoría
+en la misma transacción. El nombre se compara ignorando mayúsculas, tildes,
+espacios y separadores. Dos creaciones simultáneas desde el wizard utilizan
+el mismo identificador; se reutilizan también los componentes anteriores y
+los compartidos por sector. Editar, mover o eliminar sigue requiriendo
+`structure.manage`. El historial de OT conserva los identificadores existentes.
+
+Para activar esta función, publicar juntos la aplicación y las reglas generadas
+de Firestore. No se requiere migrar OT ni habilitar automáticamente supervisores.
+
+### Alcance de los datos
 
 La empresa (`tenantId`) siempre se aísla. Contrato y áreas se aplican a las OT y
 a sus mapas, indicadores y exportaciones. La dotación y auditoría se limitan
@@ -95,6 +125,7 @@ operacionales. Hacerla antes de habilitar usuarios externos.
 
 ```powershell
 npm run test:permissions
+npm run test:components
 npm run test:rules
 npm run check:rules
 npm run build

@@ -2,6 +2,8 @@ import { PermissionContext } from './security/PermissionContext';
 import { ROLE_LABELS, can as hasPermission, canOpenTab, TAB_PERMISSIONS, inScope } from './security/permissions';
 import { subscribeScopedData } from './api/scopedData';
 import { subscribeOwnProfile } from './api/access';
+import { createEquipmentComponent } from './api/components';
+import type { ComponentCreationInput } from './api/components';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { WorkOrdersGrid } from './components/WorkOrdersGrid';
@@ -35,7 +37,7 @@ import type {
   CoverageArea
 } from './types';
 import { isSupabaseConfigured } from './api/supabase';
-import { isFirebaseConfigured, syncWorkOrderToFirebase, patchWorkOrderResponsibility, deleteFirebaseWorkOrder, syncSingleDocToFirebase, replaceFirebaseCollection } from './api/firebase';
+import { db, isFirebaseConfigured, syncWorkOrderToFirebase, patchWorkOrderResponsibility, deleteFirebaseWorkOrder, syncSingleDocToFirebase, replaceFirebaseCollection } from './api/firebase';
 import { 
   saveWhiteLabel as apiSaveWhiteLabel, 
   saveContracts as apiSaveContracts, 
@@ -438,6 +440,14 @@ export function App() {
     });
   };
 
+  const handleCreateComponent = async (input: ComponentCreationInput) => {
+    if (!authenticatedUser || !can('components.create')) throw new Error('No tienes permiso para crear componentes desde el wizard.');
+    const result = await createEquipmentComponent(db, authenticatedUser, input);
+    if (subscriptions.current.key !== dataAccessKey) throw new Error('Tu sesión cambió. Actualiza la página para consultar el componente.');
+    setSubSectors(previous => [...previous.filter(component => component.id !== result.component.id), result.component]);
+    return result;
+  };
+
   const updateEquipments = (val: React.SetStateAction<PlantEquipment[]>) => {
     if (!can('structure.manage')) return;
     setEquipments(prev => {
@@ -758,6 +768,7 @@ export function App() {
               sectors={sectors}
               equipments={equipments}
               subSectors={subSectors}
+              onCreateComponent={handleCreateComponent}
               contingencies={contingencies}
               currentRole={currentRole}
               targetEditOrder={targetEditOrder}

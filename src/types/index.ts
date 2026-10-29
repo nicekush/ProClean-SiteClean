@@ -173,6 +173,13 @@ export interface PlantEquipment {
 
 export interface SubSector {
   id: string;
+  tenantId?: string;
+  areaId?: string;
+  nameKey?: string;
+  createdById?: string;
+  createdByName?: string;
+  creationSource?: 'wizard';
+  auditId?: string;
   sectorId?: string;
   sectorName?: string;
   equipmentId?: string;

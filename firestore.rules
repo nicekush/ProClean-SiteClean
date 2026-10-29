@@ -7,7 +7,7 @@ service cloud.firestore {
     function member() { return get(memberPath()).data; }
     function active() { return signedIn() && exists(memberPath()) && member().active == true; }
     function principal() { return active() && member().role == 'SUPER_ADMIN'; }
-    function defaults(role) { return role == 'SUPERVISOR_TERRENO' ? ["orders.view","orders.create","orders.edit","orders.export","evidence.view","evidence.upload","coverage.view","coverage.names","coverage.pdf"] : role == 'ITO_MANDANTE' ? ["orders.view","orders.approve","orders.export","kpi.view","kpi.export","kpi.pdf","map.view","map.orders","evidence.view","coverage.view","coverage.names","coverage.pdf"] : role == 'ADMINISTRADOR_CONTRATO' ? ["orders.view","orders.create","orders.edit","orders.delete","orders.export","kpi.view","kpi.export","kpi.pdf","map.view","map.orders","evidence.view","evidence.upload","coverage.view","coverage.names","coverage.edit","coverage.pdf","reporting.view","reporting.assign","reporting.export","audit.view","audit.export","structure.view","structure.manage","machines.view","machines.manage","workers.view","workers.manage","personnel.view","personnel.manage","coverageConfig.view","coverageConfig.manage","manualMatrix.manage","contracts.manage","shifts.manage","contingencies.manage","branding.manage","users.view","users.create","users.edit","users.disable","users.delete","access.view","access.manage"] : role == 'CLIENTE_VISUALIZADOR' ? ["orders.view","kpi.view","map.view","map.orders"] : role == 'SUPER_ADMIN' ? ["orders.view","orders.create","orders.edit","orders.delete","orders.approve","orders.export","kpi.view","kpi.export","kpi.pdf","map.view","map.orders","evidence.view","evidence.upload","coverage.view","coverage.names","coverage.edit","coverage.pdf","reporting.view","reporting.assign","reporting.export","audit.view","audit.export","structure.view","structure.manage","machines.view","machines.manage","workers.view","workers.manage","personnel.view","personnel.manage","coverageConfig.view","coverageConfig.manage","manualMatrix.manage","contracts.manage","shifts.manage","contingencies.manage","branding.manage","users.view","users.create","users.edit","users.disable","users.delete","access.view","access.manage","access.profiles","maintenance.reset"] :  []; }
+    function defaults(role) { return role == 'SUPERVISOR_TERRENO' ? ["orders.view","orders.create","orders.edit","orders.export","evidence.view","evidence.upload","coverage.view","coverage.names","coverage.pdf"] : role == 'ITO_MANDANTE' ? ["orders.view","orders.approve","orders.export","kpi.view","kpi.export","kpi.pdf","map.view","map.orders","evidence.view","coverage.view","coverage.names","coverage.pdf"] : role == 'ADMINISTRADOR_CONTRATO' ? ["orders.view","orders.create","orders.edit","orders.delete","orders.export","kpi.view","kpi.export","kpi.pdf","map.view","map.orders","evidence.view","evidence.upload","coverage.view","coverage.names","coverage.edit","coverage.pdf","reporting.view","reporting.assign","reporting.export","audit.view","audit.export","structure.view","components.create","structure.manage","machines.view","machines.manage","workers.view","workers.manage","personnel.view","personnel.manage","coverageConfig.view","coverageConfig.manage","manualMatrix.manage","contracts.manage","shifts.manage","contingencies.manage","branding.manage","users.view","users.create","users.edit","users.disable","users.delete","access.view","access.manage"] : role == 'CLIENTE_VISUALIZADOR' ? ["orders.view","kpi.view","map.view","map.orders"] : role == 'SUPER_ADMIN' ? ["orders.view","orders.create","orders.edit","orders.delete","orders.approve","orders.export","kpi.view","kpi.export","kpi.pdf","map.view","map.orders","evidence.view","evidence.upload","coverage.view","coverage.names","coverage.edit","coverage.pdf","reporting.view","reporting.assign","reporting.export","audit.view","audit.export","structure.view","components.create","structure.manage","machines.view","machines.manage","workers.view","workers.manage","personnel.view","personnel.manage","coverageConfig.view","coverageConfig.manage","manualMatrix.manage","contracts.manage","shifts.manage","contingencies.manage","branding.manage","users.view","users.create","users.edit","users.disable","users.delete","access.view","access.manage","access.profiles","maintenance.reset"] :  []; }
     function permissionsOf(data) { return 'permissions' in data ? data.permissions : defaults(data.get('role', '')); }
     function can(id) {
       let profile = member();
@@ -25,8 +25,8 @@ service cloud.firestore {
     }
     function payload(data) { return data.get('payload', data); }
     function validPermissions(permissions) {
-      return permissions is list && permissions.size() <= 46 && permissions.hasOnly(["orders.view","orders.create","orders.edit","orders.delete","orders.approve","orders.export","kpi.view","kpi.export","kpi.pdf","map.view","map.orders","evidence.view","evidence.upload","coverage.view","coverage.names","coverage.edit","coverage.pdf","reporting.view","reporting.assign","reporting.export","audit.view","audit.export","structure.view","structure.manage","machines.view","machines.manage","workers.view","workers.manage","personnel.view","personnel.manage","coverageConfig.view","coverageConfig.manage","manualMatrix.manage","contracts.manage","shifts.manage","contingencies.manage","branding.manage","users.view","users.create","users.edit","users.disable","users.delete","access.view","access.manage","access.profiles","maintenance.reset"])
-        && (!permissions.hasAny(["orders.create","orders.edit","orders.delete","orders.approve","orders.export","map.orders","evidence.view","reporting.view"]) || 'orders.view' in permissions)
+      return permissions is list && permissions.size() <= 47 && permissions.hasOnly(["orders.view","orders.create","orders.edit","orders.delete","orders.approve","orders.export","kpi.view","kpi.export","kpi.pdf","map.view","map.orders","evidence.view","evidence.upload","coverage.view","coverage.names","coverage.edit","coverage.pdf","reporting.view","reporting.assign","reporting.export","audit.view","audit.export","structure.view","components.create","structure.manage","machines.view","machines.manage","workers.view","workers.manage","personnel.view","personnel.manage","coverageConfig.view","coverageConfig.manage","manualMatrix.manage","contracts.manage","shifts.manage","contingencies.manage","branding.manage","users.view","users.create","users.edit","users.disable","users.delete","access.view","access.manage","access.profiles","maintenance.reset"])
+        && (!permissions.hasAny(["orders.create","orders.edit","orders.delete","orders.approve","orders.export","map.orders","evidence.view","reporting.view","components.create"]) || 'orders.view' in permissions)
         && (!permissions.hasAny(["orders.edit","orders.approve","evidence.upload"]) || 'evidence.view' in permissions)
         && (!permissions.hasAny(["kpi.export","kpi.pdf"]) || 'kpi.view' in permissions)
         && (!permissions.hasAny(["map.orders"]) || 'map.view' in permissions)
@@ -183,6 +183,44 @@ service cloud.firestore {
         && request.resource.data.personId == (payload(getAfter(/databases/$(database)/documents/proclean_dailyAssignments/$(id)).data).personId != '' ? 'covered' : '')
         && request.resource.data.diff(payload(getAfter(/databases/$(database)/documents/proclean_dailyAssignments/$(id)).data)).affectedKeys().hasOnly(['personId','personName','personSource','userEmail','createdAt']);
       allow delete: if can('coverage.edit') && tenant(resource.data) && contract(resource.data) && !existsAfter(/databases/$(database)/documents/proclean_dailyAssignments/$(id));
+    }
+    // Same normalization as src/utils/components.mjs. The deterministic ID
+    // makes concurrent wizard submissions contend on a single document.
+    function componentNameKey(name) {
+      return name.lower()
+        .replace('[ÀÁÂÃÄÅàáâãäå]', 'a').replace('[ÈÉÊËèéêë]', 'e')
+        .replace('[ÌÍÎÏìíîï]', 'i').replace('[ÒÓÔÕÖòóôõö]', 'o')
+        .replace('[ÙÚÛÜùúûü]', 'u').replace('[Ññ]', 'n').replace('[Çç]', 'c')
+        .replace('[̀-ͯ]', '').replace('[^a-z0-9]+', '-').replace('^-|-$', '');
+    }
+    function validWizardComponent(data, id) {
+      let equipmentDoc = get(/databases/$(database)/documents/equipments/$(data.equipmentId)).data;
+      let sectorDoc = get(/databases/$(database)/documents/sectors/$(data.sectorId)).data;
+      let areaDoc = get(/databases/$(database)/documents/plant_areas/$(data.areaId)).data;
+      let equipment = payload(equipmentDoc);
+      let sector = payload(sectorDoc);
+      let log = getAfter(/databases/$(database)/documents/audit_logs/$(data.auditId)).data;
+      return data.keys().hasOnly(['id','tenantId','areaId','sectorId','sectorName','equipmentId','equipmentName','name','nameKey','code','createdById','createdByName','createdAt','creationSource','auditId'])
+        && data.id == id && data.name is string && data.name.size() > 0 && data.name.size() <= 120
+        && data.nameKey == componentNameKey(data.name) && data.nameKey.size() > 0
+        && id == data.equipmentId + '::' + data.nameKey
+        && data.code is string && data.code.size() > 0 && data.code.size() <= 40
+        && tenant(equipmentDoc) && tenant(sectorDoc) && tenant(areaDoc) && area(data)
+        && (equipment.get('sectorId', '') != '' ? equipment.sectorId == data.sectorId : equipment.get('sectorName', '') == sector.name)
+        && (sector.get('areaId', '') != '' ? sector.areaId == data.areaId : sector.get('areaName', '') == payload(areaDoc).name)
+        && data.equipmentName == equipment.name && data.sectorName == sector.name
+        && data.creationSource == 'wizard' && data.createdAt == request.time
+        && data.createdById == request.auth.uid && data.createdByName == member().name
+        && log.tenantId == data.tenantId && log.userId == request.auth.uid && log.userName == member().name
+        && log.id == data.auditId && log.userRole == member().role && log.areaId == data.areaId && contract(log)
+        && log.action == 'CREACION' && log.entityName == 'Componente de equipo' && log.entityId == id
+        && log.serverRecordedAt == request.time;
+    }
+    match /sub_sectors/{id} {
+      // Transactions must also be able to check that their target is absent.
+      allow get: if can('components.create') && can('orders.view') && !exists(/databases/$(database)/documents/sub_sectors/$(id));
+      allow create: if can('components.create') && can('orders.view') && tenant(request.resource.data) && validWizardComponent(request.resource.data, id);
+      // Updates/deletes remain governed solely by structure.manage below.
     }
     function catalogRead(name) {
       return (name in ['plant_areas','sectors','equipments','sub_sectors'] && (can('structure.view') || can('orders.view') || can('map.view') || can('kpi.view')))

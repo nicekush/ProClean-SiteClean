@@ -181,6 +181,44 @@ service cloud.firestore {
         && request.resource.data.diff(payload(getAfter(/databases/$(database)/documents/proclean_dailyAssignments/$(id)).data)).affectedKeys().hasOnly(['personId','personName','personSource','userEmail','createdAt']);
       allow delete: if can('coverage.edit') && tenant(resource.data) && contract(resource.data) && !existsAfter(/databases/$(database)/documents/proclean_dailyAssignments/$(id));
     }
+    // Same normalization as src/utils/components.mjs. The deterministic ID
+    // makes concurrent wizard submissions contend on a single document.
+    function componentNameKey(name) {
+      return name.lower()
+        .replace('[ÀÁÂÃÄÅàáâãäå]', 'a').replace('[ÈÉÊËèéêë]', 'e')
+        .replace('[ÌÍÎÏìíîï]', 'i').replace('[ÒÓÔÕÖòóôõö]', 'o')
+        .replace('[ÙÚÛÜùúûü]', 'u').replace('[Ññ]', 'n').replace('[Çç]', 'c')
+        .replace('[\u0300-\u036f]', '').replace('[^a-z0-9]+', '-').replace('^-|-$', '');
+    }
+    function validWizardComponent(data, id) {
+      let equipmentDoc = get(/databases/$(database)/documents/equipments/$(data.equipmentId)).data;
+      let sectorDoc = get(/databases/$(database)/documents/sectors/$(data.sectorId)).data;
+      let areaDoc = get(/databases/$(database)/documents/plant_areas/$(data.areaId)).data;
+      let equipment = payload(equipmentDoc);
+      let sector = payload(sectorDoc);
+      let log = getAfter(/databases/$(database)/documents/audit_logs/$(data.auditId)).data;
+      return data.keys().hasOnly(['id','tenantId','areaId','sectorId','sectorName','equipmentId','equipmentName','name','nameKey','code','createdById','createdByName','createdAt','creationSource','auditId'])
+        && data.id == id && data.name is string && data.name.size() > 0 && data.name.size() <= 120
+        && data.nameKey == componentNameKey(data.name) && data.nameKey.size() > 0
+        && id == data.equipmentId + '::' + data.nameKey
+        && data.code is string && data.code.size() > 0 && data.code.size() <= 40
+        && tenant(equipmentDoc) && tenant(sectorDoc) && tenant(areaDoc) && area(data)
+        && (equipment.get('sectorId', '') != '' ? equipment.sectorId == data.sectorId : equipment.get('sectorName', '') == sector.name)
+        && (sector.get('areaId', '') != '' ? sector.areaId == data.areaId : sector.get('areaName', '') == payload(areaDoc).name)
+        && data.equipmentName == equipment.name && data.sectorName == sector.name
+        && data.creationSource == 'wizard' && data.createdAt == request.time
+        && data.createdById == request.auth.uid && data.createdByName == member().name
+        && log.tenantId == data.tenantId && log.userId == request.auth.uid && log.userName == member().name
+        && log.id == data.auditId && log.userRole == member().role && log.areaId == data.areaId && contract(log)
+        && log.action == 'CREACION' && log.entityName == 'Componente de equipo' && log.entityId == id
+        && log.serverRecordedAt == request.time;
+    }
+    match /sub_sectors/{id} {
+      // Transactions must also be able to check that their target is absent.
+      allow get: if can('components.create') && can('orders.view') && !exists(/databases/$(database)/documents/sub_sectors/$(id));
+      allow create: if can('components.create') && can('orders.view') && tenant(request.resource.data) && validWizardComponent(request.resource.data, id);
+      // Updates/deletes remain governed solely by structure.manage below.
+    }
     function catalogRead(name) {
       return (name in ['plant_areas','sectors','equipments','sub_sectors'] && (can('structure.view') || can('orders.view') || can('map.view') || can('kpi.view')))
         || (name == 'machines' && (can('machines.view') || can('orders.view') || can('map.view')))
