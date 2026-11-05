@@ -4,7 +4,7 @@ import { subscribeScopedData } from './api/scopedData';
 import { subscribeOwnProfile } from './api/access';
 import { createEquipmentComponent } from './api/components';
 import type { ComponentCreationInput } from './api/components';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { WorkOrdersGrid } from './components/WorkOrdersGrid';
 import { OperationalParameters } from './components/OperationalParameters';
@@ -150,6 +150,8 @@ export function App() {
   const [shifts, setShifts] = useState<ShiftType[]>([]);
   const [contingencies, setContingencies] = useState<ContingencyReasonConfig[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const workOrdersWithAuthors = useMemo(() => activeTab === 'work-orders'
+    ? recoverAuthors(workOrders, auditLogs, users) : workOrders, [activeTab, workOrders, auditLogs, users]);
 
   // 3-Level Plant Hierarchy Initial Defaults
   const [plantAreas, setPlantAreas] = useState<PlantArea[]>([
@@ -754,7 +756,7 @@ export function App() {
           {activeTab === 'no-access' && <div className="card"><h2>Sin módulos habilitados</h2><p>Tu cuenta está activa, pero no tiene permisos de consulta. Contacta al administrador.</p></div>}
           {activeTab === 'work-orders' && canOpenTab(authenticatedUser, 'work-orders') && (
             <WorkOrdersGrid 
-              workOrders={recoverAuthors(workOrders, auditLogs, users)}
+              workOrders={workOrdersWithAuthors}
               users={users}
               pendingWorkOrderIds={pendingWorkOrderIds}
               onAddWorkOrder={handleAddWorkOrder}

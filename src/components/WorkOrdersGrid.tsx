@@ -1,11 +1,11 @@
 import { usePermissions } from '../security/PermissionContext';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole, Machine, ContingencyReasonConfig, PlantArea, Sector, SubSector, TaskType, StaffingType, PlantEquipment, UserAccount } from '../types';
 import { Eye, Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { WorkOrderPhotoInput } from './WorkOrderPhotoInput';
 import { WorkOrderHoursSummary } from './WorkOrderHoursSummary';
-import { matchesSearchText } from '../utils/searchText';
+import { buildWorkOrderSearchIndex, filterWorkOrders, getWorkOrderPage } from '../utils/workOrderList';
 import { getReportCalendar, getReportDateRange, intersectReportDateRanges, formatReportDate, getReportFilename } from '../utils/workOrderReport.mjs';
 import { componentsForEquipment, selectedComponentIds } from '../utils/components.mjs';
 import { ComponentCreator } from './ComponentCreator';
@@ -95,7 +95,6 @@ const getStoredWorkOrderSort = (): WorkOrderSort[] => {
 };
 
 const getWorkOrderSortValue = (order: WorkOrder, key: WorkOrderSortKey): string | number => {
-  const flags = getWorkOrderResourceFlags(order);
   switch (key) {
     case 'executionDate': return order.executionDate || '';
     case 'sapCode': return order.sapCode || '';
@@ -103,7 +102,10 @@ const getWorkOrderSortValue = (order: WorkOrder, key: WorkOrderSortKey): string 
     case 'areaName': return order.areaName || '';
     case 'sectorName': return order.sectorName || '';
     case 'equipmentName': return order.equipmentName || order.equipoCorrea || '';
-    case 'resourceMode': return flags.manual && flags.equipment ? 'Mixto' : flags.equipment ? 'Maquinaria' : 'Manual';
+    case 'resourceMode': {
+      const flags = getWorkOrderResourceFlags(order);
+      return flags.manual && flags.equipment ? 'Mixto' : flags.equipment ? 'Maquinaria' : 'Manual';
+    }
     case 'hh': return Math.max(0, Number(order.headcount) || 0) * Math.max(0, Number(order.realHours) || 0);
     case 'hm': return Math.max(0, Number(order.machineHours) || 0);
     case 'evidence': return Number(Boolean(order.hasBeforeEvidence || order.imageBeforeUrl || order.beforePhotoUrl)) + Number(Boolean(order.hasAfterEvidence || order.imageAfterUrl || order.afterPhotoUrl));
@@ -133,9 +135,10 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   onClearTargetEditOrder
 }) => {
   const { can } = usePermissions();
-  const creatorName = (order: WorkOrder) => order.createdByName?.trim()
-    || users.find(user => user.id === order.createdById && user.tenantId === order.tenantId)?.name
-    || (order.createdById ? order.createdById : 'Sin autor identificado');
+  const authorNames = useMemo(() => new Map(users.map(user => [`${user.tenantId}\0${user.id}`, user.name])), [users]);
+  const creatorName = useCallback((order: WorkOrder) => order.createdByName?.trim()
+    || authorNames.get(`${order.tenantId}\0${order.createdById}`)
+    || (order.createdById ? order.createdById : 'Sin autor identificado'), [authorNames]);
   const [searchTerm, setSearchTerm] = useState('');
   const [quickFilterStatus, setQuickFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
   const [quickFilterTime, setQuickFilterTime] = useState<'ALL' | 'SHIFT_7X7' | 'TODAY'>('ALL');
@@ -160,6 +163,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const [contingencyComments, setContingencyComments] = useState<string>('');
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [sortSpecs, setSortSpecs] = useState<WorkOrderSort[]>(getStoredWorkOrderSort);
+  const [pageSize, setPageSize] = useState(50);
+  const [pageSelection, setPageSelection] = useState<{ orders: WorkOrder[] | null; page: number }>({ orders: null, page: 1 });
 
   useEffect(() => {
     try {
@@ -193,7 +198,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   const [editSelectedEquipmentId, setEditSelectedEquipmentId] = useState<string>('');
   const [editSelectedSubSectorNames, setEditSelectedSubSectorNames] = useState<string[]>([]);
 
-  const [newOrder, setNewOrder] = useState({
+  const [newOrder, setNewOrder] = useState(() => ({
     ...getTodayOrderDefaults(),
     sapCode: '',
     equipoCorrea: '',
@@ -224,7 +229,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     fleetTripsCount: 0,
     bucketCapacityM3: 0,
     machineHours: 0
-  });
+  }));
 
   const labels = whiteLabel.columnLabels;
 
@@ -554,40 +559,25 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       ? { start: reportCalendar.shiftStart, end: reportCalendar.shiftEnd }
       : { start: '', end: '' };
   const selectedDateRange = getReportDateRange(filterDatePreset, filterStartDate, filterEndDate, reportCalendar);
-  const reportDateRange = intersectReportDateRanges(quickDateRange, selectedDateRange);
+  const { start: reportStart, end: reportEnd } = intersectReportDateRanges(quickDateRange, selectedDateRange);
+  const reportDateRange = useMemo(() => ({ start: reportStart, end: reportEnd }), [reportStart, reportEnd]);
   const reportFilename = getReportFilename(reportDateRange);
 
   const totalCount = workOrders.length;
-  const pendingCount = workOrders.filter(o => o.status === 'PENDIENTE_APROBACION_ITO').length;
-  const approvedCount = workOrders.filter(o => o.status === 'APROBADO_MANDANTE' || o.status === 'COMPLETADO').length;
-
-  const matchingOrders = workOrders.filter(order => {
-    // Quick Filter Status (A prueba de niños)
-    if (quickFilterStatus === 'PENDING' && order.status !== 'PENDIENTE_APROBACION_ITO') return false;
-    if (quickFilterStatus === 'APPROVED' && order.status !== 'APROBADO_MANDANTE' && order.status !== 'COMPLETADO') return false;
-
-    const matchesSearch = matchesSearchText([
-      order.sapCode, order.equipoCorrea, order.operationDetail, creatorName(order), order.areaName,
-    ], searchTerm);
-    
-    const matchesShift = filterShiftId === 'ALL' || order.shiftId === filterShiftId;
-    const matchesArea = filterAreaId === 'ALL' || order.areaId === filterAreaId;
-    const matchesTaskType = filterTaskType === 'ALL' || order.taskType === filterTaskType || (!order.taskType && filterTaskType === 'PLANIFICADO');
-
-    const matchesStatus = filterStatus === 'ALL' || 
-      (filterStatus === 'PENDIENTE' && order.status === 'PENDIENTE_APROBACION_ITO') ||
-      (filterStatus === 'APROBADO' && order.status === 'APROBADO_MANDANTE') ||
-      (filterStatus === 'CONTINGENCIA' && (order.status === 'RECHAZADO_CONTINGENCIA' || order.status === 'CONTINGENCIA'));
-
-    const orderDateStr = order.executionDate || '';
-    const matchesDate = (!reportDateRange.start || orderDateStr >= reportDateRange.start)
-      && (!reportDateRange.end || (Boolean(orderDateStr) && orderDateStr <= reportDateRange.end));
-
-    return (filterStaffingType === 'ALL' || (order.staffingType || 'UNCLASSIFIED') === filterStaffingType) && matchesSearch && matchesShift && matchesStatus && matchesArea && matchesTaskType && matchesDate;
-  });
+  const { pendingCount, approvedCount } = useMemo(() => ({
+    pendingCount: workOrders.filter(o => o.status === 'PENDIENTE_APROBACION_ITO').length,
+    approvedCount: workOrders.filter(o => o.status === 'APROBADO_MANDANTE' || o.status === 'COMPLETADO').length,
+  }), [workOrders]);
+  const searchIndex = useMemo(() => buildWorkOrderSearchIndex(workOrders, creatorName), [workOrders, creatorName]);
+  const matchingOrders = useMemo(() => filterWorkOrders(workOrders, {
+    quickStatus: quickFilterStatus, shiftId: filterShiftId, status: filterStatus,
+    areaId: filterAreaId, staffingType: filterStaffingType, taskType: filterTaskType,
+    startDate: reportDateRange.start, endDate: reportDateRange.end, search: searchTerm,
+  }, searchIndex), [workOrders, searchIndex, quickFilterStatus, filterShiftId, filterStatus,
+    filterAreaId, filterStaffingType, filterTaskType, reportDateRange, searchTerm]);
 
   const effectiveSortSpecs = sortSpecs.length > 0 ? sortSpecs : DEFAULT_WORK_ORDER_SORT;
-  const filteredOrders = [...matchingOrders].sort((left, right) => {
+  const filteredOrders = useMemo(() => [...matchingOrders].sort((left, right) => {
     for (const spec of effectiveSortSpecs) {
       const leftValue = getWorkOrderSortValue(left, spec.key);
       const rightValue = getWorkOrderSortValue(right, spec.key);
@@ -600,7 +590,18 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       if (comparison !== 0) return spec.direction === 'asc' ? comparison : -comparison;
     }
     return textCollator.compare(left.sapCode || left.id, right.sapCode || right.id);
-  });
+  }), [matchingOrders, effectiveSortSpecs]);
+  // A new result set starts at page 1; changing pages never changes export or KPI scope.
+  const currentPage = getWorkOrderPage(filteredOrders, pageSelection.orders === filteredOrders ? pageSelection.page : 1, pageSize);
+  const pageOrders = currentPage.orders;
+  const staffingCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const order of filteredOrders) {
+      const type = order.staffingType || 'UNCLASSIFIED';
+      counts.set(type, (counts.get(type) || 0) + 1);
+    }
+    return counts;
+  }, [filteredOrders]);
 
   const handleSort = (key: WorkOrderSortKey, additive = false) => {
     setSortSpecs((current): WorkOrderSort[] => {
@@ -920,6 +921,28 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       </div>
     );
   };
+
+  const paginationControls = (
+      <nav className="ot-pagination" aria-label="Páginas de órdenes de trabajo">
+        <span>Mostrando {currentPage.start}–{currentPage.end} de {filteredOrders.length} OT</span>
+        <label>OT por página{' '}
+          <select value={pageSize} onChange={event => {
+            setPageSize(Number(event.target.value));
+            setPageSelection({ orders: filteredOrders, page: 1 });
+          }}>
+            {[25, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
+          </select>
+        </label>
+        <div className="ot-pagination-actions">
+          <button type="button" className="btn btn-secondary" disabled={currentPage.page === 1}
+            onClick={() => setPageSelection({ orders: filteredOrders, page: currentPage.page - 1 })}>Anterior</button>
+          <span>Página {currentPage.page} de {currentPage.pageCount}</span>
+          <button type="button" className="btn btn-secondary" disabled={currentPage.page === currentPage.pageCount}
+            onClick={() => setPageSelection({ orders: filteredOrders, page: currentPage.page + 1 })}>Siguiente</button>
+        </div>
+        <small>Los KPI y el Excel incluyen todas las OT filtradas.</small>
+      </nav>
+  );
 
   return (
     <div className="card">
@@ -1956,7 +1979,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           </div>
 
           <span style={{ fontSize: '12px', color: 'var(--slate-600)' }}>
-            {filteredOrders.length} OT · {['Spot13P', 'Spot72P', 'Base'].map(type => `${type}: ${filteredOrders.filter(o => o.staffingType === type).length}`).join(' · ')} · Sin clasificar: {filteredOrders.filter(o => !o.staffingType).length}
+            {filteredOrders.length} OT · {['Spot13P', 'Spot72P', 'Base'].map(type => `${type}: ${staffingCounts.get(type) || 0}`).join(' · ')} · Sin clasificar: {staffingCounts.get('UNCLASSIFIED') || 0}
           </span>
           {/* Toggle Filter Menu Button */}
           <button
@@ -2116,6 +2139,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
       <WorkOrderHoursSummary orders={filteredOrders} shifts={shifts} dateRange={reportDateRange} />
 
+      {paginationControls}
+
       <div className="ot-sort-summary">
         <div>
           <strong>Orden:</strong>{' '}
@@ -2167,7 +2192,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 </td>
               </tr>
             ) : (
-              filteredOrders.map((order) => {
+              pageOrders.map((order) => {
                 return (
                   <tr key={order.id}>
                     <td className="ot-numeric-cell" style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
@@ -2271,7 +2296,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
             No hay órdenes registradas.
           </div>
         ) : (
-          filteredOrders.map(order => {
+          pageOrders.map(order => {
             const hhGap = order.realHours - order.estimatedHours;
             return (
               <div key={order.id} className="mobile-ot-card">
@@ -2332,6 +2357,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           })
         )}
       </div>
+
+      {filteredOrders.length > pageSize && paginationControls}
 
       {/* New Work Order Modal with 3-Step Guided Wizard */}
       {/* ADD WORK ORDER MODAL WIZARD */}

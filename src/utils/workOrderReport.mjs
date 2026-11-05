@@ -1,8 +1,9 @@
 // Operational dates belong to the day each shift starts, in Chile.
+const chileDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit',
+});
 export function getReportCalendar(now = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(now);
+  const parts = chileDateFormatter.formatToParts(now);
   const part = type => parts.find(value => value.type === type).value;
   const today = `${part('year')}-${part('month')}-${part('day')}`;
   const date = new Date(`${today}T12:00:00Z`);

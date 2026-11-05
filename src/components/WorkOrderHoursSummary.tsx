@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import type { WorkOrder, ShiftType } from '../types';
 import { shiftHoursBreakdown } from '../utils/kpiMetrics';
 import { formatReportDate } from '../utils/workOrderReport.mjs';
@@ -10,8 +11,8 @@ interface WorkOrderHoursSummaryProps {
 
 const formatHours = (value: number) => value.toLocaleString('es-CL', { maximumFractionDigits: 2 });
 
-export function WorkOrderHoursSummary({ orders, shifts, dateRange }: WorkOrderHoursSummaryProps) {
-  const totals = shiftHoursBreakdown(orders, shifts);
+export const WorkOrderHoursSummary = memo(function WorkOrderHoursSummary({ orders, shifts, dateRange }: WorkOrderHoursSummaryProps) {
+  const totals = useMemo(() => shiftHoursBreakdown(orders, shifts), [orders, shifts]);
   const period = dateRange.start && dateRange.end
     ? dateRange.start === dateRange.end
       ? formatReportDate(dateRange.start)
@@ -47,4 +48,4 @@ export function WorkOrderHoursSummary({ orders, shifts, dateRange }: WorkOrderHo
       )}
     </section>
   );
-}
+});
