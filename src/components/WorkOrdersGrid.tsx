@@ -4,7 +4,9 @@ import type { WorkOrder, WorkOrderStatus, WhiteLabelConfig, ShiftType, UserRole,
 import { Eye, Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpreadsheet, Edit, Trash2, X, Save, UserCheck, Eraser, PenTool, AlertOctagon, Camera, Upload, Layers, MapPin, Grid, Wrench, Users, Tag, Cpu, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { WorkOrderPhotoInput } from './WorkOrderPhotoInput';
+import { WorkOrderHoursSummary } from './WorkOrderHoursSummary';
 import { matchesSearchText } from '../utils/searchText';
+import { getReportCalendar, getReportDateRange, intersectReportDateRanges, formatReportDate, getReportFilename } from '../utils/workOrderReport.mjs';
 import { componentsForEquipment, selectedComponentIds } from '../utils/components.mjs';
 import { ComponentCreator } from './ComponentCreator';
 import type { ComponentCreationInput, ComponentCreationResult } from '../api/components';
@@ -545,39 +547,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     }
   };
 
-  // Helper to calculate active Wednesday-to-Tuesday 7x7 shift date range
-  const getActive7x7ShiftRange = (dateStr?: string) => {
-    const today = dateStr ? new Date(dateStr) : new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
-    
-    // Calculate days back to most recent Wednesday (3)
-    let daysToWed = (dayOfWeek - 3 + 7) % 7;
-    const startWed = new Date(today);
-    startWed.setDate(today.getDate() - daysToWed);
-    startWed.setHours(0, 0, 0, 0);
-
-    const endTue = new Date(startWed);
-    endTue.setDate(startWed.getDate() + 6);
-    endTue.setHours(23, 59, 59, 999);
-
-    const startStr = startWed.toISOString().split('T')[0];
-    const endStr = endTue.toISOString().split('T')[0];
-
-    const formatShort = (d: Date) => {
-      const dd = String(d.getDate()).padStart(2, '0');
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      return `${dd}/${mm}`;
-    };
-
-    return {
-      startStr,
-      endStr,
-      label: `Mié ${formatShort(startWed)} - Mar ${formatShort(endTue)}`
-    };
-  };
-
-  const active7x7Range = getActive7x7ShiftRange();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const reportCalendar = getReportCalendar();
+  const quickDateRange = quickFilterTime === 'TODAY'
+    ? { start: reportCalendar.today, end: reportCalendar.today }
+    : quickFilterTime === 'SHIFT_7X7'
+      ? { start: reportCalendar.shiftStart, end: reportCalendar.shiftEnd }
+      : { start: '', end: '' };
+  const selectedDateRange = getReportDateRange(filterDatePreset, filterStartDate, filterEndDate, reportCalendar);
+  const reportDateRange = intersectReportDateRanges(quickDateRange, selectedDateRange);
+  const reportFilename = getReportFilename(reportDateRange);
 
   const totalCount = workOrders.length;
   const pendingCount = workOrders.filter(o => o.status === 'PENDIENTE_APROBACION_ITO').length;
@@ -587,13 +565,6 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     // Quick Filter Status (A prueba de niños)
     if (quickFilterStatus === 'PENDING' && order.status !== 'PENDIENTE_APROBACION_ITO') return false;
     if (quickFilterStatus === 'APPROVED' && order.status !== 'APROBADO_MANDANTE' && order.status !== 'COMPLETADO') return false;
-
-    // Quick Filter Time & Shift 7x7 (A prueba de niños)
-    if (quickFilterTime === 'TODAY' && order.executionDate !== todayStr) return false;
-    if (quickFilterTime === 'SHIFT_7X7') {
-      const orderDateStr = order.executionDate || '';
-      if (orderDateStr < active7x7Range.startStr || orderDateStr > active7x7Range.endStr) return false;
-    }
 
     const matchesSearch = matchesSearchText([
       order.sapCode, order.equipoCorrea, order.operationDetail, creatorName(order), order.areaName,
@@ -608,27 +579,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       (filterStatus === 'APROBADO' && order.status === 'APROBADO_MANDANTE') ||
       (filterStatus === 'CONTINGENCIA' && (order.status === 'RECHAZADO_CONTINGENCIA' || order.status === 'CONTINGENCIA'));
 
-    let matchesDate = true;
-    if (filterDatePreset !== 'ALL') {
-      const orderDateStr = order.executionDate || '';
-
-      if (filterDatePreset === 'TODAY') {
-        matchesDate = orderDateStr === todayStr;
-      } else if (filterDatePreset === 'THIS_WEEK') {
-        const now = new Date();
-        const dayOfWeek = now.getDay() || 7;
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - dayOfWeek + 1);
-        const mondayStr = monday.toISOString().split('T')[0];
-        matchesDate = orderDateStr >= mondayStr && orderDateStr <= todayStr;
-      } else if (filterDatePreset === 'THIS_MONTH') {
-        const monthPrefix = new Date().toISOString().slice(0, 7);
-        matchesDate = orderDateStr.startsWith(monthPrefix);
-      } else if (filterDatePreset === 'CUSTOM') {
-        if (filterStartDate && orderDateStr < filterStartDate) matchesDate = false;
-        if (filterEndDate && orderDateStr > filterEndDate) matchesDate = false;
-      }
-    }
+    const orderDateStr = order.executionDate || '';
+    const matchesDate = (!reportDateRange.start || orderDateStr >= reportDateRange.start)
+      && (!reportDateRange.end || (Boolean(orderDateStr) && orderDateStr <= reportDateRange.end));
 
     return (filterStaffingType === 'ALL' || (order.staffingType || 'UNCLASSIFIED') === filterStaffingType) && matchesSearch && matchesShift && matchesStatus && matchesArea && matchesTaskType && matchesDate;
   });
@@ -870,10 +823,23 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
   };
 
   const exportToExcel = () => {
+    if (filterDatePreset === 'CUSTOM' && (!filterStartDate || !filterEndDate || filterStartDate > filterEndDate)) {
+      setShowFilters(true);
+      alert('Selecciona una fecha de inicio y término válidas para el reporte.');
+      return;
+    }
+    if (!reportFilename) {
+      setShowFilters(true);
+      alert('Selecciona una fecha o rango válido antes de exportar el reporte.');
+      return;
+    }
+    if (filteredOrders.length === 0) {
+      alert('No hay órdenes de trabajo para los filtros seleccionados.');
+      return;
+    }
     const dataToExport = filteredOrders.map(o => ({
       'Semana': o.semana,
       'Día': o.dia,
-      'Tipo de dotación': o.staffingType || 'Sin clasificar',
       'Tipo de Tarea': o.taskType || 'Planificado',
       'Área de Planta (Nivel 1)': o.areaName || 'General',
       'Sector / Proceso (Nivel 2)': o.sectorName || '-',
@@ -893,7 +859,6 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       'HM Ejecutadas': Number(o.machineHours) || 0,
       'Volumen Removido (m³)': Number(o.cubicMetersRemoved) || 0,
       'Brecha HH': o.realHours - o.estimatedHours,
-      'Fotos Registradas': o.beforePhotoUrl && o.afterPhotoUrl ? 'Completo (2/2)' : o.beforePhotoUrl ? 'Pendiente Foto Final (1/2)' : 'Sin Fotos (0/2)',
       'Estado Conformidad': o.status,
       'Firma / ITO Mandante': o.itoApproverName || '-',
       'Fecha Aprobación ITO': o.itoApprovalDate || '-'
@@ -902,7 +867,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Reporte_Zaldivar_4Niveles');
-    XLSX.writeFile(wb, `Reporte_Zaldivar_4Niveles_${Date.now()}.xlsx`);
+    XLSX.writeFile(wb, reportFilename);
   };
 
   const getStatusBadge = (status: WorkOrderStatus) => {
@@ -968,7 +933,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {reportFilename && <small style={{ color: 'var(--slate-600)' }}>{reportFilename} · {filteredOrders.length} OT</small>}
           <button hidden={!can('orders.export')} onClick={exportToExcel} className="btn btn-secondary">
             <FileSpreadsheet size={16} /> Exportar Excel 4N
           </button>
@@ -1894,14 +1860,14 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
             </span>
             {quickFilterTime === 'SHIFT_7X7' && (
               <span style={{ fontSize: '10px', fontWeight: 900, color: '#7C3AED', backgroundColor: '#F5F3FF', padding: '2px 8px', borderRadius: '8px' }}>
-                🗓️ Turno Activo: {active7x7Range.label}
+                🗓️ Turno Activo: Mié {formatReportDate(reportCalendar.shiftStart).slice(0, 5).replace('.', '/')} - Mar {formatReportDate(reportCalendar.shiftEnd).slice(0, 5).replace('.', '/')}
               </span>
             )}
           </div>
           <div style={{ display: 'flex', backgroundColor: '#E2E8F0', padding: '4px', borderRadius: '14px', gap: '4px', width: '100%' }}>
             <button
               type="button"
-              onClick={() => setQuickFilterTime('ALL')}
+              onClick={() => { setQuickFilterTime('ALL'); setFilterDatePreset('ALL'); }}
               style={{
                 flex: 1,
                 padding: '10px 4px',
@@ -1925,7 +1891,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
             <button
               type="button"
-              onClick={() => setQuickFilterTime('SHIFT_7X7')}
+              onClick={() => { setQuickFilterTime('SHIFT_7X7'); setFilterDatePreset('ALL'); }}
               style={{
                 flex: 1,
                 padding: '10px 4px',
@@ -1949,7 +1915,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
 
             <button
               type="button"
-              onClick={() => setQuickFilterTime('TODAY')}
+              onClick={() => { setQuickFilterTime('TODAY'); setFilterDatePreset('ALL'); }}
               style={{
                 flex: 1,
                 padding: '10px 4px',
@@ -2039,15 +2005,17 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--slate-600)', display: 'block', marginBottom: '4px' }}>📅 Fecha de Ejecución</label>
               <select
                 value={filterDatePreset}
-                onChange={(e) => setFilterDatePreset(e.target.value)}
+                onChange={(e) => { setFilterDatePreset(e.target.value); setQuickFilterTime('ALL'); }}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--slate-200)', fontSize: '12px', backgroundColor: '#FFF', fontWeight: 800 }}
               >
                 <option value="ALL">Todas las Fechas</option>
-                <option value="TODAY">📅 Hoy ({new Date().toISOString().split('T')[0]})</option>
+                <option value="TODAY">📅 Hoy ({formatReportDate(reportCalendar.today)})</option>
+                <option value="YESTERDAY">📅 Ayer ({formatReportDate(reportCalendar.yesterday)})</option>
                 <option value="THIS_WEEK">🗓️ Esta Semana</option>
                 <option value="THIS_MONTH">📆 Este Mes</option>
                 <option value="CUSTOM">🛠️ Rango Personalizado...</option>
               </select>
+              {filterDatePreset === 'YESTERDAY' && <small>Fecha de inicio del turno. Selecciona todos los turnos para incluir día y noche.</small>}
             </div>
 
             {/* Custom Date Range Pickers (shown only when CUSTOM is chosen) */}
@@ -2145,6 +2113,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           </div>
         )}
       </div>
+
+      <WorkOrderHoursSummary orders={filteredOrders} shifts={shifts} dateRange={reportDateRange} />
 
       <div className="ot-sort-summary">
         <div>
