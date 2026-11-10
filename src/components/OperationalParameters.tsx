@@ -1,7 +1,10 @@
 import { usePermissions } from '../security/PermissionContext';
 import React, { useState, useMemo, useEffect } from 'react';
 import type { PlantArea, Sector, PlantEquipment, SubSector, Machine, Worker, ShiftType, WhiteLabelConfig, CoverageArea, PersonnelMember, CargoConfig } from '../types';
-import { syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase } from '../api/firebase';
+import { db, syncSingleDocToFirebase, deleteSingleDocFromFirebase, syncCargoToFirebase, deleteCargoFromFirebase } from '../api/firebase';
+import { planHierarchyEdit, saveHierarchyEdit } from '../api/hierarchy';
+import type { HierarchyKind, HierarchyRecord, HierarchyValues } from '../api/hierarchy';
+import { HierarchyRecordEditor } from './HierarchyRecordEditor';
 import { 
   Plus, 
   Trash2, 
@@ -461,6 +464,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
   }, [filteredAndSortedComponents, currentComponentPage, pageSizeComponent]);
 
   // Editing States
+  const [editingHierarchy, setEditingHierarchy] = useState<{ kind: HierarchyKind; record: HierarchyRecord } | null>(null);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
 
@@ -592,6 +596,29 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
     syncSingleDocToFirebase('proclean_personnel', updatedMember.id, updatedMember);
     setEditingPersonnel(null);
   };
+
+  const handleUpdateHierarchy = async (values: HierarchyValues) => {
+    if (!can('structure.manage')) throw new Error('No tienes permiso para editar la estructura de planta.');
+    if (!editingHierarchy) return;
+    const edits = planHierarchyEdit(editingHierarchy.kind, editingHierarchy.record, values, { plantAreas, sectors, equipments, subSectors });
+    await saveHierarchyEdit(db, tenantId, edits);
+    // Apply only changed fields, preserving records received by live subscriptions.
+    const apply = <T extends HierarchyRecord>(collection: string, previous: T[]): T[] => previous.map(record => {
+      const edit = edits.find(item => item.collection === collection && item.original.id === record.id);
+      return edit ? { ...record, ...edit.changes } : record;
+    });
+    if (edits.some(edit => edit.collection === 'plant_areas')) setPlantAreas(prev => apply('plant_areas', prev));
+    if (edits.some(edit => edit.collection === 'sectors')) setSectors(prev => apply('sectors', prev));
+    if (edits.some(edit => edit.collection === 'equipments')) setEquipments(prev => apply('equipments', prev));
+    if (edits.some(edit => edit.collection === 'sub_sectors')) setSubSectors(prev => apply('sub_sectors', prev));
+  };
+
+  const editHierarchyButton = (kind: HierarchyKind, record: HierarchyRecord) => (
+    <button type="button" hidden={!can('structure.manage')} onClick={() => setEditingHierarchy({ kind, record: { ...record } })}
+      className="btn btn-secondary" aria-label={`Editar ${record.name}`} style={{ padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}>
+      <Edit size={14} /> Editar
+    </button>
+  );
 
   // Plant Areas CRUD (Direct Cloud DB & LocalStorage Sync)
   const handleAddArea = (e: React.FormEvent) => {
@@ -894,6 +921,10 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
 
   return (
     <div>
+      {editingHierarchy && can('structure.manage') && (
+        <HierarchyRecordEditor key={`${editingHierarchy.kind}-${editingHierarchy.record.id}`} kind={editingHierarchy.kind} record={editingHierarchy.record}
+          onSave={handleUpdateHierarchy} onClose={() => setEditingHierarchy(null)} />
+      )}
       <div style={{ marginBottom: '20px' }}>
         <h2 style={{ color: 'var(--color-primary-dark)', fontSize: '22px', fontWeight: 800 }}>
           ⚙️ Parametrización de Jerarquía de Planta, Flota y Nómina
@@ -1026,6 +1057,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         </span>
                       </td>
                       <td>
+                        {editHierarchyButton('area', area)}
                         <button hidden={!can('structure.manage')} onClick={() => handleDeleteArea(area.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
@@ -1111,6 +1143,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         </span>
                       </td>
                       <td>
+                        {editHierarchyButton('sector', sector)}
                         <button hidden={!can('structure.manage')} onClick={() => handleDeleteSector(sector.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
@@ -1370,6 +1403,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
+                        {editHierarchyButton('equipment', item)}
                         <button hidden={!can('structure.manage')} onClick={() => handleDeleteEquipment(item.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
@@ -1586,6 +1620,7 @@ export const OperationalParameters: React.FC<OperationalParametersProps> = ({
                             Convertir a equipo
                           </button>
                         )}
+                        {editHierarchyButton('component', sub)}
                         <button hidden={!can('structure.manage')} onClick={() => handleDeleteSubSector(sub.id)} className="btn" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', padding: '4px 8px', fontSize: '11px' }}>
                           <Trash2 size={14} /> Eliminar
                         </button>
