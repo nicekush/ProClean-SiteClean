@@ -842,6 +842,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       'Semana': o.semana,
       'Día': o.dia,
       'Tipo de Tarea': o.taskType || 'Planificado',
+      'Servicio': o.staffingType || 'Sin clasificar',
       'Área de Planta (Nivel 1)': o.areaName || 'General',
       'Sector / Proceso (Nivel 2)': o.sectorName || '-',
       'Equipo / Sistema (Nivel 3)': o.equipmentName || o.equipoCorrea,
