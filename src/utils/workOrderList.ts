@@ -1,4 +1,5 @@
 import type { WorkOrder } from '../types';
+import { matchesStaffingService } from './kpiMetrics.ts';
 
 export interface WorkOrderFilters {
   quickStatus: string;
@@ -28,7 +29,7 @@ export function filterWorkOrders(orders: WorkOrder[], filters: WorkOrderFilters,
     if (filters.quickStatus === 'APPROVED' && order.status !== 'APROBADO_MANDANTE' && order.status !== 'COMPLETADO') return false;
     if (filters.shiftId !== 'ALL' && order.shiftId !== filters.shiftId) return false;
     if (filters.areaId !== 'ALL' && order.areaId !== filters.areaId) return false;
-    if (filters.staffingType !== 'ALL' && (order.staffingType || 'UNCLASSIFIED') !== filters.staffingType) return false;
+    if (!matchesStaffingService(order, filters.staffingType)) return false;
     if (filters.taskType !== 'ALL' && (order.taskType || 'PLANIFICADO') !== filters.taskType) return false;
     if (filters.status === 'PENDIENTE' && order.status !== 'PENDIENTE_APROBACION_ITO') return false;
     if (filters.status === 'APROBADO' && order.status !== 'APROBADO_MANDANTE') return false;

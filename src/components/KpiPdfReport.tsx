@@ -225,7 +225,7 @@ export const KpiPdfReport: React.FC<Props> = ({
           <tbody>{staffingRows.map(row => <tr key={row.name}><td>{row.name}</td><td>{row.ots}</td><td>{num(row.volume)}</td><td>{num(row.hh)}</td><td>{num(row.hm)}</td><td>{num(row.water)}</td></tr>)}</tbody>
           <tfoot><tr><td>Total del reporte</td><td>{orders.length}</td><td>{num(metrics.volume)}</td><td>{num(metrics.hh)}</td><td>{num(metrics.hm)}</td><td>{num(metrics.water)}</td></tr></tfoot>
         </table>
-        <p>Según el tipo de dotación registrado en cada OT incluida en los filtros. Los gráficos y tablas por área muestran el consolidado de estos segmentos.</p>
+        <p>HH según dotación manual; HM y agua según servicio de maquinaria. Cada OT se cuenta una vez bajo su servicio principal. Los gráficos y tablas por área muestran el consolidado de estos segmentos.</p>
       </section>
       <div className="kpi-pdf-note"><strong>Criterio de lectura:</strong> HH = dotación × duración real. HM corresponde a horas máquina informadas. Los promedios diarios consideran jornadas con al menos una OT.</div>
       <Footer />

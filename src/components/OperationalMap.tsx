@@ -1,4 +1,5 @@
 import { usePermissions } from '../security/PermissionContext';
+import { machineServiceOf } from '../utils/kpiMetrics';
 import React, { useState } from 'react';
 import type { WorkOrder, PlantArea, Sector, PlantEquipment, SubSector, WhiteLabelConfig, Machine, StaffingType } from '../types';
 import { Layers, Box, Clock, X, Filter, Activity, Cpu, Truck, HardHat, Edit, MapPin, ChevronDown, CalendarDays, RotateCcw, Droplets } from 'lucide-react';
@@ -329,7 +330,8 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   // Resource flags are the source of truth. Volume and personnel values are metrics, not classifiers.
   const filteredOrders = workOrders.filter(order => {
     if (!orderMatchesPeriod(order) || !orderMatchesStatus(order)) return false;
-    if (serviceFilter !== 'ALL' && (order.staffingType || 'UNCLASSIFIED') !== serviceFilter) return false;
+    const service = activeMetric === 'WATER_M3' || resourceFilter === 'EQUIPMENT' ? machineServiceOf(order) : order.staffingType;
+    if (serviceFilter !== 'ALL' && (service || 'UNCLASSIFIED') !== serviceFilter) return false;
     if (patentFilter !== 'ALL' && order.vehiclePatent !== patentFilter) return false;
     if (activeMetric === 'WATER_M3') {
       // En modo Recurso Hídrico, incluir todas las operaciones de lavado/alta presión
@@ -388,7 +390,10 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
         : 0
     );
 
-    return { totalHH, totalHM, manualM3, machineryM3, waterM3 };
+    const manualMatches = serviceFilter === 'ALL' || (order.staffingType || 'UNCLASSIFIED') === serviceFilter;
+    const machineMatches = serviceFilter === 'ALL' || (machineServiceOf(order) || 'UNCLASSIFIED') === serviceFilter;
+    return { totalHH: manualMatches ? totalHH : 0, totalHM: machineMatches ? totalHM : 0,
+      manualM3: manualMatches ? manualM3 : 0, machineryM3: machineMatches ? machineryM3 : 0, waterM3: machineMatches ? waterM3 : 0 };
   };
 
   const getMetricsForOrders = (orders: WorkOrder[]): MapMetrics => {
@@ -759,6 +764,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             <option value="Base">Base</option>
             <option value="Spot13P">Spot13P</option>
             <option value="Spot72P">Spot72P</option>
+            <option value="AAP">AAP</option>
             <option value="UNCLASSIFIED">Sin clasificar</option>
           </select>
           <select

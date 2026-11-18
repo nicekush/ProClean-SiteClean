@@ -2,6 +2,10 @@ import type { WorkOrder, ShiftType } from '../types';
 
 export const hhOf = (order: WorkOrder) => Math.max(0, Number(order.headcount) || 0) * Math.max(0, Number(order.realHours) || 0);
 export const hmOf = (order: WorkOrder) => Math.max(0, Number(order.machineHours) || 0);
+export const machineServiceOf = (order: WorkOrder) => order.machineStaffingType || order.staffingType;
+export const matchesStaffingService = (order: WorkOrder, service: string) => service === 'ALL'
+  || (order.staffingType || 'UNCLASSIFIED') === service
+  || (hmOf(order) > 0 && (machineServiceOf(order) || 'UNCLASSIFIED') === service);
 
 function reportShiftPeriod(order: WorkOrder, shifts: ShiftType[]): 'day' | 'night' | 'unclassified' {
   const normalize = (value: string = '') => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
@@ -47,16 +51,17 @@ export const waterOf = (order: WorkOrder) => {
 };
 
 export function staffingBreakdown(orders: WorkOrder[]) {
-  const rows = ['Base', 'Spot13P', 'Spot72P', 'Sin clasificar'].map(name => ({
+  const rows = ['Base', 'Spot13P', 'Spot72P', 'AAP', 'Sin clasificar'].map(name => ({
     name, ots: 0, volume: 0, hh: 0, hm: 0, water: 0,
   }));
   for (const order of orders) {
-    const row = rows.find(row => row.name === order.staffingType) || rows[3];
+    const row = rows.find(row => row.name === order.staffingType) || rows[4];
+    const machineRow = rows.find(row => row.name === machineServiceOf(order)) || rows[4];
     row.ots += 1;
     row.volume += volumeOf(order);
     row.hh += hhOf(order);
-    row.hm += hmOf(order);
-    row.water += waterOf(order);
+    machineRow.hm += hmOf(order);
+    machineRow.water += waterOf(order);
   }
-  return rows.filter(row => row.name !== 'Sin clasificar' || row.ots > 0);
+  return rows.filter(row => !['Sin clasificar', 'AAP'].includes(row.name) || row.ots > 0 || row.hh > 0 || row.hm > 0 || row.water > 0);
 }

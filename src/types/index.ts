@@ -52,7 +52,7 @@ export interface CustomColumn {
 
 export type TaskType = 'PLANIFICADO' | 'MANTENIMIENTO_PROGRAMADO' | 'EMERGENTE';
 
-export type StaffingType = 'Spot13P' | 'Spot72P' | 'Base';
+export type StaffingType = 'Spot13P' | 'Spot72P' | 'Base' | 'AAP';
 
 export interface WorkOrder {
   revision?: string;
@@ -72,6 +72,7 @@ export interface WorkOrder {
   approvedAt?: string;
   approvedById?: string;
   staffingType?: StaffingType;
+  machineStaffingType?: StaffingType;
   id: string;
   tenantId?: string;
   semana: number;

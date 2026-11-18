@@ -5,6 +5,7 @@ import { Eye, Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpre
 import * as XLSX from 'xlsx';
 import { WorkOrderPhotoInput } from './WorkOrderPhotoInput';
 import { WorkOrderHoursSummary } from './WorkOrderHoursSummary';
+import { machineServiceOf } from '../utils/kpiMetrics';
 import { buildWorkOrderSearchIndex, filterWorkOrders, getWorkOrderPage } from '../utils/workOrderList';
 import { getReportCalendar, getReportDateRange, intersectReportDateRanges, formatReportDate, getReportFilename } from '../utils/workOrderReport.mjs';
 import { componentsForEquipment, selectedComponentIds } from '../utils/components.mjs';
@@ -843,6 +844,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       'Día': o.dia,
       'Tipo de Tarea': o.taskType || 'Planificado',
       'Servicio': o.staffingType || 'Sin clasificar',
+      'Servicio HM': Number(o.machineHours) > 0 ? machineServiceOf(o) || 'Sin clasificar' : '-',
       'Área de Planta (Nivel 1)': o.areaName || 'General',
       'Sector / Proceso (Nivel 2)': o.sectorName || '-',
       'Equipo / Sistema (Nivel 3)': o.equipmentName || o.equipoCorrea,
@@ -1138,9 +1140,15 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
             <label style={{ display: 'grid', gap: '6px', marginBottom: '16px' }}>Tipo de dotación
               <select value={editingOrder.staffingType || ''} onChange={e => setEditingOrder({ ...editingOrder, staffingType: e.target.value as StaffingType })}>
                 <option value="" disabled>Sin clasificar</option>
-                {['Spot13P', 'Spot72P', 'Base'].map(type => <option key={type} value={type}>{type}</option>)}
+                {['Spot13P', 'Spot72P', 'Base', 'AAP'].map(type => <option key={type} value={type}>{type}</option>)}
               </select>
             </label>
+            {Number(editingOrder.machineHours) > 0 && <label style={{ display: 'grid', gap: '6px', marginBottom: '16px' }}>Servicio de maquinaria
+              <select value={machineServiceOf(editingOrder) || ''} onChange={e => setEditingOrder({ ...editingOrder, machineStaffingType: e.target.value as StaffingType })}>
+                <option value="" disabled>Sin clasificar</option>
+                {['Base', 'AAP', 'Spot72P'].map(type => <option key={type} value={type}>{type}</option>)}
+              </select>
+            </label>}
             {renderStepper(currentEditStep, 9)}
 
           <form className="responsive-form-grid" onSubmit={handleUpdateSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '16px' }}>
@@ -1980,7 +1988,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
           </div>
 
           <span style={{ fontSize: '12px', color: 'var(--slate-600)' }}>
-            {filteredOrders.length} OT · {['Spot13P', 'Spot72P', 'Base'].map(type => `${type}: ${staffingCounts.get(type) || 0}`).join(' · ')} · Sin clasificar: {staffingCounts.get('UNCLASSIFIED') || 0}
+            {filteredOrders.length} OT · {['Spot13P', 'Spot72P', 'Base', 'AAP'].map(type => `${type}: ${staffingCounts.get(type) || 0}`).join(' · ')} · Sin clasificar: {staffingCounts.get('UNCLASSIFIED') || 0}
           </span>
           {/* Toggle Filter Menu Button */}
           <button
@@ -2071,7 +2079,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
               <label htmlFor="staffing-filter">Tipo de dotación</label>
               <select id="staffing-filter" value={filterStaffingType} onChange={e => setFilterStaffingType(e.target.value)} style={{ width: '100%', padding: '8px' }}>
                 <option value="ALL">Todas las dotaciones</option>
-                {['Spot13P', 'Spot72P', 'Base'].map(type => <option key={type} value={type}>{type}</option>)}
+                {['Spot13P', 'Spot72P', 'Base', 'AAP'].map(type => <option key={type} value={type}>{type}</option>)}
                 <option value="UNCLASSIFIED">Sin clasificar</option>
               </select>
             </div>
@@ -2211,7 +2219,9 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                       )}
                     </td>
                     <td style={{ fontSize: '12px', fontWeight: 700 }} title="Usuario que creó la orden de trabajo">{creatorName(order)}</td>
-                    <td>{order.staffingType || 'Sin clasificar'}</td>
+                    <td>{order.machineStaffingType && order.machineStaffingType !== order.staffingType
+                      ? `HH: ${order.staffingType || 'Sin clasificar'} · HM: ${order.machineStaffingType}`
+                      : order.staffingType || 'Sin clasificar'}</td>
                     <td>{getTaskTypeBadge(order.taskType)}</td>
                     <td>
                       <span className="pill pill-complete" style={{ backgroundColor: '#E0F2FE', color: '#0369A1', border: '1px solid #7DD3FC' }}>
@@ -2309,6 +2319,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                     )}
                     {getTaskTypeBadge(order.taskType)}
                     <span>Dotación: {order.staffingType || 'Sin clasificar'}</span>
+                    {Number(order.machineHours) > 0 && <span>Servicio HM: {machineServiceOf(order) || 'Sin clasificar'}</span>}
                   </div>
                   {getStatusBadge(order.status)}
                 </div>
@@ -2381,7 +2392,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 <div style={{ gridColumn: '1 / -1', display: 'grid', gap: '18px' }}>
                   <h4>Paso 1: Tipo de dotación</h4>
                   <div className="responsive-option-grid" role="group" aria-label="Tipo de dotación">
-                    {(['Spot13P', 'Spot72P', 'Base'] as const).map(type => (
+                    {(['Spot13P', 'Spot72P', 'Base', 'AAP'] as const).map(type => (
                       <button key={type} type="button" className="btn btn-secondary" aria-pressed={newOrder.staffingType === type}
                         onClick={() => setNewOrder({ ...newOrder, staffingType: type })}
                         style={{ padding: '18px', border: newOrder.staffingType === type ? '2px solid var(--orange)' : '1px solid var(--slate-200)', background: newOrder.staffingType === type ? '#FFF3E6' : '#FFF' }}>{type}</button>

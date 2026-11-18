@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { staffingBreakdown, hhOf, hmOf, volumeOf, waterOf } from '../src/utils/kpiMetrics.ts';
+import { staffingBreakdown, hhOf, hmOf, volumeOf, waterOf, machineServiceOf, matchesStaffingService } from '../src/utils/kpiMetrics.ts';
+import { readModels } from '../src/security/readModels.mjs';
 
 test('staffing segments reconcile all resources including unknown classifications', () => {
   const orders = [
@@ -24,4 +25,26 @@ test('filtered or empty reports preserve named segments without importing exclud
   const rows = staffingBreakdown([{ staffingType: 'Spot13P', headcount: 4, realHours: 9 }]);
   assert.deepEqual(rows.map(row => [row.name, row.ots, row.hh]), [['Base', 0, 0], ['Spot13P', 1, 36], ['Spot72P', 0, 0]]);
   assert.equal(staffingBreakdown([]).length, 3);
+});
+
+test('mixed OT keeps manual HH and assigns machinery to AAP without duplicating global resources', () => {
+  const mixed = { id: 'mixed', staffingType: 'Spot13P', machineStaffingType: 'AAP', headcount: 4, realHours: 9,
+    machineHours: 5, cubicMetersRemoved: 28.8, waterVolumeM3: 7 };
+  const legacy = { id: 'legacy', staffingType: 'Base', machineHours: 3 };
+  const rows = staffingBreakdown([mixed, legacy]);
+  assert.equal(rows.find(r => r.name === 'Spot13P').hh, 36);
+  assert.equal(rows.find(r => r.name === 'Spot13P').hm, 0);
+  assert.equal(rows.find(r => r.name === 'AAP').hh, 0);
+  assert.equal(rows.find(r => r.name === 'AAP').hm, 5);
+  assert.equal(rows.find(r => r.name === 'AAP').water, 7);
+  assert.equal(rows.reduce((n, r) => n + r.ots, 0), 2);
+  assert.equal(rows.reduce((n, r) => n + r.hh, 0), 36);
+  assert.equal(rows.reduce((n, r) => n + r.hm, 0), 8);
+  assert.equal(machineServiceOf(legacy), 'Base');
+  assert.ok(matchesStaffingService(mixed, 'AAP'));
+  assert.ok(matchesStaffingService(mixed, 'Spot13P'));
+  assert.equal(matchesStaffingService(mixed, 'Spot72P'), false);
+  const projections = readModels(mixed);
+  assert.equal(projections.metrics.machineStaffingType, 'AAP');
+  assert.equal(projections.detail.machineStaffingType, 'AAP');
 });
