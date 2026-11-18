@@ -5,7 +5,7 @@ import { Eye, Plus, Filter, Search, CheckCircle2, Clock, AlertTriangle, FileSpre
 import * as XLSX from 'xlsx';
 import { WorkOrderPhotoInput } from './WorkOrderPhotoInput';
 import { WorkOrderHoursSummary } from './WorkOrderHoursSummary';
-import { machineServiceOf } from '../utils/kpiMetrics';
+import { machineServiceOf, waterOf } from '../utils/kpiMetrics';
 import { buildWorkOrderSearchIndex, filterWorkOrders, getWorkOrderPage } from '../utils/workOrderList';
 import { getReportCalendar, getReportDateRange, intersectReportDateRanges, formatReportDate, getReportFilename } from '../utils/workOrderReport.mjs';
 import { componentsForEquipment, selectedComponentIds } from '../utils/components.mjs';
@@ -862,6 +862,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
       'HH Ejecutadas': (Number(o.headcount) || 0) * (Number(o.realHours) || 0),
       'HM Ejecutadas': Number(o.machineHours) || 0,
       'Volumen Removido (m³)': Number(o.cubicMetersRemoved) || 0,
+      'Agua utilizada (m³)': waterOf(o),
       'Brecha HH': o.realHours - o.estimatedHours,
       'Estado Conformidad': o.status,
       'Firma / ITO Mandante': o.itoApproverName || '-',
