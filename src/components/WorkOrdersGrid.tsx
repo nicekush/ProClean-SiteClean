@@ -34,6 +34,8 @@ interface WorkOrdersGridProps {
   onClearTargetEditOrder?: () => void;
 }
 
+const ACTIVE_STAFFING_TYPES = ['Spot72P', 'Base', 'AAP'] as const satisfies readonly StaffingType[];
+
 const getOrderDateMetadata = (localDate: string) => {
   if (!localDate) return { executionDate: '', semana: 0, dia: '' };
   const now = new Date(`${localDate}T12:00:00`);
@@ -1141,7 +1143,8 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
             <label style={{ display: 'grid', gap: '6px', marginBottom: '16px' }}>Tipo de dotación
               <select value={editingOrder.staffingType || ''} onChange={e => setEditingOrder({ ...editingOrder, staffingType: e.target.value as StaffingType })}>
                 <option value="" disabled>Sin clasificar</option>
-                {['Spot13P', 'Spot72P', 'Base', 'AAP'].map(type => <option key={type} value={type}>{type}</option>)}
+                {editingOrder.staffingType === 'Spot13P' && <option value="Spot13P" disabled>Spot13P (histórico)</option>}
+                {ACTIVE_STAFFING_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
               </select>
             </label>
             {Number(editingOrder.machineHours) > 0 && <label style={{ display: 'grid', gap: '6px', marginBottom: '16px' }}>Servicio de maquinaria
@@ -2393,7 +2396,7 @@ export const WorkOrdersGrid: React.FC<WorkOrdersGridProps> = ({
                 <div style={{ gridColumn: '1 / -1', display: 'grid', gap: '18px' }}>
                   <h4>Paso 1: Tipo de dotación</h4>
                   <div className="responsive-option-grid" role="group" aria-label="Tipo de dotación">
-                    {(['Spot13P', 'Spot72P', 'Base', 'AAP'] as const).map(type => (
+                    {ACTIVE_STAFFING_TYPES.map(type => (
                       <button key={type} type="button" className="btn btn-secondary" aria-pressed={newOrder.staffingType === type}
                         onClick={() => setNewOrder({ ...newOrder, staffingType: type })}
                         style={{ padding: '18px', border: newOrder.staffingType === type ? '2px solid var(--orange)' : '1px solid var(--slate-200)', background: newOrder.staffingType === type ? '#FFF3E6' : '#FFF' }}>{type}</button>
